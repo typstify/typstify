@@ -14,6 +14,7 @@ import (
 	"os"
 	"path/filepath"
 	"strings"
+	"sync/atomic"
 	"time"
 
 	"gioui.org/f32"
@@ -76,7 +77,7 @@ type TextEditor struct {
 	overviewRuler    OverviewRuler
 	diffProvider     *providers.VCSDiffProvider
 	differ           *diff.GitDiff
-	diffHunks        []*providers.DiffHunk
+	pendingHunks     atomic.Pointer[[]*providers.DiffHunk]
 
 	OnSelectChange func(gvcode.Position)
 	OnOpenLink     func(link string, external bool)
@@ -249,10 +250,9 @@ func (me *TextEditor) update(gtx layout.Context, th *theme.Theme, settings *sett
 		me.OnOpenLink(link, external)
 	}
 
-	if len(me.diffHunks) > 0 {
-		me.diffProvider.UpdateDiff(me.diffHunks)
-		me.overviewRuler.UpdateDiffMarkers(me.diffHunks)
-		me.diffHunks = me.diffHunks[:0]
+	if hunks := me.pendingHunks.Swap(nil); hunks != nil && len(*hunks) > 0 {
+		me.diffProvider.UpdateDiff(*hunks)
+		me.overviewRuler.UpdateDiffMarkers(*hunks)
 	}
 
 }
@@ -533,16 +533,41 @@ func (te *TextEditor) SetupLsp(gtx layout.Context, th *theme.Theme, client *lsp.
 }
 
 func (me *TextEditor) updateDiff() {
+	if me.differ == nil {
+		return
+	}
+
+	// Capture the current buffer content to diffs against the in-memory state
+	content := []byte(me.state.Text())
 	go func() {
-		me.diffHunks = me.diffHunks[:0]
-		// Parse git diff for the current file and update the diff provider
-		if hunks := me.differ.ParseDiff(); len(hunks) > 0 {
-			me.diffHunks = append(me.diffHunks, hunks...)
-		}
+		hunks := me.differ.ParseDiff(content)
+		me.pendingHunks.Store(&hunks)
 	}()
 }
 
 func NewTextEditor(path string, createOnMissing bool, readonly bool, settings *settings.EditorSettings) (*TextEditor, error) {
+	ed := &TextEditor{
+		filename:     path,
+		highlighter:  NewHighlighter(path),
+		state:        &gvcode.Editor{},
+		wrapLine:     false,
+		diffProvider: providers.NewVCSDiffProvider(),
+		differ:       diff.NewGitDiff(path),
+	}
+
+	ed.state.WithOptions(
+		gvcode.WrapLine(false),
+		gvcode.WithGutterGap(unit.Dp(24)),
+		gvcode.WithCornerRadius(unit.Dp(4)),
+		gvcode.WithGutter(providers.NewLineNumberProvider()),
+		gvcode.WithGutter(ed.diffProvider),
+	)
+
+	// Initialize overview ruler colors
+	ed.overviewRuler.UseDefaultColors()
+	ed.diffProvider.SetIndicatorWidth(unit.Dp(3))
+	ed.hoverTips = newHoverTips(ed.state)
+
 	flag := os.O_RDWR
 	if createOnMissing {
 		err := os.MkdirAll(filepath.Dir(path), 0755)
@@ -553,34 +578,13 @@ func NewTextEditor(path string, createOnMissing bool, readonly bool, settings *s
 		flag = os.O_RDWR | os.O_CREATE
 	}
 
-	file, err := os.OpenFile(path, flag, 0755)
+	originalFile, err := os.OpenFile(path, flag, 0755)
 	if err != nil {
 		return nil, err
 	}
+	defer originalFile.Close()
 
-	ed := &TextEditor{
-		filename:     path,
-		highlighter:  NewHighlighter(path),
-		state:        &gvcode.Editor{},
-		wrapLine:     false,
-		hoverTips:    newHoverTips(),
-		diffProvider: providers.NewVCSDiffProvider(),
-		differ:       diff.NewGitDiff(path),
-	}
-	// Initialize overview ruler colors
-	ed.overviewRuler.UseDefaultColors()
-
-	ed.diffProvider.SetIndicatorWidth(unit.Dp(6))
-
-	ed.state.WithOptions(
-		gvcode.WrapLine(false),
-		gvcode.WithGutterGap(unit.Dp(24)),
-		gvcode.WithCornerRadius(unit.Dp(4)),
-		gvcode.WithGutter(providers.NewLineNumberProvider()),
-		gvcode.WithGutter(ed.diffProvider),
-	)
-
-	content, err := io.ReadAll(file)
+	content, err := io.ReadAll(originalFile)
 	if err != nil {
 		return nil, err
 	}
@@ -594,7 +598,6 @@ func NewTextEditor(path string, createOnMissing bool, readonly bool, settings *s
 
 	ed.state.SetText(string(content))
 	ed.originalHash = calcDigest(content)
-	file.Close()
 
 	// Some file systems or file system watchers, like fswatch, might not
 	// pick up changes if they are batched together or if the file is not

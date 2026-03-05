@@ -6,11 +6,13 @@ import (
 	"math"
 	"net/url"
 	"strings"
+	"sync/atomic"
 	"time"
 
 	"gioui.org/f32"
 	"gioui.org/font"
 	"gioui.org/gesture"
+	"gioui.org/io/key"
 	"gioui.org/layout"
 	"gioui.org/op"
 	"gioui.org/op/clip"
@@ -28,13 +30,20 @@ import (
 )
 
 var (
-	maxHoverTipX = unit.Dp(750)
 	maxHoverTipY = unit.Dp(350)
 )
 
 type OnHoverAt func(gvcode.Position) (string, f32.Point)
 
+type hoverResult struct {
+	seq         uint64
+	content     string
+	pixelPos    f32.Point
+	fallbackPos image.Point
+}
+
 type HoverTips struct {
+	editor      *gvcode.Editor
 	colorScheme *syntax.ColorScheme
 
 	label      richtext.InteractiveText
@@ -42,20 +51,23 @@ type HoverTips struct {
 	list       widget.List
 	anim       *component.VisibilityAnimation
 
-	lastHoverPos image.Point
-	lastContent  string
-	needRebuild  bool
-	cancelled    bool
+	lastHoverPos  image.Point
+	lastContent   string
+	needRebuild   bool
+	cancelled     bool
+	hoverSeq      uint64
+	pendingResult atomic.Pointer[hoverResult]
 
 	// Mouse tracking for tip area
-	tipBounds image.Rectangle
-	tipHover  gesture.Hover
-	hoverInTip bool
+	tipBounds      image.Rectangle
+	tipHover       gesture.Hover
+	hoverInTip     bool
 	prevHoverInTip bool
 }
 
-func newHoverTips() *HoverTips {
+func newHoverTips(editor *gvcode.Editor) *HoverTips {
 	return &HoverTips{
+		editor: editor,
 		anim: &component.VisibilityAnimation{
 			State:    component.Invisible,
 			Duration: 150 * time.Millisecond,
@@ -73,28 +85,37 @@ func (h *HoverTips) OnHover(evt gvcode.HoverEvent, hoverCallbacks ...OnHoverAt) 
 		return
 	}
 
-	hoverContent := ""
-	var pixelPos f32.Point
-	for _, cb := range hoverCallbacks {
-		hoverContent, pixelPos = cb(evt.Pos)
-		if hoverContent != "" {
-			break
-		}
-	}
+	// Increment sequence so stale goroutine results are discarded.
+	h.hoverSeq++
+	seq := h.hoverSeq
+	fallbackPos := evt.PixelOff
 
-	h.lastContent = hoverContent
-	if pixelPos != (f32.Point{}) {
-		h.lastHoverPos = image.Point{X: pixelPos.Round().X, Y: pixelPos.Round().Y}
-	} else {
-		h.lastHoverPos = evt.PixelOff
-	}
-	h.needRebuild = true
+	go func() {
+		var content string
+		var pixelPos f32.Point
+		for _, cb := range hoverCallbacks {
+			content, pixelPos = cb(evt.Pos)
+			if content != "" {
+				break
+			}
+		}
+
+		h.pendingResult.Store(&hoverResult{
+			seq:         seq,
+			content:     content,
+			pixelPos:    pixelPos,
+			fallbackPos: fallbackPos,
+		})
+	}()
 }
 
 func (h *HoverTips) Clear(gtx layout.Context) {
 	h.spanStyles = h.spanStyles[:0]
 	h.list.ScrollTo(0)
 	h.anim.Disappear(gtx.Now)
+	h.cancelled = false
+	h.needRebuild = false
+	h.editor.RemoveCommands(h)
 }
 
 func (h *HoverTips) SetColorScheme(colorScheme string) {
@@ -132,6 +153,14 @@ func (h *HoverTips) buildSpans(th *theme.Theme) {
 }
 
 func (h *HoverTips) Update(gtx layout.Context, th *theme.Theme) (string, bool) {
+	// press ESC to cancel and close the popup
+	h.editor.RegisterCommand(h, key.Filter{Name: key.NameEscape},
+		func(gtx layout.Context, evt key.Event) gvcode.EditorEvent {
+			h.Clear(gtx)
+			return nil
+		},
+	)
+
 	for {
 		span, event, ok := h.label.Update(gtx)
 		if !ok {
@@ -187,6 +216,18 @@ func (h *HoverTips) Update(gtx layout.Context, th *theme.Theme) (string, bool) {
 		h.prevHoverInTip = false
 	}
 
+	// Pick up async hover result from the goroutine.
+	if result := h.pendingResult.Swap(nil); result != nil && result.seq == h.hoverSeq {
+		h.cancelled = false
+		h.lastContent = result.content
+		if result.pixelPos != (f32.Point{}) {
+			h.lastHoverPos = image.Point{X: result.pixelPos.Round().X, Y: result.pixelPos.Round().Y}
+		} else {
+			h.lastHoverPos = result.fallbackPos
+		}
+		h.needRebuild = true
+	}
+
 	if h.needRebuild {
 		h.buildSpans(th)
 		h.anim.Appear(gtx.Now.Add(350 * time.Millisecond))
@@ -197,7 +238,6 @@ func (h *HoverTips) Update(gtx layout.Context, th *theme.Theme) (string, bool) {
 }
 
 func (h *HoverTips) Layout(gtx layout.Context, th *theme.Theme) layout.Dimensions {
-	h.Update(gtx, th)
 	// Should be called for every frame.
 	if h.anim.Animating() {
 		_ = h.anim.Revealed(gtx)
@@ -221,7 +261,7 @@ func (h *HoverTips) Layout(gtx layout.Context, th *theme.Theme) layout.Dimension
 	callOp := macro.Stop()
 
 	defer clip.Rect(image.Rectangle{Max: dims.Size}).Push(gtx.Ops).Pop()
-		// Paint background (no animation)
+	// Paint background (no animation)
 	if h.colorScheme.Background.IsSet() {
 		bgColor := h.colorScheme.Background.NRGBA()
 		// Paint rounded rectangle background matching border radius
@@ -240,7 +280,7 @@ func (h *HoverTips) Layout(gtx layout.Context, th *theme.Theme) layout.Dimension
 
 func (h *HoverTips) layoutContent(gtx layout.Context, th *theme.Theme, listStyle *material.ListStyle) layout.Dimensions {
 	maxSize := gtx.Constraints.Max
-	maxSize.X = min(gtx.Dp(maxHoverTipX), int(float32(maxSize.X)*0.7))
+	maxSize.X = int(float32(maxSize.X) * 0.7)
 	maxSize.Y = min(gtx.Dp(maxHoverTipY), int(float32(maxSize.Y)*0.8))
 	gtx.Constraints.Max = maxSize
 	gtx.Constraints.Min = image.Point{}
