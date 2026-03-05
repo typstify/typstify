@@ -219,8 +219,7 @@ func (me *TextEditor) update(gtx layout.Context, th *theme.Theme, settings *sett
 		me.colorScheme.LineNumberColor = me.colorScheme.Foreground.MulAlpha(0xb6)
 		me.state.WithOptions(gvcode.WithColorScheme(*me.colorScheme))
 
-		tokens := me.highlighter.Highlight([]byte(me.state.Text()))
-		me.state.SetSyntaxTokens(tokens...)
+		me.highlighter.Highlight(me.state)
 		me.hoverTips.SetColorScheme(colorScheme)
 	}
 
@@ -255,6 +254,10 @@ func (me *TextEditor) update(gtx layout.Context, th *theme.Theme, settings *sett
 		me.overviewRuler.UpdateDiffMarkers(*hunks)
 	}
 
+	if tokens := me.highlighter.PendingTokens(); tokens != nil && len(*tokens) > 0 {
+		me.state.SetSyntaxTokens(*tokens...)
+	}
+
 }
 
 func (me *TextEditor) handleEvents(gtx layout.Context) {
@@ -268,8 +271,7 @@ func (me *TextEditor) handleEvents(gtx layout.Context) {
 		switch evt := event.(type) {
 		case gvcode.ChangeEvent:
 			me.onTextChanged()
-			styles := me.highlighter.Highlight([]byte(me.state.Text()))
-			me.state.SetSyntaxTokens(styles...)
+			me.highlighter.Highlight(me.state)
 			me.searchbar.ReSearch()
 			if me.lspClient != nil {
 				me.lspClient.OnEditorUpdated(me.filename, me.state)

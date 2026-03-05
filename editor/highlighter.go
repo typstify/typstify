@@ -2,25 +2,37 @@ package editor
 
 import (
 	"image/color"
+	"io"
 	"os"
 	"path/filepath"
 	"regexp"
 	"strings"
+	"sync/atomic"
+	"time"
 	"unicode/utf8"
 
 	"github.com/alecthomas/chroma/v2"
 	"github.com/alecthomas/chroma/v2/lexers"
 	"github.com/alecthomas/chroma/v2/styles"
+	"github.com/oligo/gvcode"
 	gvcolor "github.com/oligo/gvcode/color"
 	"github.com/oligo/gvcode/textstyle/syntax"
 	"github.com/saintfish/chardet"
 )
 
-type Highlighter struct {
-	lexer       chroma.Lexer
-	colorScheme string
+type highlightResult struct {
+	seq    uint64
+	tokens *[]syntax.Token
+}
 
-	tokens []syntax.Token
+type Highlighter struct {
+	lexer         chroma.Lexer
+	buffers       [2][]syntax.Token
+	bufIdx        int // only accessed from highlight goroutines, serialized by running
+	running       atomic.Bool
+	seq           uint64 // only accessed from the UI thread
+	pendingResult atomic.Pointer[highlightResult]
+	debounceTimer *time.Timer // only accessed from the UI thread
 }
 
 func NewHighlighter(filename string) *Highlighter {
@@ -34,9 +46,10 @@ func NewHighlighter(filename string) *Highlighter {
 	return &Highlighter{lexer: lexer}
 }
 
+var camelCaseRe = regexp.MustCompile(`([A-Z]+)`)
+
 func chromaTokenType2Scope(t chroma.TokenType) syntax.StyleScope {
-	re := regexp.MustCompile(`([A-Z]+)`)
-	str := re.ReplaceAllString(t.String(), `.$1`)
+	str := camelCaseRe.ReplaceAllString(t.String(), `.$1`)
 	str = strings.ToLower(strings.Trim(str, "."))
 
 	return syntax.StyleScope(str)
@@ -55,29 +68,60 @@ func convertChromaColor(c chroma.Colour) gvcolor.Color {
 	})
 }
 
-// HighlightText hightlight the document according to the specified lexer and color scheme.
-func (h *Highlighter) Highlight(source []byte) []syntax.Token {
-	h.tokens = h.tokens[:0]
-
-	iterator, err := h.lexer.Tokenise(nil, string(source))
-	if err != nil {
-		return nil
+// Highlight debounces and tokenizes the editor content asynchronously.
+// Results are picked up via PendingTokens on the next frame.
+func (h *Highlighter) Highlight(editor *gvcode.Editor) {
+	if h.debounceTimer != nil {
+		h.debounceTimer.Stop()
 	}
 
-	offset := 0
+	h.seq++
+	seq := h.seq
+	reader := editor.GetReader()
 
-	for _, token := range iterator.Tokens() {
-		textStyle := syntax.Token{
-			Start: offset,
-			End:   offset + len([]rune(token.Value)),
-			Scope: chromaTokenType2Scope(token.Type),
+	h.debounceTimer = time.AfterFunc(50*time.Millisecond, func() {
+		if !h.running.CompareAndSwap(false, true) {
+			return // previous highlight still running, skip
+		}
+		defer h.running.Store(false)
+
+		reader.Seek(0, io.SeekStart)
+		source, err := io.ReadAll(reader)
+		if err != nil {
+			return
 		}
 
-		h.tokens = append(h.tokens, textStyle)
-		offset = textStyle.End
-	}
+		iterator, err := h.lexer.Tokenise(nil, string(source))
+		if err != nil {
+			return
+		}
 
-	return h.tokens
+		idx := h.bufIdx
+		h.buffers[idx] = h.buffers[idx][:0]
+
+		offset := 0
+		for _, token := range iterator.Tokens() {
+			textStyle := syntax.Token{
+				Start: offset,
+				End:   offset + len([]rune(token.Value)),
+				Scope: chromaTokenType2Scope(token.Type),
+			}
+
+			h.buffers[idx] = append(h.buffers[idx], textStyle)
+			offset = textStyle.End
+		}
+
+		h.pendingResult.Store(&highlightResult{seq: seq, tokens: &h.buffers[idx]})
+		h.bufIdx = 1 - idx
+	})
+}
+
+func (h *Highlighter) PendingTokens() *[]syntax.Token {
+	result := h.pendingResult.Swap(nil)
+	if result == nil || result.seq != h.seq {
+		return nil // no result, or stale result from before a newer edit
+	}
+	return result.tokens
 }
 
 func (h *Highlighter) LexerName() string {
@@ -98,7 +142,8 @@ func fileEncoding(filePath string) string {
 	defer file.Close()
 
 	var buf = make([]byte, 1*1024*1024)
-	file.Read(buf)
+	n, _ := file.Read(buf)
+	buf = buf[:n]
 
 	// Strategy A: High-Confidence Check
 	// If the entire sample is valid UTF-8, assume UTF-8 with high confidence,
@@ -123,7 +168,7 @@ func buildColorScheme(schemeName string) *syntax.ColorScheme {
 		style = styles.Fallback
 	}
 
-	scheme := syntax.ColorScheme{}
+	scheme := syntax.ColorScheme{Name: schemeName}
 
 	bgType := style.Get(chroma.Background)
 	fg := convertChromaColor(bgType.Colour)
