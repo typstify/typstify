@@ -226,9 +226,6 @@ func (me *TextEditor) update(gtx layout.Context, th *theme.Theme, settings *sett
 	if me.popup != nil {
 		me.popup.TextSize = th.TextSize - 1
 		me.popup.Theme = th.Theme
-		// te.popup.Theme.Fg = editorApp.colorScheme.Foreground.NRGBA()
-		// popupTheme.Bg = editorApp.colorScheme.Background.NRGBA()
-		// popup.Theme = &popupTheme
 	}
 
 	xScrollDist := me.xScroll.ScrollDistance()

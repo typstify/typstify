@@ -13,8 +13,8 @@ import (
 	"gioui.org/op"
 	"gioui.org/unit"
 	"gioui.org/widget"
-	fileexp "gioui.org/x/explorer"
 
+	"github.com/gioui-plugins/gio-plugins/plugin/gioplugins"
 	"github.com/oligo/gioview/explorer"
 	"github.com/oligo/gioview/theme"
 	"github.com/oligo/gioview/view"
@@ -77,10 +77,10 @@ func (ui *UI) Loop(ctx context.Context) error {
 		default:
 			// continue
 		}
-		e := ui.window.Event()
-		fileexp.DefaultExplorer.ListenEvents(e)
 
-		switch e := e.(type) {
+		evt := gioplugins.Hijack(ui.window)
+
+		switch e := evt.(type) {
 		case app.DestroyEvent:
 			log.Println("exiting application")
 			ui.vm.OnClose()

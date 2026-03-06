@@ -5,11 +5,9 @@ import (
 	"crypto/rand"
 	"fmt"
 	"log"
-	"net"
 	"time"
 
 	"github.com/oligo/gvcode"
-	"golang.org/x/exp/jsonrpc2"
 
 	"looz.ws/typstify/lsp"
 )
@@ -25,83 +23,58 @@ type PreviewOptions struct {
 	OpenInBrowser    bool
 }
 
-// Previewer is the previewer client.
-type Previewer struct {
-	client       *lsp.Client
-	conn         *jsonrpc2.Connection
-	targetFile   string
-	lastTask     string
-	isPreviewing bool
+type previewTask struct {
+	taskID     string
+	targetFile string
+	opts       PreviewOptions
+	serverAddr string
 }
 
-func NewPreviewer(client *lsp.Client) (*Previewer, error) {
-	p := &Previewer{client: client}
+// PreviewClient is the previewer client.
+type PreviewClient struct {
+	client     *lsp.Client
+	task       *previewTask
+	targetFile string
+}
 
-	dialer := jsonrpc2.NetDialer("tcp", previewRPCServer, net.Dialer{
-		Timeout: 5 * time.Second,
-	})
-
-	ctx := context.Background()
-	conn, err := jsonrpc2.Dial(ctx, dialer, jsonrpc2.ConnectionOptions{
-		Handler: clientHandler(p),
-	})
-	if err != nil {
-		return nil, err
+func NewPreviwClient(client *lsp.Client, targetFile string) *PreviewClient {
+	return &PreviewClient{
+		client:     client,
+		targetFile: targetFile,
 	}
-
-	p.conn = conn
-	return p, nil
 }
 
-// func (p *Previewer) Bind(ctx context.Context, conn *jsonrpc2.Connection) (jsonrpc2.ConnectionOptions, error) {
-// 	return jsonrpc2.ConnectionOptions{
-// 		Handler: jsonrpc2.HandlerFunc(func(ctx context.Context, req *jsonrpc2.Request) (interface{}, error) {
-// 			return p.clientRPCHandle(ctx, req)
-// 		}),
-// 	}, nil
-// }
-
-func (p *Previewer) New(ctx context.Context, targetFile string, opts PreviewOptions) error {
-	ctx, cancel := context.WithTimeout(ctx, 100*time.Millisecond)
-	defer cancel()
-
-	if p.isPreviewing {
-		// kill the last preview first here as we can not get callback when browser tab is closing.
+func (p *PreviewClient) New(ctx context.Context, opts PreviewOptions) (string, error) {
+	if p.task != nil {
+		if opts == p.task.opts {
+			return "", nil
+		}
+		// else kill existing one and create a new previewer
 		err := p.killLspPreview(ctx)
 		if err != nil {
-			return err
+			return "", err
 		}
 	}
 
-	previewServerPort, err := p.requestLspPreview(ctx, targetFile, opts)
+	ctx, cancel := context.WithTimeout(ctx, 100*time.Millisecond)
+	defer cancel()
+
+	taskID, previewServerPort, err := p.requestLspPreview(ctx, p.targetFile, opts)
 	if err != nil {
-		return err
+		return "", err
 	}
 
-	p.targetFile = targetFile
-
-	if opts.OpenInBrowser {
-		return nil
+	task := &previewTask{
+		taskID:     taskID,
+		targetFile: p.targetFile,
+		opts:       opts,
+		serverAddr: fmt.Sprintf("http://127.0.0.1:%d", previewServerPort),
 	}
-
-	params := PreviewReq{
-		Server:     fmt.Sprintf("http://127.0.0.1:%d", previewServerPort),
-		TargetFile: targetFile,
-	}
-
-	//log.Println("requesting preview with params: ", params)
-	var result interface{}
-	err = p.conn.Call(ctx, rpcMethodNew, &params).Await(ctx, &result)
-	if err != nil {
-		p.killLspPreview(ctx)
-		return err
-	}
-
-	p.isPreviewing = true
-	return nil
+	p.task = task
+	return task.serverAddr, nil
 }
 
-func (p *Previewer) Close(ctx context.Context, targetFile string) error {
+func (p *PreviewClient) Close(ctx context.Context) error {
 	ctx, cancel := context.WithTimeout(ctx, 100*time.Millisecond)
 	defer cancel()
 
@@ -110,24 +83,15 @@ func (p *Previewer) Close(ctx context.Context, targetFile string) error {
 		return err
 	}
 
-	p.isPreviewing = false
-
-	params := PreviewCloseReq{
-		TargetFile: targetFile,
-	}
-	var result interface{}
-	return p.conn.Call(ctx, rpcMethodClose, &params).Await(ctx, &result)
-
+	return nil
 }
 
-func (p *Previewer) Destroy(ctx context.Context) {
-	p.Close(ctx, p.targetFile)
-	p.conn.Close()
+func (p *PreviewClient) Destroy(ctx context.Context) {
+	p.Close(ctx)
 }
 
-func (p *Previewer) requestLspPreview(ctx context.Context, targetFile string, opts PreviewOptions) (int, error) {
+func (p *PreviewClient) requestLspPreview(ctx context.Context, targetFile string, opts PreviewOptions) (string, int, error) {
 	taskID := rand.Text()[:8]
-	p.lastTask = taskID
 	args := []any{
 		"--task-id", taskID,
 		"--data-plane-host", "127.0.0.1:0",
@@ -169,7 +133,7 @@ func (p *Previewer) requestLspPreview(ctx context.Context, targetFile string, op
 	result, err := p.client.ExecuteCommand(ctx, cmd, []any{args})
 	if err != nil {
 		log.Println("start previewer failed: ", err)
-		return 0, err
+		return "", 0, err
 	}
 
 	// Try to open in built-in webview
@@ -180,25 +144,26 @@ func (p *Previewer) requestLspPreview(ctx context.Context, targetFile string, op
 
 	previewServerPort := cmdResp["staticServerPort"].(float64)
 
-	return int(previewServerPort), nil
+	return taskID, int(previewServerPort), nil
 }
 
-func (p *Previewer) killLspPreview(ctx context.Context) error {
-	if p.lastTask == "" {
+func (p *PreviewClient) killLspPreview(ctx context.Context) error {
+	if p.task == nil || p.task.taskID == "" {
 		return nil
 	}
 
-	_, err := p.client.ExecuteCommand(ctx, "tinymist.doKillPreview", []any{p.lastTask})
+	_, err := p.client.ExecuteCommand(ctx, "tinymist.doKillPreview", []any{p.task.taskID})
 	if err != nil {
-		log.Printf("kill preview task %s failed: %v", p.lastTask, err)
+		log.Printf("kill preview tasks %v failed: %v", p.task.taskID, err)
 		return err
 	}
+	p.task = nil
 
 	return nil
 }
 
-func (p *Previewer) scollLspPreview(ctx context.Context, req map[string]any) error {
-	_, err := p.client.ExecuteCommand(ctx, "tinymist.scrollPreview", []any{p.lastTask, req})
+func (p *PreviewClient) scollLspPreview(ctx context.Context, taskID string, req map[string]any) error {
+	_, err := p.client.ExecuteCommand(ctx, "tinymist.scrollPreview", []any{taskID, req})
 	if err != nil {
 		log.Println("scroll previewer failed: ", err)
 		return err
@@ -207,10 +172,11 @@ func (p *Previewer) scollLspPreview(ctx context.Context, req map[string]any) err
 	return nil
 }
 
-func (p *Previewer) ScrollOnSelectionChange(ctx context.Context, pos gvcode.Position) {
-	if !p.isPreviewing {
+func (p *PreviewClient) ScrollOnSelectionChange(ctx context.Context, pos gvcode.Position) {
+	if p.task == nil {
 		return
 	}
+
 	ctx, cancel := context.WithTimeout(ctx, 100*time.Millisecond)
 	defer cancel()
 
@@ -220,7 +186,7 @@ func (p *Previewer) ScrollOnSelectionChange(ctx context.Context, pos gvcode.Posi
 		"line":      pos.Line,
 		"character": pos.Column,
 	}
-	p.scollLspPreview(ctx, req)
+	p.scollLspPreview(ctx, p.task.taskID, req)
 
 	// req2 := map[string]any{
 	// 	"event":     "changeCursorPosition",
@@ -229,56 +195,4 @@ func (p *Previewer) ScrollOnSelectionChange(ctx context.Context, pos gvcode.Posi
 	// 	"character": pos.Column,
 	// }
 	// p.scollLspPreview(ctx, req2)
-}
-
-func (p *Previewer) onWebviewClosed(ctx context.Context) error {
-	p.isPreviewing = false
-	err := p.killLspPreview(ctx)
-	if err != nil {
-		return err
-	}
-
-	return nil
-}
-
-func (p *Previewer) clientRPCHandle(ctx context.Context, req *jsonrpc2.Request) (any, error) {
-	if ctx.Err() != nil {
-		return nil, RequestCancelledError
-	}
-
-	defer func() {
-		if x := recover(); x != nil {
-			log.Printf("panic in request, method: %s", req.Method)
-		}
-	}()
-
-	switch req.Method {
-	case rpcMethodNotifyClosing:
-		var closeReq WebviewClosedNotifyReq
-		err := UnmarshalJSON(req.Params, &closeReq)
-		if err != nil {
-			return nil, err
-		}
-
-		if closeReq.TargetFile == p.targetFile {
-			p.onWebviewClosed(ctx)
-			log.Println("received webview closing notify for file ", p.targetFile)
-		}
-		return nil, nil
-	}
-
-	return nil, jsonrpc2.ErrMethodNotFound
-}
-
-func (p *Previewer) IsPreviewing() bool {
-	return p.isPreviewing
-}
-
-func clientHandler(previewer *Previewer) jsonrpc2.Handler {
-	return jsonrpc2.HandlerFunc(func(ctx context.Context, req *jsonrpc2.Request) (any, error) {
-		if ctx.Err() != nil {
-			return nil, RequestCancelledError
-		}
-		return previewer.clientRPCHandle(ctx, req)
-	})
 }

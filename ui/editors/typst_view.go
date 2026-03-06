@@ -23,6 +23,7 @@ import (
 	"looz.ws/typstify/service/bus"
 	"looz.ws/typstify/typst"
 	"looz.ws/typstify/ui/dialog"
+	uipreview "looz.ws/typstify/ui/preview"
 	"looz.ws/typstify/ui/statusbar"
 	"looz.ws/typstify/ui/viewer"
 	"looz.ws/typstify/utils"
@@ -46,14 +47,17 @@ var (
 
 type TypstEditor struct {
 	*view.BaseView
-	//vm      view.ViewManager
-	srv         *service.ServiceFacade
-	previewer   *preview.Previewer
-	srcEditor   *editor.TextEditor
-	targetFile  string // the main file
-	currentFile string // switched temp file
-	breadcrums  *fileBreadcrums
-	lspReady    bool
+	srv           *service.ServiceFacade
+	previewClient *preview.PreviewClient
+	srcEditor     *editor.TextEditor
+	targetFile    string // the main file
+	currentFile   string // switched temp file
+	breadcrums    *fileBreadcrums
+	lspReady      bool
+
+	// Preview
+	uiPreviewer    *uipreview.Previewer
+	previewVisible bool
 }
 
 func (te *TypstEditor) ID() view.ViewID {
@@ -93,13 +97,10 @@ func (te *TypstEditor) OnNavTo(intent view.Intent) error {
 
 	client := lsp.GetLspClient(rootDir, te.srv.Settings())
 	if client != nil {
-		previewer, err := preview.NewPreviewer(client)
-		if err != nil {
-			panic(err)
-		}
-
-		te.previewer = previewer
+		te.previewClient = preview.NewPreviwClient(client, te.targetFile)
 	}
+
+	te.uiPreviewer = uipreview.NewPreviewer(te.targetFile, te.srv)
 
 	return nil
 }
@@ -113,8 +114,8 @@ func (te *TypstEditor) setupEditor(path string, createOnMissing bool, readonly b
 	te.srcEditor = srcEditor
 
 	te.srcEditor.OnSelectChange = func(p gvcode.Position) {
-		if te.previewer != nil {
-			te.previewer.ScrollOnSelectionChange(context.Background(), p)
+		if te.previewClient != nil {
+			te.previewClient.ScrollOnSelectionChange(context.Background(), p)
 		}
 	}
 	te.srcEditor.OnOpenLink = te.openLink
@@ -161,24 +162,33 @@ func (te *TypstEditor) Actions() []view.ViewAction {
 			Name: "Preview",
 			Icon: previewIcon,
 			OnClicked: func(gtx C) {
-				if te.previewer != nil {
-					if !te.previewer.IsPreviewing() {
-						err := te.previewer.New(context.Background(), te.currentFile,
-							preview.PreviewOptions{
-								PreviewMode:      "document",
-								ProjectRoot:      te.srv.CurrentProjectDir(),
-								FontPath:         te.srv.CurrentProjectDir(),
-								PackagePath:      te.srv.Settings().Typst().PackageDir,
-								PackageCachePath: te.srv.Settings().Typst().PackageCacheDir,
-								InvertColor:      "never",
-								PartialRender:    false,
-								OpenInBrowser:    te.srv.Settings().General().OpenPreviewInBrowser != 0,
-							})
+				if te.previewVisible {
+					te.previewVisible = false
+					return
+				}
 
-						if err != nil {
-							log.Println("preview ERR: ", err)
-						}
+				if te.previewClient != nil {
+					serverAddr, err := te.previewClient.New(context.Background(),
+						preview.PreviewOptions{
+							PreviewMode:      "document",
+							ProjectRoot:      te.srv.CurrentProjectDir(),
+							FontPath:         te.srv.CurrentProjectDir(),
+							PackagePath:      te.srv.Settings().Typst().PackageDir,
+							PackageCachePath: te.srv.Settings().Typst().PackageCacheDir,
+							InvertColor:      "never",
+							PartialRender:    false,
+							OpenInBrowser:    te.srv.Settings().General().OpenPreviewInBrowser != 0,
+						})
+
+					if err != nil {
+						log.Println("preview ERR: ", err)
+						return
 					}
+
+					if serverAddr != "" && te.uiPreviewer != nil {
+						te.uiPreviewer.Navigate(serverAddr)
+					}
+					te.previewVisible = true
 				}
 			},
 		},
@@ -225,12 +235,21 @@ func (te *TypstEditor) Layout(gtx layout.Context, th *theme.Theme) layout.Dimens
 				return te.breadcrums.Layout(gtx, th)
 			}),
 			layout.Rigid(layout.Spacer{Height: unit.Dp(4)}.Layout),
-			layout.Rigid(func(gtx C) D {
+			layout.Flexed(1, func(gtx C) D {
 				return te.srcEditor.Layout(gtx, th, te.srv.Settings().Editor())
 			}),
 		)
 	})
+}
 
+// IsPreviewVisible returns whether the inline preview panel should be shown.
+func (te *TypstEditor) IsPreviewVisible() bool {
+	return te.previewVisible && te.uiPreviewer != nil
+}
+
+// LayoutPreview renders the preview panel. Called by home.go when preview is active.
+func (te *TypstEditor) LayoutPreview(gtx C, th *theme.Theme) D {
+	return te.uiPreviewer.Layout(gtx, th)
 }
 
 // Implements StatusIndicator to let statusbar render it.
@@ -240,12 +259,13 @@ func (te *TypstEditor) LayoutStatus(gtx C, th *theme.Theme) D {
 
 func (te *TypstEditor) OnFinish() {
 	te.BaseView.OnFinish()
-	// Put your cleanup code here.
 	if te.srcEditor != nil {
 		te.srcEditor.Close()
 	}
 
-	te.previewer.Destroy(context.Background())
+	if te.previewClient != nil {
+		te.previewClient.Destroy(context.Background())
+	}
 }
 
 func (te *TypstEditor) onExportFile(params *typst.CompileParams) {

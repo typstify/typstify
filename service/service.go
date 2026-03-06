@@ -6,14 +6,12 @@ import (
 	"io"
 	"log"
 	"net/http"
-	"os/exec"
 	"time"
 
 	"github.com/oligo/gioview/explorer"
 	"github.com/oligo/gioview/image"
 	"github.com/oligo/gioview/view"
 	"looz.ws/typstify/lsp"
-	"looz.ws/typstify/preview"
 	"looz.ws/typstify/service/bus"
 	"looz.ws/typstify/service/net"
 	"looz.ws/typstify/service/settings"
@@ -32,11 +30,15 @@ type ServiceFacade struct {
 	pkgService         *pkg.TypstPkgService
 	windowSrv          *WindowService
 	fileChooserBuilder func() *explorer.FileChooser
-	previewServer      *exec.Cmd
 	consoleState       *console.ConsoleState
 
 	currentProjectDir string
 	DeviceBlocked     bool
+
+	// Window layout metrics for native webview positioning.
+	// Set by the home view each frame.
+	WindowContentWidth int
+	ViewAreaTopOffset  int
 }
 
 func NewService(ctx context.Context) *ServiceFacade {
@@ -55,8 +57,6 @@ func NewService(ctx context.Context) *ServiceFacade {
 		windowSrv:     NewWindowService(ctx, st),
 		consoleState:  console.NewConsoleState(1000),
 	}
-
-	s.SpawnPreview(ctx)
 
 	eventbus.Subscribe(s, "service.onSettingUpdate", bus.TopicSettingsUpdated, func(topic string, data interface{}) {
 		s.pkgService = pkg.NewTypstPkgService(st.Typst())
@@ -109,7 +109,6 @@ func (s *ServiceFacade) Close(ctx context.Context) {
 	s.windowSrv.Shutdown()
 	s.windowSrv.Wait()
 	lsp.StopLsp()
-	s.previewServer.Cancel()
 	log.Println("service down")
 }
 
@@ -186,16 +185,6 @@ func (s *ServiceFacade) SetProjectDir(dir string) {
 
 func (s *ServiceFacade) CurrentProjectDir() string {
 	return s.currentProjectDir
-}
-
-func (s *ServiceFacade) SpawnPreview(ctx context.Context) error {
-	cmd, err := preview.SpawnPreview(ctx)
-	if err != nil {
-		return err
-	}
-
-	s.previewServer = cmd
-	return nil
 }
 
 func (s *ServiceFacade) Console() *console.ConsoleState {

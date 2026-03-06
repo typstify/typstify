@@ -18,6 +18,12 @@ import (
 	"gioui.org/widget"
 )
 
+// previewable is implemented by views that support an inline preview panel.
+type previewable interface {
+	IsPreviewVisible() bool
+	LayoutPreview(gtx C, th *theme.Theme) D
+}
+
 type HomeView struct {
 	view.ViewManager
 	srv          *service.ServiceFacade
@@ -36,6 +42,10 @@ type HomeView struct {
 	yresizer   *widgets.Resize
 	lastYRatio float32
 	hbar       *widgets.ResizeBar
+
+	// preview resizer (view | preview split)
+	previewResizer *widgets.Resize
+	previewBar     *widgets.ResizeBar
 
 	welcome WelcomeView
 }
@@ -74,6 +84,9 @@ func (hv *HomeView) Layout(gtx C, th *theme.Theme, deco *widget.Decorations, tit
 		// 	return d.Layout(gtx)
 		// }),
 		layout.Flexed(1, func(gtx C) D {
+			// Store window layout metrics for native webview positioning.
+			hv.srv.WindowContentWidth = gtx.Constraints.Max.X
+
 			if hv.resizer == (widgets.Resize{}) {
 				hv.resizer.Axis = layout.Horizontal
 				hv.resizer.Ratio = float32(gtx.Dp(unit.Dp(280))) / float32(gtx.Constraints.Max.X)
@@ -107,6 +120,8 @@ func (hv *HomeView) Layout(gtx C, th *theme.Theme, deco *widget.Decorations, tit
 					rect := clip.Rect{Max: gtx.Constraints.Max}
 					paint.FillShape(gtx.Ops, th.Bg, rect.Op())
 
+					rightPanelH := gtx.Constraints.Max.Y
+
 					return layout.Flex{
 						Axis:      layout.Vertical,
 						Alignment: layout.Middle,
@@ -120,6 +135,8 @@ func (hv *HomeView) Layout(gtx C, th *theme.Theme, deco *widget.Decorations, tit
 						}),
 
 						layout.Flexed(1, func(gtx C) D {
+							// Top offset = tabbar + spacer = rightPanelH - this child's height.
+							hv.srv.ViewAreaTopOffset = rightPanelH - gtx.Constraints.Max.Y
 							return hv.layoutMain(gtx, th)
 						}),
 					)
@@ -203,10 +220,35 @@ func (hv *HomeView) layoutMain(gtx C, th *theme.Theme) D {
 }
 
 func (hv *HomeView) layoutView(gtx C, th *theme.Theme) D {
-	if hv.CurrentView() == nil {
+	cv := hv.CurrentView()
+	if cv == nil {
 		return hv.welcome.Layout(gtx, th)
 	}
-	return hv.CurrentView().Layout(gtx, th)
+
+	pv, ok := cv.(previewable)
+	if !ok || !pv.IsPreviewVisible() {
+		return cv.Layout(gtx, th)
+	}
+
+	// Initialize preview resizer on first use.
+	if hv.previewResizer == nil {
+		hv.previewResizer = &widgets.Resize{Axis: layout.Horizontal, Ratio: 0.7}
+	}
+
+	return hv.previewResizer.Layout(gtx,
+		func(gtx C) D {
+			return cv.Layout(gtx, th)
+		},
+		func(gtx C) D {
+			return pv.LayoutPreview(gtx, th)
+		},
+		func(gtx C) D {
+			if hv.previewBar == nil {
+				hv.previewBar = widgets.NewResizeBar(layout.Vertical)
+			}
+			return hv.previewBar.Layout(gtx, th)
+		},
+	)
 }
 
 func (hv *HomeView) OnClose() {
