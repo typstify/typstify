@@ -2,7 +2,6 @@ package main
 
 import (
 	"context"
-	"flag"
 	"log"
 	"os"
 	"path/filepath"
@@ -11,7 +10,6 @@ import (
 	//"github.com/pkg/profile"
 
 	"looz.ws/typstify/logger"
-	"looz.ws/typstify/preview"
 	"looz.ws/typstify/service"
 	"looz.ws/typstify/ui"
 )
@@ -23,25 +21,6 @@ func main() {
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
 
-	previewCmd := flag.NewFlagSet("preview", flag.ExitOnError)
-
-	if len(os.Args) > 1 {
-		switch os.Args[1] {
-		case "preview":
-			previewCmd.Parse(os.Args[2:])
-			previewServer := preview.NewPreviewServer()
-			defer previewServer.Close()
-			// Run starts the server and blocks the thread.
-			previewServer.Run()
-		}
-	} else {
-		// And then the main UI loop.
-		startMain(ctx)
-	}
-
-}
-
-func startMain(ctx context.Context) {
 	srv := service.NewService(ctx)
 	// init logger
 	logger.InitLogger(filepath.Join(srv.Settings().General().RootDir, "application.log"))
