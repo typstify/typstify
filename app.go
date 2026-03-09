@@ -37,8 +37,5 @@ func main() {
 		os.Exit(0)
 	}()
 
-	// Proxy Gio events to gioplugins
-	//go gioplugins.ProxyEvents(app.Events)
-
 	app.Main()
 }

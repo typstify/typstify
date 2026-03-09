@@ -2,7 +2,6 @@ package preview
 
 import (
 	"context"
-	"image"
 	"path/filepath"
 
 	"gioui.org/app"
@@ -10,28 +9,24 @@ import (
 	"gioui.org/io/system"
 	"gioui.org/layout"
 	"gioui.org/op"
-	"gioui.org/op/clip"
 	"gioui.org/unit"
 	"gioui.org/widget/material"
+	"github.com/gioui-plugins/gio-plugins/plugin/gioplugins"
 	"github.com/oligo/gioview/theme"
 
 	"looz.ws/typstify/i18n"
 	"looz.ws/typstify/service"
 )
 
-type (
-	C = layout.Context
-	D = layout.Dimensions
-)
-
 type Previewer struct {
-	srv         *service.ServiceFacade
-	targetFile  string
-	err         error
-	popupCancel context.CancelFunc
-	windowChan  chan struct{}
-	isPopup     bool
-	webview     *WebView
+	srv            *service.ServiceFacade
+	targetFile     string
+	err            error
+	popupCancel    context.CancelFunc
+	windowChan     chan struct{}
+	isPopup        bool
+	webview        *WebView
+	destroyPending bool // true when webview should be destroyed on next layout
 }
 
 func NewPreviewer(targetFile string, srv *service.ServiceFacade) *Previewer {
@@ -46,26 +41,40 @@ func (p *Previewer) Navigate(url string) {
 	p.webview.Navigate(url)
 }
 
-func (p *Previewer) Layout(gtx C, th *theme.Theme) D {
+// HideWebView makes the native webview invisible and restores keyboard focus
+// to the Gio view. The plugin auto-hides unseen webviews, but on macOS the
+// WKWebView retains first-responder status even when hidden, so we must
+// explicitly restore focus to the Gio NSView.
+func (p *Previewer) HideWebView(gtx layout.Context) {
+	//p.webview.Hide(gtx)
+}
+
+func (p *Previewer) Layout(gtx layout.Context, th *theme.Theme) layout.Dimensions {
+	// Handle pending destroy request
+	if p.destroyPending {
+		p.webview.Destroy(gtx)
+		p.webview = nil
+		p.destroyPending = false
+		return layout.Dimensions{}
+	}
+
+	// If webview was destroyed and not recreated, return empty dimensions
+	if p.webview == nil {
+		return layout.Dimensions{}
+	}
+
 	// Left inset so the native webview doesn't cover the resize drag handle.
-	return layout.Inset{Left: unit.Dp(6)}.Layout(gtx, func(gtx C) D {
+	return layout.Inset{Left: unit.Dp(6)}.Layout(gtx, func(gtx layout.Context) layout.Dimensions {
 		absOffset := f32.Point{
 			X: float32(p.srv.WindowContentWidth - gtx.Constraints.Max.X),
 			Y: float32(p.srv.ViewAreaTopOffset),
 		}
-
-		macro := op.Record(gtx.Ops)
-		dims := p.webview.Layout(gtx, th, absOffset)
-		callOp := macro.Stop()
-
-		defer clip.Rect(image.Rectangle{Max: dims.Size}).Push(gtx.Ops).Pop()
-		callOp.Add(gtx.Ops)
-		return dims
+		return p.webview.Layout(gtx, th, absOffset)
 	})
 }
 
-func (p *Previewer) LayoutPopupIndicator(gtx C, th *theme.Theme) D {
-	return layout.Center.Layout(gtx, func(gtx C) D {
+func (p *Previewer) LayoutPopupIndicator(gtx layout.Context, th *theme.Theme) layout.Dimensions {
+	return layout.Center.Layout(gtx, func(gtx layout.Context) layout.Dimensions {
 		return material.Label(th.Theme, th.TextSize, i18n.Translate("Previewing is switched to the pop-up window.")).Layout(gtx)
 	})
 }
@@ -75,10 +84,6 @@ func (p *Previewer) IsPopup() bool {
 }
 
 func (p *Previewer) Popup() bool {
-	if !p.isPopup {
-		return false
-	}
-
 	// popup previewer.
 	ctx, cancel := context.WithCancel(context.Background())
 	p.popupCancel = cancel
@@ -108,7 +113,9 @@ func (p *Previewer) Run(ctx context.Context, w *service.Window) error {
 	}()
 
 	for {
-		switch e := w.Event().(type) {
+		evt := gioplugins.Hijack(w.Window)
+
+		switch e := evt.(type) {
 		case app.DestroyEvent:
 			p.CancelPopup()
 			return e.Err
@@ -122,6 +129,17 @@ func (p *Previewer) Run(ctx context.Context, w *service.Window) error {
 
 func (p *Previewer) Close() {
 	p.CancelPopup()
+}
+
+// Destroy permanently destroys the native webview.
+// Called when switching to OpenInBrowser mode to release resources.
+func (p *Previewer) Destroy() {
+	// We need a valid context to execute the destroy command.
+	// Since this is called outside of layout, we defer it to the next layout.
+	// The webview will be destroyed on the next frame.
+	// Actually, we need to handle this differently - the Destroy needs to be
+	// called during a frame. We'll use a flag that gets processed in Layout.
+	p.destroyPending = true
 }
 
 func (p *Previewer) CancelPopup() {

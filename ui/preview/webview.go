@@ -2,27 +2,21 @@ package preview
 
 import (
 	"image"
+	"sync"
 
 	"gioui.org/f32"
+	"gioui.org/layout"
 	"gioui.org/op"
 	"github.com/gioui-plugins/gio-plugins/plugin/gioplugins"
 	"github.com/gioui-plugins/gio-plugins/webviewer/giowebview"
 	"github.com/oligo/gioview/theme"
 )
 
-// Script injected into the webview to block all keyboard events.
-// The preview panel is read-only; preventing key events stops the
-// native webview from stealing input (e.g. F, H causing scrolling)
-// that should go to the Gio editor.
-const blockKeyboardJS = `document.addEventListener('keydown', function(e){ e.preventDefault(); e.stopPropagation(); }, true);
-document.addEventListener('keyup', function(e){ e.preventDefault(); e.stopPropagation(); }, true);`
-
 type WebView struct {
 	tag         int
 	currentURL  string
-	pendingURL  string
 	initialized bool // true after first frame with WebViewOp
-	jsInstalled bool // true after keyboard-blocking JS is installed
+	once        sync.Once
 }
 
 func NewWebView() *WebView {
@@ -30,13 +24,41 @@ func NewWebView() *WebView {
 }
 
 func (wv *WebView) Navigate(url string) {
-	wv.pendingURL = url
+	wv.currentURL = url
+}
+
+func (wv *WebView) initialize(gtx layout.Context) {
+	if wv.currentURL == "" {
+		return
+	}
+
+	wv.once.Do(func() {
+		gioplugins.Execute(gtx, giowebview.NavigateCmd{
+			View: &wv.tag,
+			URL:  wv.currentURL,
+		})
+	})
+
+}
+
+// Destroy sends a DestroyCmd to giowebview to permanently destroy the native webview.
+func (wv *WebView) Destroy(gtx layout.Context) {
+	if !wv.initialized {
+		return
+	}
+
+	// DestroyCmd does not work for now, as it's just a empty cmd in giowebview.
+	// We place it here to wait for it to be implemented in the future.
+	gioplugins.Execute(gtx, giowebview.DestroyCmd{View: &wv.tag})
+	// Reset state so a new webview can be created if needed
+	wv.initialized = false
+	wv.currentURL = ""
 }
 
 // Layout renders the webview at the given absolute offset within the window
 // content area. The giowebview plugin does not track Gio's transform stack,
 // so the caller must provide the absolute position.
-func (wv *WebView) Layout(gtx C, th *theme.Theme, absOffset f32.Point) D {
+func (wv *WebView) Layout(gtx layout.Context, th *theme.Theme, absOffset f32.Point) layout.Dimensions {
 	// Drain webview events.
 	for {
 		_, ok := gioplugins.Event(gtx, giowebview.Filter{Target: &wv.tag})
@@ -53,28 +75,12 @@ func (wv *WebView) Layout(gtx C, th *theme.Theme, absOffset f32.Point) D {
 	giowebview.OffsetOp{Point: absOffset}.Add(gtx.Ops)
 	giowebview.RectOp{Size: f32.Point{X: w, Y: h}}.Add(gtx.Ops)
 
-	if wv.initialized {
-		// Install keyboard-blocking JS once, before the first navigation.
-		if !wv.jsInstalled {
-			gioplugins.Execute(gtx, giowebview.InstallJavascriptCmd{
-				View:   &wv.tag,
-				Script: blockKeyboardJS,
-			})
-			wv.jsInstalled = true
-		}
-
-		if wv.pendingURL != "" {
-			gioplugins.Execute(gtx, giowebview.NavigateCmd{
-				View: &wv.tag,
-				URL:  wv.pendingURL,
-			})
-			wv.currentURL = wv.pendingURL
-			wv.pendingURL = ""
-		}
-	} else {
+	if !wv.initialized {
 		wv.initialized = true
 		gtx.Execute(op.InvalidateCmd{})
+	} else {
+		wv.initialize(gtx)
 	}
 
-	return D{Size: image.Point{X: int(w), Y: int(h)}}
+	return layout.Dimensions{Size: image.Point{X: int(w), Y: int(h)}}
 }

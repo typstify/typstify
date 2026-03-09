@@ -79,6 +79,7 @@ func (ui *UI) Loop(ctx context.Context) error {
 		}
 
 		evt := gioplugins.Hijack(ui.window)
+		// evt := ui.window.Event()
 
 		switch e := evt.(type) {
 		case app.DestroyEvent:

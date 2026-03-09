@@ -20,8 +20,9 @@ import (
 
 // previewable is implemented by views that support an inline preview panel.
 type previewable interface {
-	IsPreviewVisible() bool
+	IsVisible() bool
 	LayoutPreview(gtx C, th *theme.Theme) D
+	HidePreview(gtx C)
 }
 
 type HomeView struct {
@@ -44,8 +45,9 @@ type HomeView struct {
 	hbar       *widgets.ResizeBar
 
 	// preview resizer (view | preview split)
-	previewResizer *widgets.Resize
-	previewBar     *widgets.ResizeBar
+	previewResizer    *widgets.Resize
+	previewBar        *widgets.ResizeBar
+	activePreviewView view.View // tracks which view has an active preview webview
 
 	welcome WelcomeView
 }
@@ -220,15 +222,36 @@ func (hv *HomeView) layoutMain(gtx C, th *theme.Theme) D {
 }
 
 func (hv *HomeView) layoutView(gtx C, th *theme.Theme) D {
+	// cv := hv.CurrentView()
+	// if cv == nil {
+	// 	return hv.welcome.Layout(gtx, th)
+	// }
+
+	// return cv.Layout(gtx, th)
+
 	cv := hv.CurrentView()
+
+	// If the view that owned the active preview changed or its preview is no
+	// longer visible, hide the native webview so it stops stealing input.
+	if hv.activePreviewView != nil {
+		if pv, ok := hv.activePreviewView.(previewable); ok {
+			if cv != hv.activePreviewView || !pv.IsVisible() {
+				pv.HidePreview(gtx)
+				hv.activePreviewView = nil
+			}
+		}
+	}
+
 	if cv == nil {
 		return hv.welcome.Layout(gtx, th)
 	}
 
 	pv, ok := cv.(previewable)
-	if !ok || !pv.IsPreviewVisible() {
+	if !ok || !pv.IsVisible() {
 		return cv.Layout(gtx, th)
 	}
+
+	hv.activePreviewView = cv
 
 	// Initialize preview resizer on first use.
 	if hv.previewResizer == nil {

@@ -100,8 +100,6 @@ func (te *TypstEditor) OnNavTo(intent view.Intent) error {
 		te.previewClient = preview.NewPreviwClient(client, te.targetFile)
 	}
 
-	te.uiPreviewer = uipreview.NewPreviewer(te.targetFile, te.srv)
-
 	return nil
 }
 
@@ -162,34 +160,56 @@ func (te *TypstEditor) Actions() []view.ViewAction {
 			Name: "Preview",
 			Icon: previewIcon,
 			OnClicked: func(gtx C) {
-				if te.previewVisible {
-					te.previewVisible = false
+				te.previewVisible = !te.previewVisible
+
+				if te.previewClient == nil {
 					return
 				}
 
-				if te.previewClient != nil {
-					serverAddr, err := te.previewClient.New(context.Background(),
-						preview.PreviewOptions{
-							PreviewMode:      "document",
-							ProjectRoot:      te.srv.CurrentProjectDir(),
-							FontPath:         te.srv.CurrentProjectDir(),
-							PackagePath:      te.srv.Settings().Typst().PackageDir,
-							PackageCachePath: te.srv.Settings().Typst().PackageCacheDir,
-							InvertColor:      "never",
-							PartialRender:    false,
-							OpenInBrowser:    te.srv.Settings().General().OpenPreviewInBrowser != 0,
-						})
+				openInBrowser := te.srv.Settings().General().OpenPreviewInBrowser != 0
+				if !te.previewVisible {
+					te.previewClient.Close(context.Background())
 
-					if err != nil {
-						log.Println("preview ERR: ", err)
-						return
+					// Close existing preview webview if switching to browser mode
+					if te.uiPreviewer != nil {
+						te.uiPreviewer.CancelPopup()
+						//te.uiPreviewer.Destroy()
+						//te.uiPreviewer = nil
 					}
-
-					if serverAddr != "" && te.uiPreviewer != nil {
-						te.uiPreviewer.Navigate(serverAddr)
-					}
-					te.previewVisible = true
+					return
 				}
+
+				// create new
+				serverAddr, err := te.previewClient.New(context.Background(),
+					preview.PreviewOptions{
+						PreviewMode:      "document",
+						ProjectRoot:      te.srv.CurrentProjectDir(),
+						FontPath:         te.srv.CurrentProjectDir(),
+						PackagePath:      te.srv.Settings().Typst().PackageDir,
+						PackageCachePath: te.srv.Settings().Typst().PackageCacheDir,
+						InvertColor:      "never",
+						PartialRender:    false,
+						OpenInBrowser:    openInBrowser,
+					})
+
+				if err != nil {
+					log.Println("preview ERR: ", err)
+					return
+				}
+
+				// If OpenInBrowser is true, the LSP handles opening the browser
+				if openInBrowser {
+					return
+				}
+
+				if serverAddr != "" {
+					if te.uiPreviewer == nil {
+						te.uiPreviewer = uipreview.NewPreviewer(te.targetFile, te.srv)
+					}
+					te.uiPreviewer.Navigate(serverAddr)
+					// te.uiPreviewer.Popup()
+				}
+
 			},
 		},
 
@@ -243,8 +263,15 @@ func (te *TypstEditor) Layout(gtx layout.Context, th *theme.Theme) layout.Dimens
 }
 
 // IsPreviewVisible returns whether the inline preview panel should be shown.
-func (te *TypstEditor) IsPreviewVisible() bool {
+func (te *TypstEditor) IsVisible() bool {
 	return te.previewVisible && te.uiPreviewer != nil
+}
+
+// HidePreview hides the native webview so it stops intercepting keyboard events.
+func (te *TypstEditor) HidePreview(gtx C) {
+	if te.uiPreviewer != nil {
+		te.uiPreviewer.HideWebView(gtx)
+	}
 }
 
 // LayoutPreview renders the preview panel. Called by home.go when preview is active.
@@ -265,6 +292,10 @@ func (te *TypstEditor) OnFinish() {
 
 	if te.previewClient != nil {
 		te.previewClient.Destroy(context.Background())
+	}
+
+	if te.uiPreviewer != nil {
+		te.uiPreviewer.Destroy()
 	}
 }
 
