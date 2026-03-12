@@ -5,6 +5,7 @@ import (
 	"image/color"
 	"io"
 	"log"
+	"strings"
 
 	"gioui.org/io/event"
 	"gioui.org/io/pointer"
@@ -26,9 +27,11 @@ const (
 	mimeDnd = "dnd/filepath"
 	// For read from clipboard use.
 	mimeText = "application/text"
+
+	dragThresholdPixel = 6
 )
 
-func (fn *FlatNode) Layout(gtx layout.Context, th *theme.Theme, textColor color.NRGBA, tree *TreeView) D {
+func (fn *FlatNode) Layout(gtx layout.Context, th *theme.Theme, textColor color.NRGBA, tree *TreeView) layout.Dimensions {
 	fn.Update(gtx, tree)
 
 	inset := layout.Inset{
@@ -39,9 +42,9 @@ func (fn *FlatNode) Layout(gtx layout.Context, th *theme.Theme, textColor color.
 
 	macro := op.Record(gtx.Ops)
 	//dims := fn.layout(gtx, th, textColor)
-	dims := fn.State.Label.Layout(gtx, th, func(gtx C, color color.NRGBA) D {
-		return inset.Layout(gtx, func(gtx C) D {
-			return layout.W.Layout(gtx, func(gtx C) D {
+	dims := fn.State.Label.Layout(gtx, th, func(gtx layout.Context, color color.NRGBA) layout.Dimensions {
+		return inset.Layout(gtx, func(gtx layout.Context) layout.Dimensions {
+			return layout.W.Layout(gtx, func(gtx layout.Context) layout.Dimensions {
 				return fn.layout(gtx, th, textColor)
 			})
 		})
@@ -60,7 +63,7 @@ func (fn *FlatNode) Layout(gtx layout.Context, th *theme.Theme, textColor color.
 	return dims
 }
 
-func (fn *FlatNode) layout(gtx layout.Context, th *theme.Theme, textColor color.NRGBA) D {
+func (fn *FlatNode) layout(gtx layout.Context, th *theme.Theme, textColor color.NRGBA) layout.Dimensions {
 	if fn.State.Editable == nil {
 		fn.State.Editable = gv.EditableLabel(fn.Node.Name(), func(text string) {
 			err := fn.Node.UpdateName(text)
@@ -74,48 +77,59 @@ func (fn *FlatNode) layout(gtx layout.Context, th *theme.Theme, textColor color.
 	fn.State.Editable.TextSize = th.TextSize
 
 	return fn.State.Draggable.Layout(gtx,
-		func(gtx C) D {
+		func(gtx layout.Context) layout.Dimensions {
 			return layout.Flex{Alignment: layout.Middle}.Layout(gtx,
-				layout.Rigid(func(gtx C) D {
-					if fn.Icon == nil {
+				layout.Rigid(func(gtx layout.Context) layout.Dimensions {
+					if fn.Icon == nil && !fn.Node.IsDir() {
 						return layout.Dimensions{}
 					}
-					return layout.Inset{Right: unit.Dp(6)}.Layout(gtx, func(gtx C) D {
+
+					icon := fn.Icon
+					if fn.Node.IsDir() {
+						if fn.State.Expanded {
+							icon = FolderOpenIcon
+						} else {
+							icon = FolderIcon
+						}
+					}
+
+					return layout.Inset{Right: unit.Dp(6)}.Layout(gtx, func(gtx layout.Context) layout.Dimensions {
 						iconColor := th.ContrastBg
-						return misc.Icon{Icon: fn.Icon, Color: iconColor, Size: IconSize}.Layout(gtx, th)
+						return misc.Icon{Icon: icon, Color: iconColor, Size: IconSize}.Layout(gtx, th)
 					})
 				}),
-				layout.Flexed(1, func(gtx C) D {
+				layout.Flexed(1, func(gtx layout.Context) layout.Dimensions {
 					gtx.Constraints.Min.X = gtx.Constraints.Max.X
 					return fn.State.Editable.Layout(gtx, th)
 				}),
 			)
 		},
-		func(gtx C) D {
+		func(gtx layout.Context) layout.Dimensions {
 			return fn.layoutDraggingBox(gtx, th)
 		},
 	)
 
 }
 
-func (fn *FlatNode) layoutDraggingBox(gtx C, th *theme.Theme) D {
+func (fn *FlatNode) layoutDraggingBox(gtx layout.Context, th *theme.Theme) layout.Dimensions {
 	if !fn.State.Draggable.Dragging() {
-		return D{}
+		return layout.Dimensions{}
 	}
 
 	offset := fn.State.Draggable.Pos()
-	if offset.Round().X == 0 && offset.Round().Y == 0 {
-		return D{}
+	// Detect if the dragging exceeds the threshold.
+	if offset.Round().X < dragThresholdPixel && offset.Round().Y < dragThresholdPixel {
+		return layout.Dimensions{}
 	}
 
 	macro := op.Record(gtx.Ops)
-	dims := func(gtx C) D {
+	dims := func(gtx layout.Context) layout.Dimensions {
 		return widget.Border{
 			Color:        th.ContrastBg,
 			Width:        unit.Dp(1),
 			CornerRadius: unit.Dp(8),
-		}.Layout(gtx, func(gtx C) D {
-			return layout.Inset{Top: unit.Dp(4), Bottom: unit.Dp(4), Left: unit.Dp(8), Right: unit.Dp(8)}.Layout(gtx, func(gtx C) D {
+		}.Layout(gtx, func(gtx layout.Context) layout.Dimensions {
+			return layout.Inset{Top: unit.Dp(4), Bottom: unit.Dp(4), Left: unit.Dp(8), Right: unit.Dp(8)}.Layout(gtx, func(gtx layout.Context) layout.Dimensions {
 				lb := material.Label(th.Theme, th.TextSize, fn.Node.Name())
 				lb.Color = th.ContrastFg
 				return lb.Layout(gtx)
@@ -133,7 +147,7 @@ func (fn *FlatNode) layoutDraggingBox(gtx C, th *theme.Theme) D {
 	return dims
 }
 
-func (fn *FlatNode) Update(gtx C, tree *TreeView) error {
+func (fn *FlatNode) Update(gtx layout.Context, tree *TreeView) error {
 	if err := fn.processDndEvents(gtx, fn.State, tree); err != nil {
 		return err
 	}
@@ -141,7 +155,10 @@ func (fn *FlatNode) Update(gtx C, tree *TreeView) error {
 	return nil
 }
 
-func (fn *FlatNode) processDndEvents(gtx C, state *NodeState, tree *TreeView) error {
+func (fn *FlatNode) processDndEvents(gtx layout.Context, state *NodeState, tree *TreeView) error {
+	if gtx.Focused(fn.Node) {
+		log.Println("node focused: ", fn.Node.Path)
+	}
 	filters := []event.Filter{
 		// Detect if pointer is inside of the dir item, so we can highlight it when dropping items to it.
 		pointer.Filter{Target: fn.Node, Kinds: pointer.Enter | pointer.Leave},
@@ -181,10 +198,9 @@ func (fn *FlatNode) processDndEvents(gtx C, state *NodeState, tree *TreeView) er
 				return err
 			}
 
-			log.Printf("flatNode data event, dest: %s, src: %s", fn.Node.Path, string(source))
-
 			if event.Type == mimeDnd {
 				tree.OnDropped(fn.Node, string(source))
+				gtx.Execute(op.InvalidateCmd{})
 			}
 
 		}
@@ -195,7 +211,7 @@ func (fn *FlatNode) processDndEvents(gtx C, state *NodeState, tree *TreeView) er
 		state.Draggable.Type = mimeDnd
 	}
 	if m, ok := state.Draggable.Update(gtx); ok {
-		state.Draggable.Offer(gtx, m, newFileNodeReader(fn.Node))
+		state.Draggable.Offer(gtx, m, io.NopCloser(strings.NewReader(fn.Node.Path)))
 	}
 
 	return nil

@@ -1,8 +1,6 @@
 package filetree
 
 import (
-	"strings"
-
 	"gioui.org/unit"
 	"gioui.org/widget"
 	"github.com/oligo/gioview/explorer"
@@ -38,21 +36,4 @@ type FlatNode struct {
 	Icon            *widget.Icon
 	VerticalPadding unit.Dp
 	IndentUnit      unit.Dp
-}
-
-// Implelments io.ReadCloser for widget.Draggable.
-type fileNodeReader struct {
-	pathReader strings.Reader
-}
-
-func newFileNodeReader(node *FileNode) *fileNodeReader {
-	return &fileNodeReader{pathReader: *strings.NewReader(node.Path)}
-}
-
-func (f *fileNodeReader) Read(p []byte) (n int, err error) {
-	return f.pathReader.Read(p)
-}
-
-func (f *fileNodeReader) Close() error {
-	return nil
 }

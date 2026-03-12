@@ -29,14 +29,11 @@ import (
 	"looz.ws/typstify/utils"
 )
 
-type (
-	C = layout.Context
-	D = layout.Dimensions
-)
-
 var (
-	IconSize    = unit.Dp(14)
-	FileIcon, _ = widget.NewIcon(icons.ActionDescription)
+	IconSize          = unit.Dp(14)
+	FileIcon, _       = widget.NewIcon(icons.ActionDescription)
+	FolderIcon, _     = widget.NewIcon(icons.NavigationChevronRight)
+	FolderOpenIcon, _ = widget.NewIcon(icons.NavigationExpandMore)
 )
 
 type OnDropConfirmFunc func(srcPath string, dest *FileNode, onConfirmed func())
@@ -55,8 +52,7 @@ type TreeView struct {
 	list widget.List
 
 	// The selected node
-	selectedNode       *FileNode
-	selectedNodeCutted bool
+	selectedNode *FileNode
 
 	// node currently being dropped to
 	currentDropTarget *FileNode
@@ -98,6 +94,10 @@ func (t *TreeView) GetState(path string) *NodeState {
 	return newState
 }
 
+func (t *TreeView) deleteState(path string) {
+	delete(t.states, path)
+}
+
 // Rebuild flattens the tree. Call this ONLY when a node expands/collapses,
 // not on every single frame.
 func (t *TreeView) Rebuild() {
@@ -133,7 +133,7 @@ func (t *TreeView) droppable() bool {
 	return t.pointerEntered && t.dndInited
 }
 
-func (t *TreeView) Layout(gtx C, th *theme.Theme) D {
+func (t *TreeView) Layout(gtx layout.Context, th *theme.Theme) layout.Dimensions {
 	t.update(gtx)
 
 	if t.pendingRebuild {
@@ -149,10 +149,10 @@ func (t *TreeView) Layout(gtx C, th *theme.Theme) D {
 		Axis:      layout.Vertical,
 		Alignment: layout.Middle,
 	}.Layout(gtx,
-		layout.Rigid(func(gtx C) D {
+		layout.Rigid(func(gtx layout.Context) layout.Dimensions {
 			return t.layout(gtx, th, dropTarget)
 		}),
-		layout.Flexed(1, func(gtx C) D {
+		layout.Flexed(1, func(gtx layout.Context) layout.Dimensions {
 			// setup an clip area for context menu and key, pointer events.
 			//defer clip.Rect(image.Rectangle{Max: gtx.Constraints.Max}).Push(gtx.Ops).Pop()
 			//event.Op(gtx.Ops, t)
@@ -228,15 +228,16 @@ func (t *TreeView) update(gtx layout.Context) {
 	t.processKeyEvents(gtx)
 }
 
-func (t *TreeView) processKeyEvents(gtx C) error {
+func (t *TreeView) processKeyEvents(gtx layout.Context) error {
 	filters := []event.Filter{
+		key.FocusFilter{Target: t},
 		key.Filter{Focus: t, Name: "C", Required: key.ModShortcut},
 		key.Filter{Focus: t, Name: "V", Required: key.ModShortcut},
 		key.Filter{Focus: t, Name: "X", Required: key.ModShortcut},
 		transfer.TargetFilter{Target: t, Type: mimeText},
 		transfer.TargetFilter{Target: t, Type: mimeDnd},
 		// Detect if pointer is inside of the dir item, so we can highlight it when dropping items to it.
-		pointer.Filter{Target: t, Kinds: pointer.Enter | pointer.Leave},
+		pointer.Filter{Target: t, Kinds: pointer.Enter | pointer.Leave | pointer.Release},
 	}
 
 	for {
@@ -255,15 +256,10 @@ func (t *TreeView) processKeyEvents(gtx C) error {
 			// Initiate a paste operation, by requesting the clipboard contents; other
 			// half is in DataEvent.
 			case "V":
-				gtx.Execute(clipboard.ReadCmd{Tag: t})
-
+				t.onPasteInit(gtx)
 			// Copy or Cut selection -- ignored if nothing selected.
 			case "C", "X":
-				log.Println("copy|cut", t.selectedNode.Path)
-				t.OnCopyOrCut(gtx, t.selectedNode)
-				if event.Name == "X" {
-					t.selectedNodeCutted = true
-				}
+				t.OnCopyOrCut(gtx, t.selectedNode, event.Name == "X")
 			}
 
 		case pointer.Event:
@@ -272,8 +268,12 @@ func (t *TreeView) processKeyEvents(gtx C) error {
 				t.pointerEntered = true
 			case pointer.Leave:
 				t.pointerEntered = false
+			case pointer.Release:
+				// let treeView to grab the focus, so we can do copy/cut/paste
+				gtx.Execute(key.FocusCmd{Tag: t})
 			}
-
+		case key.FocusEvent:
+			// no-op
 		case transfer.InitiateEvent:
 			t.dndInited = true
 		case transfer.CancelEvent:
@@ -292,9 +292,9 @@ func (t *TreeView) processKeyEvents(gtx C) error {
 			defer gtx.Execute(op.InvalidateCmd{})
 
 			switch event.Type {
-			case mimeText:
-				isCut := t.selectedNodeCutted == true
-				if err := t.OnPaste(string(content), isCut, t.selectedNode); err != nil {
+			case mimeText: // when using MacOS, path paste is handled directly in key.Event 'cmd+V'
+				paths := parseClipboardPaths(string(content))
+				if err := t.OnPaste(paths, t.selectedNode); err != nil {
 					return err
 				}
 			case mimeDnd:
@@ -308,7 +308,7 @@ func (t *TreeView) processKeyEvents(gtx C) error {
 }
 
 // Create file or subfolder under the current folder.
-func (t *TreeView) CreateChild(gtx C, kind explorer.NodeKind) error {
+func (t *TreeView) CreateChild(gtx layout.Context, kind explorer.NodeKind) error {
 	if t.selectedNode == nil || !t.selectedNode.IsDir() {
 		return nil
 	}
@@ -356,53 +356,72 @@ func (t *TreeView) Remove() error {
 	return nil
 }
 
-// Move file to the current dir or the dir of the current file. Set removeOld to false to
-// simulate a copy OP.
-func (t *TreeView) OnPaste(data string, removeOld bool, dest *FileNode) error {
+func (t *TreeView) onPasteInit(gtx layout.Context) {
+	paths := ReadClipboardFiles()
+	if len(paths) == 0 {
+		gtx.Execute(clipboard.ReadCmd{Tag: t})
+		return
+	}
+
+	// else process the paste directly here
+	if err := t.OnPaste(paths, t.selectedNode); err != nil {
+		log.Println("paste error: ", err)
+	}
+}
+
+// Move file to the current dir or the dir of the current file.
+// pathStr can be space seperated multiple paths
+func (t *TreeView) OnPaste(paths []string, dest *FileNode) error {
 	// when paste destination is a normal file node, use its parent dir to ease the CUT/COPY operations.
 	if dest == nil {
-		return errors.New("no target node is selected")
+		dest = t.root
 	}
 
 	if !dest.IsDir() && dest.Path != t.root.Path {
 		dest = dest.Parent
 	}
 
-	pathes := strings.Split(string(data), "\n")
-	if removeOld {
-		for _, p := range pathes {
-			err := dest.Move(p)
-			if err != nil {
-				return err
-			}
-
-			src := t.findVisibleNode(data)
-
-			if src != nil && src.Node.Parent != nil {
-				t.selectedNodeCutted = false // TODO: does not scale when multiple nodes selected
-				// trigger a rebuild
-				t.pendingRebuild = true
-			}
+	for _, p := range paths {
+		if !isValidFilePath(p) {
+			// no op if path is invalid
+			return nil
 		}
-	} else {
-		for _, p := range pathes {
-			err := dest.Copy(p)
-			if err != nil {
-				return err
-			}
-			t.pendingRebuild = true
+	}
+
+	for _, p := range paths {
+
+		nodeState := t.GetState(p)
+		var opErr error
+		if nodeState.Cutted {
+			opErr = dest.Move(p)
+			// No need to check if the path is external of the root dir.
+			t.deleteState(p)
+		} else {
+			opErr = dest.Copy(p)
 		}
+		if opErr != nil {
+			return opErr
+		}
+
+		// trigger a rebuild
+		t.pendingRebuild = true
 	}
 
 	return nil
 }
 
-func (t *TreeView) OnCopyOrCut(gtx C, srcNode *FileNode) error {
+func (t *TreeView) OnCopyOrCut(gtx layout.Context, srcNode *FileNode, isCut bool) error {
 	if srcNode == nil {
 		return errors.New("no source node is selected")
 	}
 
 	gtx.Execute(clipboard.WriteCmd{Type: mimeText, Data: io.NopCloser(strings.NewReader(srcNode.Path))})
+
+	if isCut {
+		nodeState := t.GetState(t.selectedNode.Path)
+		nodeState.Cutted = true
+	}
+
 	return nil
 }
 
@@ -458,6 +477,25 @@ func (t *TreeView) UpdateDropTarget(destNode *FileNode) {
 }
 
 func (t *TreeView) OnDropped(destNode *FileNode, sourcePath string) {
+	moveNode := func(srcNodePath string, dest *FileNode) error {
+		if dest == nil {
+			return errors.New("no target node is selected")
+		}
+
+		if !dest.IsDir() && dest.Path != t.root.Path {
+			dest = dest.Parent
+		}
+
+		err := dest.Move(srcNodePath)
+		if err != nil {
+			// TODO: report to the caller component.
+			log.Println("move file error: ", err)
+			return err
+		}
+
+		return nil
+	}
+
 	srcNode := t.findVisibleNode(sourcePath)
 
 	if sourcePath == destNode.Path || srcNode.Node.Parent.Path == destNode.Path {
@@ -466,10 +504,18 @@ func (t *TreeView) OnDropped(destNode *FileNode, sourcePath string) {
 
 	if t.OnDropConfirmFunc != nil {
 		t.OnDropConfirmFunc(sourcePath, destNode, func() {
-			t.OnPaste(sourcePath, true, destNode)
+			err := moveNode(sourcePath, destNode)
+			if err == nil {
+				t.pendingRebuild = true
+				t.deleteState(sourcePath)
+			}
 		})
 	} else {
-		t.OnPaste(sourcePath, true, destNode)
+		err := moveNode(sourcePath, destNode)
+		if err == nil {
+			t.pendingRebuild = true
+			t.deleteState(sourcePath)
+		}
 	}
 }
 
