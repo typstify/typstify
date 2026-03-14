@@ -147,9 +147,7 @@ func FileTreeMenuOptions(vm view.ViewManager, tree *TreeView) MenuOptionFunc {
 		// create new file in current folder
 		newFileOpt := menu.MenuOption{
 			OnClicked: func(gtx layout.Context) error {
-				err := tree.CreateChild(gtx, node, explorer.FileNode, func(newNode *FileNode) {
-					//vm.RequestSwitch(onFileSelected(newNode))
-				})
+				err := tree.CreateChild(gtx, node, explorer.FileNode)
 				if err != nil {
 					log.Println("create file failed: ", err)
 				}
@@ -165,7 +163,7 @@ func FileTreeMenuOptions(vm view.ViewManager, tree *TreeView) MenuOptionFunc {
 		// create subfolder
 		newFolderOpt := menu.MenuOption{
 			OnClicked: func(gtx layout.Context) error {
-				err := tree.CreateChild(gtx, node, explorer.FolderNode, nil)
+				err := tree.CreateChild(gtx, node, explorer.FolderNode)
 				if err != nil {
 					log.Println("create folder failed: ", err)
 				}

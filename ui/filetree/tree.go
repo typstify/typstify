@@ -2,12 +2,14 @@ package filetree
 
 import (
 	"errors"
+	"fmt"
 	"image"
 	"io"
 	"log"
 	"slices"
 	"strings"
 
+	"gioui.org/f32"
 	"gioui.org/io/clipboard"
 	"gioui.org/io/event"
 	"gioui.org/io/key"
@@ -60,18 +62,20 @@ type TreeView struct {
 	// The context node which is determined by a right-click.
 	// Context menu operates on context node.
 	contextNode *FileNode
+	// Global context menu state
+	contextMenu    *menu.ContextMenu
+	contextMenuPos f32.Point
 
 	// node currently being dropped to
 	currentDropTarget *FileNode
-
-	// Global context menu state
-	contextMenu *menu.ContextMenu
 
 	pendingRebuild bool
 	pointerEntered bool
 	dndInited      bool
 
+	OnFileCreatedFunc func(node *FileNode)
 	OnDropConfirmFunc OnDropConfirmFunc
+	OnErrorFunc       func(err error)
 }
 
 type TreeState struct {
@@ -226,6 +230,10 @@ func (t *TreeView) layoutRow(gtx layout.Context, th *theme.Theme, flatNode FlatN
 }
 
 func (t *TreeView) update(gtx layout.Context) {
+	// Lifting the event processing of context menu first, so dismiss event can be handled first
+	// and won't overwrite t.contextMenu.Show in OnContextNodeChange.
+	t.contextMenu.Update(gtx)
+
 	t.processKeyEvents(gtx)
 }
 
@@ -274,10 +282,14 @@ func (t *TreeView) processKeyEvents(gtx layout.Context) error {
 				gtx.Execute(key.FocusCmd{Tag: t})
 				// also update context node
 				if event.Buttons == pointer.ButtonSecondary {
+					t.contextMenuPos = event.Position
 					t.OnContextNodeChange(t.root)
+
 				} else {
+					// left clicking in the empty area, will clear the context node
+					// and clear the node selection.
 					t.OnContextNodeChange(nil)
-					// clear selection
+					// clear node selection
 					t.OnSelect(nil)
 
 				}
@@ -317,7 +329,7 @@ func (t *TreeView) processKeyEvents(gtx layout.Context) error {
 }
 
 // Create file or subfolder under the specified folder.
-func (t *TreeView) CreateChild(gtx layout.Context, parent *FileNode, kind explorer.NodeKind, onFinish func(newNode *FileNode)) error {
+func (t *TreeView) CreateChild(gtx layout.Context, parent *FileNode, kind explorer.NodeKind) error {
 	if parent == nil || !parent.IsDir() {
 		return nil
 	}
@@ -337,15 +349,15 @@ func (t *TreeView) CreateChild(gtx layout.Context, parent *FileNode, kind explor
 
 	childNodeState := t.GetState(childNode.Path)
 
+	if t.OnFileCreatedFunc != nil {
+		t.OnFileCreatedFunc(childNode)
+	}
+
 	childNodeState.Editable = gv.EditableLabel(childNode.Name(), func(text string) {
 		err := childNode.UpdateName(text)
 		if err != nil {
 			log.Println("update name err: ", err)
 			return
-		}
-
-		if onFinish != nil {
-			onFinish(childNode)
 		}
 	})
 
@@ -383,6 +395,9 @@ func (t *TreeView) onPasteInit(gtx layout.Context) {
 	// else process the paste directly here
 	if err := t.OnPaste(paths, t.selectedNode); err != nil {
 		log.Println("paste error: ", err)
+		if t.OnErrorFunc != nil {
+			t.OnErrorFunc(err)
+		}
 	}
 }
 
@@ -463,10 +478,10 @@ func (t *TreeView) OnContextNodeChange(fileNode *FileNode) {
 
 	// update context menu options
 	if t.contextNode == nil {
-		t.contextMenu.SetOptions(nil)
-	} else if lastContextNode != fileNode {
+		t.contextMenu.Dismiss()
+	} else {
 		menuOpts := t.getContextMenuOptions(t.contextNode)
-		t.contextMenu.SetOptions(menuOpts)
+		t.contextMenu.Show(t.contextMenuPos, menuOpts)
 	}
 }
 
@@ -535,8 +550,9 @@ func (t *TreeView) OnDropped(destNode *FileNode, sourcePath string) {
 
 		err := dest.Move(srcNodePath)
 		if err != nil {
-			// TODO: report to the caller component.
-			log.Println("move file error: ", err)
+			if t.OnErrorFunc != nil {
+				t.OnErrorFunc(fmt.Errorf("move file error: %w", err))
+			}
 			return err
 		}
 
