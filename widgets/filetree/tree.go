@@ -603,10 +603,6 @@ func (t *TreeView) OnDropped(destNode *FileNode, sourcePath string) {
 			return errors.New("no target node is selected")
 		}
 
-		if !dest.IsDir() && dest.Path != t.root.Path {
-			dest = dest.Parent
-		}
-
 		err := dest.Move(srcNodePath)
 		if err != nil {
 			if t.OnErrorFunc != nil {
@@ -622,8 +618,18 @@ func (t *TreeView) OnDropped(destNode *FileNode, sourcePath string) {
 		t.currentDropTarget = nil
 	}()
 
-	srcNode := t.findVisibleNode(sourcePath)
+	if destNode == nil {
+		if t.OnErrorFunc != nil {
+			t.OnErrorFunc(errors.New("no target folder is selected"))
+		}
+		return
+	}
 
+	if !destNode.IsDir() && destNode.Path != t.root.Path {
+		destNode = destNode.Parent
+	}
+
+	srcNode := t.findVisibleNode(sourcePath)
 	if sourcePath == destNode.Path || srcNode.Node.Parent.Path == destNode.Path {
 		return
 	}
