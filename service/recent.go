@@ -8,17 +8,17 @@ import (
 	"strings"
 	"time"
 
-	"github.com/oligo/gioview/explorer"
 	bolt "go.etcd.io/bbolt"
 	"looz.ws/typstify/utils"
+	"looz.ws/typstify/widgets/filetree"
 )
 
 type RecentProject struct {
-	Path          string
-	RelPath       string
-	LastAccessAt  time.Time
-	ExplorerState *explorer.TreeState
-	OpenedFiles   []string
+	Path         string
+	RelPath      string
+	LastAccessAt time.Time
+	TreeState    *filetree.TreeState
+	OpenedFiles  []string
 }
 
 type RecentProjectsService struct {
@@ -52,11 +52,11 @@ func (rp *RecentProjectsService) AddRecent(projectDir string) {
 	rp.allCache = rp.allCache[:0] // invalidate cache
 }
 
-func (rp *RecentProjectsService) SaveSnapshot(explorerState *explorer.TreeState, openedFiles []string) {
+func (rp *RecentProjectsService) SaveSnapshot(treeState *filetree.TreeState, openedFiles []string) {
 	if rp.Current.Path == "" {
 		return
 	}
-	rp.Current.ExplorerState = explorerState
+	rp.Current.TreeState = treeState
 	rp.Current.OpenedFiles = openedFiles
 	rp.index.Save(utils.SKey(rp.Current.Path), rp.Current)
 }

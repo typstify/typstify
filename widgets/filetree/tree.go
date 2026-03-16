@@ -25,7 +25,6 @@ import (
 	"github.com/oligo/gioview/explorer"
 	"github.com/oligo/gioview/misc"
 	"github.com/oligo/gioview/theme"
-	"github.com/oligo/gioview/view"
 	"golang.org/x/exp/shiny/materialdesign/icons"
 	"looz.ws/typstify/utils"
 	"looz.ws/typstify/widgets"
@@ -37,6 +36,9 @@ var (
 	FileIcon, _       = widget.NewIcon(icons.ActionDescription)
 	FolderIcon, _     = widget.NewIcon(icons.NavigationChevronRight)
 	FolderOpenIcon, _ = widget.NewIcon(icons.NavigationExpandMore)
+
+	NodePadding = unit.Dp(3)
+	IndentUnit  = unit.Dp(16)
 )
 
 type OnDropConfirmFunc func(srcPath string, dest *FileNode, onConfirmed func())
@@ -45,8 +47,6 @@ type MenuOptionFunc func(node *FileNode) [][]menu.MenuOption
 // TreeView is the view controller of file nodes.
 type TreeView struct {
 	root *FileNode
-	vm   view.ViewManager
-
 	// states maps a file path to its persistent UI state.
 	states map[string]*NodeState
 
@@ -73,15 +73,11 @@ type TreeView struct {
 	pointerEntered bool
 	dndInited      bool
 
-	OnFileCreatedFunc func(node *FileNode)
-	OnFileRemoveFunc  func(node *FileNode) bool
-	OnDropConfirmFunc OnDropConfirmFunc
-	OnErrorFunc       func(err error)
-}
-
-type TreeState struct {
-	Path     string
-	Children []NodeState
+	OnFileCreatedFunc  func(node *FileNode)
+	OnFileRemoveFunc   func(node *FileNode) bool
+	OnFileSelectedFunc func(node *FileNode)
+	OnDropConfirmFunc  OnDropConfirmFunc
+	OnErrorFunc        func(err error)
 }
 
 func NewTreeView(rootNode *FileNode) *TreeView {
@@ -92,6 +88,14 @@ func NewTreeView(rootNode *FileNode) *TreeView {
 		pendingRebuild: true,
 		contextMenu:    menu.NewContextMenu(),
 	}
+}
+
+func (t *TreeView) Root() string {
+	if t.root == nil {
+		return ""
+	}
+
+	return t.root.Path
 }
 
 // GetState retrieves or initializes the UI state for a specific path.
@@ -122,8 +126,8 @@ func (t *TreeView) flatten(node *FileNode, depth int) {
 		flatNode := FlatNode{
 			Node:            node,
 			Depth:           depth,
-			VerticalPadding: unit.Dp(3),
-			IndentUnit:      unit.Dp(16),
+			VerticalPadding: NodePadding,
+			IndentUnit:      IndentUnit,
 		}
 		if !node.IsDir() {
 			flatNode.Icon = FileIcon
@@ -236,9 +240,11 @@ func (t *TreeView) update(gtx layout.Context) {
 	t.contextMenu.Update(gtx)
 
 	err := t.processKeyEvents(gtx)
-	if t.OnErrorFunc != nil {
+	if err != nil {
+		if t.OnErrorFunc != nil {
+			t.OnErrorFunc(err)
+		}
 		log.Println("filetree error: ", err)
-		t.OnErrorFunc(err)
 	}
 }
 
@@ -536,6 +542,10 @@ func (t *TreeView) OnSelect(fileNode *FileNode) {
 		if fileNode.IsDir() {
 			t.pendingRebuild = true
 		}
+
+		if !fileNode.IsDir() && t.OnFileCreatedFunc != nil {
+			t.OnFileSelectedFunc(fileNode)
+		}
 	}
 }
 
@@ -654,60 +664,64 @@ func (t *TreeView) StartEditing(gtx layout.Context, node *FileNode) {
 	gtx.Execute(op.InvalidateCmd{})
 }
 
-/*
-// Restore restores the tree states by applying state to the current node and its children.
-func (t *TreeView) Restore(state *TreeState) error {
-	root, err := explorer.NewFileTree(state.Path)
-	if err != nil {
-		return err
-	}
-	t.root = root
-
-	stateMap := make(map[string]*TreeState, len(state.Children))
-	for _, st := range state.Children {
-		stateMap[st.Path] = st
-	}
-
-	for _, child := range eitem.children {
-		child := child.(*EntryNavItem)
-		if !child.state.IsDir() {
-			continue
-		}
-
-		if st, exists := stateMap[child.Path()]; exists {
-			child.Restore(st)
-		}
-	}
-}
-
-// Snapshot saves states of the expanded [EntryNavItem] node, and the states of its children.
+// Snapshot saves states of the expanded node.
 func (t *TreeView) Snapshot() *TreeState {
 	if t.root == nil {
 		return nil
 	}
 
-	state := &TreeState{Path: t.root.Path, Expanded: eitem.expanded}
+	state := &TreeState{Path: t.root.Path}
 
-	for _, child := range eitem.children {
-		child := child.(*EntryNavItem)
-		if !child.state.IsDir() {
+	for path, nodeState := range t.states {
+		node := t.findVisibleNode(path)
+		if node == nil {
 			continue
 		}
 
-		if childState := child.Snapshot(); childState != nil {
-			state.Children = append(state.Children, childState)
+		if !node.Node.IsDir() {
+			continue
 		}
+
+		if !nodeState.Expanded {
+			continue
+		}
+
+		state.ExpandedNodes = append(state.ExpandedNodes, node.Node.Path)
 	}
 
 	return state
 }
-*/
 
 func (t *TreeView) getContextMenuOptions(node *FileNode) [][]menu.MenuOption {
 	if node == nil {
 		return nil
 	}
 
-	menuOptionFunc := FileTreeMenuOptions(t.vm, t)
+	menuOptionFunc := FileTreeMenuOptions(t)
 	return menuOptionFunc(node)
+}
+
+func (t *TreeView) Close() {
+	// NO-OP
+}
+
+// Restore create a tree  by applying state to the newly created tree.
+func RestoreTree(state *TreeState) (*TreeView, error) {
+	if state == nil {
+		return nil, errors.New("invalid tree state")
+	}
+
+	root, err := explorer.NewFileTree(state.Path)
+	if err != nil {
+		return nil, err
+	}
+
+	tree := NewTreeView(root)
+
+	for _, nodePath := range state.ExpandedNodes {
+		nodeState := tree.GetState(nodePath)
+		nodeState.Expanded = true
+	}
+
+	return tree, nil
 }

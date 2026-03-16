@@ -4,23 +4,18 @@ import (
 	"io"
 	"log"
 	"os"
-	"os/exec"
 	"path/filepath"
-	"runtime"
 	"slices"
-	"strings"
+	"sync"
 	"unicode/utf8"
 
 	"gioui.org/font"
-	"gioui.org/io/clipboard"
 	"gioui.org/layout"
-	"gioui.org/op"
 	"gioui.org/unit"
 	"gioui.org/widget"
 	"gioui.org/widget/material"
 	"github.com/alecthomas/chroma/v2/lexers"
 	"github.com/oligo/gioview/explorer"
-	"github.com/oligo/gioview/menu"
 	"github.com/oligo/gioview/misc"
 	"github.com/oligo/gioview/theme"
 	"github.com/oligo/gioview/view"
@@ -31,6 +26,7 @@ import (
 	"looz.ws/typstify/ui/editors"
 	"looz.ws/typstify/ui/viewer"
 	"looz.ws/typstify/utils"
+	"looz.ws/typstify/widgets/filetree"
 )
 
 type (
@@ -39,22 +35,19 @@ type (
 )
 
 var (
-	folderIcon, _     = widget.NewIcon(icons.NavigationChevronRight)
-	folderOpenIcon, _ = widget.NewIcon(icons.NavigationExpandMore)
 	moreIcon, _       = widget.NewIcon(icons.NavigationMoreHoriz)
 	createFolder, _   = widget.NewIcon(icons.FileCreateNewFolder)
 	createFile, _     = widget.NewIcon(icons.ContentCreate)
 )
 
 type FileTreeNav struct {
-	title        string
-	rootNode     *explorer.EntryNavItem
-	rootSwitched bool
-	root         *NavTree
-	selectedItem *visibleItem
+	title string
+	tree  *filetree.TreeView
+	srv   *service.ServiceFacade
+	vm    view.ViewManager
 
-	srv *service.ServiceFacade
-	vm  view.ViewManager
+	rootSwitched bool
+	newRoot      string
 }
 
 // Construct a FileTreeNav object that loads files and folders from rootDir. The skipFolders
@@ -72,45 +65,66 @@ func NewFileTreeNav(title string, srv *service.ServiceFacade, vm view.ViewManage
 			panic("not a path")
 		}
 
-		if ftn.rootNode != nil && path == ftn.rootNode.Path() {
+		if ftn.tree != nil && path == ftn.tree.Root() {
 			return
 		}
 
 		ftn.saveLastWorkplace()
-
-		root, err := explorer.NewEntryNavItem(path)
-		if err != nil {
-			log.Println("open explorer failed: ", err)
-			return
-		}
-
-		ftn.rootNode = root
-		ftn.rootSwitched = true
+		ftn.newRoot = path
 	})
 
 	return ftn
 }
 
-func (tn *FileTreeNav) SetRoot(navRoot *explorer.EntryNavItem) {
-	navRoot.MenuOptionFunc = FileTreeMenuOptions(tn.vm, navRoot.Path())
-	navRoot.OnSelectFunc = tn.onFileSelected
-	navRoot.OnDropConfirmFunc = onDropConfirmFunc(tn.vm, navRoot)
-
-	if tn.root != nil {
-		tn.root.Close()
+func (tn *FileTreeNav) switchRoot() {
+	if tn.newRoot == "" {
+		return
 	}
 
-	tn.root = NewNavTree(navRoot, tn.vm, tn.onSelect)
+	newRoot, err := filepath.Abs(tn.newRoot)
+	if err != nil {
+		log.Println("convert dir to abs dir error: ", err)
+		return
+	}
 
-	tn.srv.SetProjectDir(navRoot.Path())
-	tn.srv.RecentProjects().AddRecent(navRoot.Path())
-	tn.title = navRoot.Name()
+	tn.srv.SetProjectDir(newRoot)
+	tn.title = filepath.Base(newRoot)
+	tn.srv.RecentProjects().AddRecent(newRoot)
 
 	// Restore the workplace.
-	states := tn.srv.RecentProjects().Current.ExplorerState
+	states := tn.srv.RecentProjects().Current.TreeState
+	var newTree *filetree.TreeView
 	if states != nil {
-		navRoot.Restore(states)
+		restoredTree, err := filetree.RestoreTree(states)
+		if err != nil {
+			log.Println("Restore file tree error: ", err)
+		} else {
+			newTree = restoredTree
+		}
 	}
+
+	if newTree == nil {
+		root, err := explorer.NewFileTree(newRoot)
+		if err != nil {
+			log.Println("open explorer failed: ", err)
+			return
+		}
+
+		newTree = filetree.NewTreeView(root)
+	}
+
+	// set callbacks for file operations
+	newTree.OnFileSelectedFunc = tn.onFileSelected
+	newTree.OnDropConfirmFunc = onDropConfirmFunc(tn.vm, newTree.Root())
+	newTree.OnFileCreatedFunc = func(node *filetree.FileNode) {
+		tn.vm.RequestSwitch(onFileSelected(node))
+	}
+	newTree.OnFileRemoveFunc = tn.onFileDeleted
+	newTree.OnErrorFunc = func(err error) {
+		log.Println("file tree error: ", err)
+	}
+
+	tn.tree = newTree
 
 	for _, file := range tn.srv.RecentProjects().Current.OpenedFiles {
 		node, err := explorer.NewFileTree(file)
@@ -124,13 +138,13 @@ func (tn *FileTreeNav) SetRoot(navRoot *explorer.EntryNavItem) {
 }
 
 func (tn *FileTreeNav) saveLastWorkplace() {
-	if tn.rootNode == nil {
+	if tn.tree == nil {
 		return
 	}
 
 	defer tn.vm.Reset()
 
-	states := tn.rootNode.Snapshot()
+	states := tn.tree.Snapshot()
 	openedFiles := make([]string, 0)
 	views := tn.vm.OpenedViews()
 	for _, vw := range views {
@@ -149,20 +163,39 @@ func (tn *FileTreeNav) saveLastWorkplace() {
 
 func (tn *FileTreeNav) OnClose() {
 	tn.saveLastWorkplace()
-	tn.root.Close()
+	tn.tree.Close()
 }
 
-func (tn *FileTreeNav) onSelect(item *visibleItem) {
-	if item != tn.selectedItem {
-		if tn.selectedItem != nil {
-			tn.selectedItem.Unselect()
-		}
-		tn.selectedItem = item
+func (tn *FileTreeNav) Title() string {
+	return tn.title
+}
+
+func (tn *FileTreeNav) Update(gtx C) bool {
+	updated := tn.newRoot != ""
+	if tn.newRoot != "" {
+		tn.switchRoot()
 	}
 
+	tn.newRoot = ""
+	return updated
 }
 
-func (tn *FileTreeNav) onFileSelected(node *explorer.EntryNode) {
+func (tn *FileTreeNav) Layout(gtx C, th *theme.Theme) D {
+	tn.Update(gtx)
+
+	if tn.tree == nil {
+		return layout.UniformInset(unit.Dp(8)).Layout(gtx, func(gtx C) D {
+			lb := material.Label(th.Theme, th.TextSize*0.9, i18n.Translate("No open projects."))
+			lb.Font.Style = font.Italic
+			lb.Color = misc.WithAlpha(th.Fg, 0xb6)
+			return lb.Layout(gtx)
+		})
+	}
+
+	return tn.tree.Layout(gtx, th)
+}
+
+func (tn *FileTreeNav) onFileSelected(node *filetree.FileNode) {
 	if node == nil {
 		return
 	}
@@ -174,44 +207,33 @@ func (tn *FileTreeNav) onFileSelected(node *explorer.EntryNode) {
 	}
 }
 
-func (tn *FileTreeNav) Title() string {
-	return tn.title
+func (tn *FileTreeNav) onFileDeleted(node *filetree.FileNode) bool {
+	rootDir := tn.tree.Root()
+	var wg sync.WaitGroup
+	var userConfirm bool
+
+	wg.Go(func() {
+		destPath := filepath.Clean(node.Path)
+		relPath, err := filepath.Rel(rootDir, destPath)
+		if err == nil {
+			destPath = relPath
+		}
+
+		caller := dialog.NewDialogChooser[bool](tn.vm)
+		result, err := caller.Call(dialog.DeleteFileDialogViewID, map[string]any{"destination": destPath})
+		if err != nil {
+			log.Println("delete file error: ", err)
+		}
+
+		userConfirm = result.Params
+	})
+
+	wg.Wait()
+	return userConfirm
 }
 
-func (tn *FileTreeNav) Update(gtx C) bool {
-	updated := tn.rootSwitched
-	if tn.rootSwitched {
-		tn.SetRoot(tn.rootNode)
-		tn.rootNode.Refresh()
-	}
-
-	tn.rootSwitched = false
-	return updated
-}
-
-func (tn *FileTreeNav) Layout(gtx C, th *theme.Theme) D {
-	tn.Update(gtx)
-
-	if tn.root == nil {
-		return layout.UniformInset(unit.Dp(8)).Layout(gtx, func(gtx C) D {
-			lb := material.Label(th.Theme, th.TextSize*0.9, i18n.Translate("No open projects."))
-			lb.Font.Style = font.Italic
-			lb.Color = misc.WithAlpha(th.Fg, 0xb6)
-			return lb.Layout(gtx)
-		})
-	}
-
-	explorer.FolderIcon = folderIcon
-	explorer.FolderOpenIcon = folderOpenIcon
-	explorer.IconSize = unit.Dp(th.TextSize * 1.2)
-
-	return tn.root.Layout(gtx, th)
-}
-
-func onDropConfirmFunc(vm view.ViewManager, root *explorer.EntryNavItem) func(srcPath string, dest *explorer.EntryNode, onConfirm func()) {
-	rootDir := filepath.Clean(root.Path())
-
-	return func(srcPath string, dest *explorer.EntryNode, onConfirm func()) {
+func onDropConfirmFunc(vm view.ViewManager, rootDir string) filetree.OnDropConfirmFunc {
+	return func(srcPath string, dest *filetree.FileNode, onConfirm func()) {
 		go func() {
 			caller := dialog.NewDialogChooser[bool](vm)
 			srcPath = filepath.Clean(srcPath)
@@ -235,7 +257,7 @@ func onDropConfirmFunc(vm view.ViewManager, root *explorer.EntryNavItem) func(sr
 	}
 }
 
-func onFileSelected(node *explorer.EntryNode) view.Intent {
+func onFileSelected(node *filetree.FileNode) view.Intent {
 	if slices.Contains([]string{".png", ".jpg", ".jpeg", ".gif", ".PNG", ".JPG", ".JPEG", ".GIF"}, node.FileType()) {
 		return view.Intent{
 			Target:      viewer.ImgViewerViewID,
@@ -275,6 +297,7 @@ func onFileSelected(node *explorer.EntryNode) view.Intent {
 	return view.Intent{}
 }
 
+/*
 func FileTreeMenuOptions(vm view.ViewManager, projectDir string) explorer.MenuOptionFunc {
 	rootDir := filepath.Clean(projectDir)
 
@@ -457,9 +480,10 @@ func FileTreeMenuOptions(vm view.ViewManager, projectDir string) explorer.MenuOp
 		return common
 	}
 }
+*/
 
 // ported from https://cs.opensource.google/go/x/tools/+/refs/tags/v0.26.0:godoc/util/util.go;l=69
-func isTextFile(node *explorer.EntryNode) bool {
+func isTextFile(node *filetree.FileNode) bool {
 	if lexer := lexers.Match(node.Path); lexer != nil {
 		return true
 	}
@@ -496,26 +520,4 @@ func isTextFile(node *explorer.EntryNode) bool {
 		}
 	}
 	return true
-}
-
-// open a file or folder in the file manager and have it selected.
-func openInFsExplorer(node *explorer.EntryNavItem) error {
-	switch runtime.GOOS {
-	case "darwin", "ios":
-		return runCmd("open", "-R", node.Path())
-	case "windows":
-		return runCmd("explorer", "/select,"+node.Path())
-	default:
-		// linux, unix flavors.
-		path := node.Path()
-		if !node.IsDir() {
-			path = filepath.Dir(path)
-		}
-		return runCmd("xdg-open", path)
-	}
-}
-
-func runCmd(cmdName string, arg ...string) error {
-	cmd := exec.Command(cmdName, arg...)
-	return cmd.Run()
 }

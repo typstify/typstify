@@ -47,7 +47,7 @@ func (fn *FlatNode) Layout(gtx layout.Context, th *theme.Theme, textColor color.
 	inset := layout.Inset{
 		Top:    fn.VerticalPadding,
 		Bottom: fn.VerticalPadding,
-		Left:   unit.Dp(8) + unit.Dp(fn.Depth*int(fn.IndentUnit)),
+		Left:   unit.Dp(4) + unit.Dp(fn.Depth*int(fn.IndentUnit)),
 	}
 
 	macro := op.Record(gtx.Ops)

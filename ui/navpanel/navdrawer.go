@@ -81,15 +81,6 @@ func (nv *NavDrawer) Layout(gtx C, th *theme.Theme) D {
 		nv.explorerSection.expanded = true
 	}
 
-	if nv.FileExplorer.Update(gtx) {
-		options := FileTreeMenuOptions(nv.vm, nv.srv.CurrentProjectDir())(gtx, nv.FileExplorer.rootNode)
-		nv.explorerSection.menu = menu.NewContextMenu(options, false)
-		nv.explorerSection.menu.PositionHint = layout.N
-		nv.explorerSection.onClicked = func() {
-			nv.FileExplorer.rootNode.Refresh()
-		}
-	}
-
 	return layout.Flex{
 		Axis: layout.Horizontal,
 	}.Layout(gtx,
@@ -253,7 +244,7 @@ func (ns *NavSection) layout(gtx C, th *theme.Theme, icon *widget.Icon, title st
 				},
 			)
 		}),
-		layout.Rigid(func(gtx C) D {
+		layout.Flexed(1, func(gtx C) D {
 			if !ns.anim.Visible() {
 				return D{}
 			}

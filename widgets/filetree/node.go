@@ -37,6 +37,11 @@ type FlatNode struct {
 	IndentUnit      unit.Dp
 }
 
+type TreeState struct {
+	Path          string
+	ExpandedNodes []string
+}
+
 func isAncestor(ancestor, childNode *FileNode) bool {
 	if ancestor == nil || childNode == nil {
 		return false
