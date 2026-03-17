@@ -65,7 +65,7 @@ type RecentProjects struct {
 	vm         view.ViewManager
 	srv        *service.ServiceFacade
 	list       widget.List
-	recentList []service.RecentProject
+	recentList []service.WorkspaceState
 	labels     []*list.InteractiveLabel
 	selected   int
 }
@@ -213,7 +213,7 @@ func (rp *RecentProjects) openSelected(projectDir string) {
 }
 
 func (rp *RecentProjects) Update(gtx C) bool {
-	recent := rp.srv.RecentProjects().GetAll()
+	recent := rp.srv.Workspace().GetAll()
 	if len(rp.recentList) != len(recent) {
 		rp.recentList = recent
 	} else if len(recent) > 0 {

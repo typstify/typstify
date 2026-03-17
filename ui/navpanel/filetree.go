@@ -35,9 +35,9 @@ type (
 )
 
 var (
-	moreIcon, _       = widget.NewIcon(icons.NavigationMoreHoriz)
-	createFolder, _   = widget.NewIcon(icons.FileCreateNewFolder)
-	createFile, _     = widget.NewIcon(icons.ContentCreate)
+	moreIcon, _     = widget.NewIcon(icons.NavigationMoreHoriz)
+	createFolder, _ = widget.NewIcon(icons.FileCreateNewFolder)
+	createFile, _   = widget.NewIcon(icons.ContentCreate)
 )
 
 type FileTreeNav struct {
@@ -89,10 +89,10 @@ func (tn *FileTreeNav) switchRoot() {
 
 	tn.srv.SetProjectDir(newRoot)
 	tn.title = filepath.Base(newRoot)
-	tn.srv.RecentProjects().AddRecent(newRoot)
+	tn.srv.Workspace().AddRecent(newRoot)
 
 	// Restore the workplace.
-	states := tn.srv.RecentProjects().Current.TreeState
+	states := tn.srv.Workspace().Current().TreeState
 	var newTree *filetree.TreeView
 	if states != nil {
 		restoredTree, err := filetree.RestoreTree(states)
@@ -126,7 +126,7 @@ func (tn *FileTreeNav) switchRoot() {
 
 	tn.tree = newTree
 
-	for _, file := range tn.srv.RecentProjects().Current.OpenedFiles {
+	for _, file := range tn.srv.Workspace().Current().OpenedFiles {
 		node, err := explorer.NewFileTree(file)
 		if err != nil {
 			log.Println("open file failed: ", err)
@@ -158,7 +158,7 @@ func (tn *FileTreeNav) saveLastWorkplace() {
 		}
 	}
 
-	tn.srv.RecentProjects().SaveSnapshot(states, openedFiles)
+	tn.srv.Workspace().SaveSnapshot(states, openedFiles)
 }
 
 func (tn *FileTreeNav) OnClose() {

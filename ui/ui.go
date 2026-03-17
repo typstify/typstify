@@ -46,11 +46,12 @@ type UI struct {
 }
 
 func (ui *UI) Loop(ctx context.Context) error {
+	width, height := ui.getWindowSize()
 	ui.window.Option(
 		app.Title("Typstify"),
 		app.Decorated(true),
 		app.MinSize(unit.Dp(960), unit.Dp(640)),
-		app.Size(unit.Dp(960), unit.Dp(640)),
+		app.Size(width, height),
 	)
 	ui.window.Perform(system.ActionCenter)
 
@@ -98,6 +99,9 @@ func (ui *UI) Loop(ctx context.Context) error {
 			}
 
 			e.Frame(gtx.Ops)
+			// update window size
+			ui.srv.Workspace().RememberWindowSize(int(gtx.Metric.PxToDp(e.Size.X)), int(gtx.Metric.PxToDp(e.Size.Y)))
+
 		}
 	}
 }
@@ -130,6 +134,24 @@ func (ui *UI) registerViews() {
 
 	ui.vm = vm
 	ui.srv.SetViewManager(vm.ViewManager)
+}
+
+func (ui *UI) getWindowSize() (width unit.Dp, height unit.Dp) {
+	width = unit.Dp(960)
+	height = unit.Dp(640)
+
+	lastAppState := ui.srv.Workspace().GetAppState()
+	if lastAppState == nil {
+		return
+	}
+
+	if lastAppState.WindowSize[0] <= 0 || lastAppState.WindowSize[1] <= 0 {
+		return
+	}
+
+	width = unit.Dp(lastAppState.WindowSize[0])
+	height = unit.Dp(lastAppState.WindowSize[1])
+	return
 }
 
 func NewUI(srv *service.ServiceFacade, enableProfiler bool) *UI {

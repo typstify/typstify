@@ -24,7 +24,7 @@ type ServiceFacade struct {
 	vm                 view.ViewManager
 	settings           *settings.Settings
 	eventbus           *bus.EventBus
-	recentProjSrv      *RecentProjectsService
+	workspaceSrv       *WorkspaceService
 	pkgService         *pkg.TypstPkgService
 	windowSrv          *WindowService
 	fileChooserBuilder func() *explorer.FileChooser
@@ -50,7 +50,7 @@ func NewService(ctx context.Context) *ServiceFacade {
 		eventbus:      eventbus,
 		settings:      st,
 		pkgService:    pkg.NewTypstPkgService(st.Typst()),
-		recentProjSrv: NewRecentProjectsService(st.General().RootDir),
+		workspaceSrv: NewWorkspaceService(st.General().RootDir),
 		windowSrv:     NewWindowService(ctx, st),
 		consoleState:  console.NewConsoleState(1000),
 	}
@@ -76,8 +76,8 @@ func (s *ServiceFacade) PkgService() *pkg.TypstPkgService {
 	return s.pkgService
 }
 
-func (s *ServiceFacade) RecentProjects() *RecentProjectsService {
-	return s.recentProjSrv
+func (s *ServiceFacade) Workspace() *WorkspaceService {
+	return s.workspaceSrv
 }
 
 func (s *ServiceFacade) WindowService() *WindowService {
@@ -102,7 +102,7 @@ func (s *ServiceFacade) RequestSwitch(intent view.Intent) {
 
 func (s *ServiceFacade) Close(ctx context.Context) {
 	image.ClearCache()
-	s.recentProjSrv.Close()
+	s.workspaceSrv.Close()
 	s.windowSrv.Shutdown()
 	s.windowSrv.Wait()
 	lsp.StopLsp()
