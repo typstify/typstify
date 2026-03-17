@@ -169,6 +169,9 @@ func (cp *CommandPanel) update(gtx C) {
 				log.Println("failed to choose folder: ", projectDir, err)
 				return
 			}
+			if isFile(projectDir) {
+				projectDir = filepath.Dir(projectDir)
+			}
 
 			log.Println("choosed folder: ", projectDir)
 			cp.srv.EventBus().Emit(bus.TopicProjectSwitched, projectDir)
@@ -362,4 +365,13 @@ func (ut *UpdateTips) Layout(gtx C, th *theme.Theme) D {
 func dirExists(path string) bool {
 	st, err := os.Stat(path)
 	return !errors.Is(err, os.ErrNotExist) && st.IsDir()
+}
+
+func isFile(path string) bool {
+	st, err := os.Stat(path)
+	if err != nil {
+		return false
+	}
+
+	return !st.IsDir()
 }
