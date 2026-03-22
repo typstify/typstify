@@ -5,7 +5,6 @@ import (
 
 	"context"
 	"errors"
-	"fmt"
 	"log"
 	"path/filepath"
 	"regexp"
@@ -16,15 +15,11 @@ import (
 	"github.com/oligo/gioview/view"
 	"github.com/oligo/gvcode"
 	"looz.ws/typstify/editor"
-	"looz.ws/typstify/i18n"
 	"looz.ws/typstify/lsp"
 	"looz.ws/typstify/preview"
 	"looz.ws/typstify/service"
-	"looz.ws/typstify/service/bus"
-	"looz.ws/typstify/typst"
 	"looz.ws/typstify/ui/dialog"
 	uipreview "looz.ws/typstify/ui/preview"
-	"looz.ws/typstify/ui/statusbar"
 	"looz.ws/typstify/ui/viewer"
 	"looz.ws/typstify/utils"
 
@@ -221,9 +216,7 @@ func (te *TypstEditor) Actions() []view.ViewAction {
 					Target:      dialog.ExportDialogViewID,
 					ShowAsModal: true,
 					Params: map[string]interface{}{
-						"onConfirm": func(params *typst.CompileParams) {
-							te.onExportFile(params)
-						},
+						"targetFile": te.targetFile,
 					},
 				})
 			},
@@ -299,66 +292,6 @@ func (te *TypstEditor) OnFinish() {
 	}
 }
 
-func (te *TypstEditor) onExportFile(params *typst.CompileParams) {
-	settings := te.srv.Settings().Typst()
-
-	if settings.UseSysInputs != 0 {
-		inputs, err := typst.LoadInputs(te.srv.CurrentProjectDir(), true)
-		if err != nil {
-			te.srv.Console().Write([]byte(err.Error()))
-		} else if len(inputs) > 0 {
-			params.Options.Input = inputs
-		}
-	}
-
-	params.Options.PackagePath = settings.PackageDir
-	params.Options.PackageCachePath = settings.PackageCacheDir
-	params.Options.FontPaths = te.fontPaths()
-	params.Options.IgnoreSystemFonts = settings.IgnoreSystemFonts == 1
-	params.Options.IgnoreEmbeddedFonts = settings.IgnoreEmbeddedFonts == 1
-
-	params.InputFile = te.targetFile
-	params.OutDir = filepath.Join(filepath.Dir(te.targetFile), "output")
-	if settings.OutputDir != "" {
-		params.OutDir = settings.OutputDir
-	}
-
-	if settings.BuildDeps == 1 {
-		params.Options.Deps = filepath.Join(params.OutDir, "deps.json")
-		params.Options.DepsFormat = "json"
-	}
-
-	params.CmdOut = te.srv.Console()
-	params.Options.Features = "html" // enable HTML export
-
-	if params.OutFilename == "" {
-		params.OutFilename = strings.TrimSuffix(filepath.Base(te.targetFile), filepath.Ext(te.targetFile))
-	} else {
-		name := params.OutFilename
-		params.OutFilename = strings.TrimSuffix(filepath.Base(name), filepath.Ext(name))
-	}
-
-	te.srv.EventBus().Emit(bus.TopicStatusbarNotifyEvent, statusbar.Notification{Content: i18n.Translate("Exporting file...")})
-
-	// use targetFile dir as work dir for Typst to properly resolve imported resources.
-	compiler, err := typst.NewCompiler(te.srv.CurrentProjectDir())
-	if err != nil {
-		te.srv.EventBus().Emit(bus.TopicStatusbarNotifyEvent, statusbar.Notification{Content: err.Error()})
-		return
-	}
-	defer compiler.Close()
-
-	err = compiler.Compile(context.Background(), params, func(files []string) {
-		msg := fmt.Sprintf("Files exported to %s", params.OutDir)
-		te.srv.EventBus().Emit(bus.TopicStatusbarNotifyEvent, statusbar.Notification{Content: msg})
-	})
-	if err != nil {
-		log.Println("export PDF error: ", err)
-		te.srv.EventBus().Emit(bus.TopicStatusbarNotifyEvent, statusbar.Notification{Content: "File export error: " + err.Error()})
-	}
-
-}
-
 func (te *TypstEditor) openLink(link string, external bool) {
 	pattern := `(\.png|\.jpg|\.jpeg|\.gif|\.PNG|\.JPG|\.JPEG|\.GIF)$`
 	matched, err := regexp.MatchString(pattern, link)
@@ -388,15 +321,6 @@ func (te *TypstEditor) openLink(link string, external bool) {
 		}
 	}
 	// gtx.Execute(op.InvalidateCmd{})
-}
-
-func (te *TypstEditor) fontPaths() []string {
-	fontPaths := []string{te.srv.CurrentProjectDir()}
-	if te.srv.Settings().Typst().ExtraFontPath != "" {
-		fontPaths = append(fontPaths, te.srv.Settings().Typst().ExtraFontPath)
-	}
-
-	return fontPaths
 }
 
 func NewTypstEditor(srv *service.ServiceFacade) view.View {

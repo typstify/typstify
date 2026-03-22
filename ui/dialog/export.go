@@ -1,7 +1,10 @@
 package dialog
 
 import (
+	"context"
 	"fmt"
+	"log"
+	"path/filepath"
 	"strings"
 
 	"gioui.org/layout"
@@ -15,8 +18,10 @@ import (
 	gw "github.com/oligo/gioview/widget"
 	"looz.ws/typstify/i18n"
 	"looz.ws/typstify/service"
+	"looz.ws/typstify/service/bus"
 	"looz.ws/typstify/typst"
 	"looz.ws/typstify/ui/settings/form"
+	"looz.ws/typstify/ui/statusbar"
 )
 
 var ExportDialogViewID = view.NewViewID("ExportDialogView")
@@ -39,8 +44,8 @@ type ExportDialog struct {
 	noPdfTags       widget.Bool
 	nameInput       gw.TextField
 
-	formatChoices     []layout.FlexChild
-	onConfirmCallback func(params *typst.CompileParams)
+	formatChoices []layout.FlexChild
+	targetFile    string
 }
 
 func NewExportDialog(srv *service.ServiceFacade) view.View {
@@ -53,12 +58,12 @@ func NewExportDialog(srv *service.ServiceFacade) view.View {
 }
 
 func (d *ExportDialog) OnInit(intent view.Intent) error {
-	cb := intent.Params["onConfirm"]
-	if cb == nil {
-		panic("no confirm callback provided!")
+	targetFile := intent.Params["targetFile"]
+	if targetFile == nil {
+		panic("no targetFile provided!")
 	}
 
-	d.onConfirmCallback = cb.(func(params *typst.CompileParams))
+	d.targetFile = targetFile.(string)
 	d.formatEnum.Value = string(typst.PDF)
 	d.pdfVersion.Value = string(typst.PDF1_7)
 
@@ -100,9 +105,48 @@ func (d *ExportDialog) OnConfirm() error {
 		params.Options.NoPdfTags = d.noPdfTags.Value
 	}
 
-	if d.onConfirmCallback != nil {
+	// Other options
+	settings := d.srv.Settings().Typst()
+
+	if settings.UseSysInputs != 0 {
+		inputs, err := typst.LoadInputs(d.srv.CurrentProjectDir(), true)
+		if err != nil {
+			d.srv.Console().Write([]byte(err.Error()))
+		} else if len(inputs) > 0 {
+			params.Options.Input = inputs
+		}
+	}
+
+	params.Options.PackagePath = settings.PackageDir
+	params.Options.PackageCachePath = settings.PackageCacheDir
+	params.Options.FontPaths = d.fontPaths()
+	params.Options.IgnoreSystemFonts = settings.IgnoreSystemFonts == 1
+	params.Options.IgnoreEmbeddedFonts = settings.IgnoreEmbeddedFonts == 1
+
+	params.InputFile = d.targetFile
+	params.OutDir = filepath.Join(filepath.Dir(d.targetFile), "output")
+	if settings.OutputDir != "" {
+		params.OutDir = settings.OutputDir
+	}
+
+	if settings.BuildDeps == 1 {
+		params.Options.Deps = filepath.Join(params.OutDir, "deps.json")
+		params.Options.DepsFormat = "json"
+	}
+
+	params.CmdOut = d.srv.Console()
+	params.Options.Features = "html" // enable HTML export
+
+	if params.OutFilename == "" {
+		params.OutFilename = strings.TrimSuffix(filepath.Base(d.targetFile), filepath.Ext(d.targetFile))
+	} else {
+		name := params.OutFilename
+		params.OutFilename = strings.TrimSuffix(filepath.Base(name), filepath.Ext(name))
+	}
+
+	if d.targetFile != "" {
 		go func() {
-			d.onConfirmCallback(params)
+			d.onExportFile(params)
 		}()
 	}
 
@@ -249,4 +293,35 @@ func (d *ExportDialog) LayoutBody(gtx C, th *theme.Theme) D {
 				})
 		}),
 	)
+}
+
+func (d *ExportDialog) fontPaths() []string {
+	fontPaths := []string{d.srv.CurrentProjectDir()}
+	if d.srv.Settings().Typst().ExtraFontPath != "" {
+		fontPaths = append(fontPaths, d.srv.Settings().Typst().ExtraFontPath)
+	}
+
+	return fontPaths
+}
+
+func (d *ExportDialog) onExportFile(params *typst.CompileParams) {
+	d.srv.EventBus().Emit(bus.TopicStatusbarNotifyEvent, statusbar.Notification{Content: i18n.Translate("Exporting file...")})
+
+	// use project dir as work dir for Typst to properly resolve imported resources.
+	compiler, err := typst.NewCompiler(d.srv.CurrentProjectDir())
+	if err != nil {
+		d.srv.EventBus().Emit(bus.TopicStatusbarNotifyEvent, statusbar.Notification{Content: err.Error()})
+		return
+	}
+	defer compiler.Close()
+
+	err = compiler.Compile(context.Background(), params, func(files []string) {
+		msg := fmt.Sprintf("Files exported to %s", params.OutDir)
+		d.srv.EventBus().Emit(bus.TopicStatusbarNotifyEvent, statusbar.Notification{Content: msg})
+	})
+	if err != nil {
+		log.Println("export PDF error: ", err)
+		d.srv.EventBus().Emit(bus.TopicStatusbarNotifyEvent, statusbar.Notification{Content: "File export error: " + err.Error()})
+	}
+
 }
