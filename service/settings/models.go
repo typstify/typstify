@@ -215,7 +215,7 @@ func init() {
 	}
 
 	defaultEditorSettings = &EditorSettings{
-		TypeFace:         "Hack, Roboto Mono, Go Mono, monospace",
+		TypeFace:         "Hack, Roboto Mono, Go Mono, Noto Emoji, monospace",
 		TextSize:         13,
 		Weight:           int(font.Normal),
 		LineHeightScale:  1.6,
