@@ -56,8 +56,8 @@ github.com/mustafaturan/bus/v3 v3.0.3 h1:PMEUVKpfI9FOUw32o3wAHRaBS1XGxh6cFCy/VHk
 github.com/mustafaturan/bus/v3 v3.0.3/go.mod h1:JVCyq6Pb6S/IGI6LrzKH5vlBZ9ifsd1Js+wd4Y2+7Xg=
 github.com/oligo/gioview v0.8.5 h1:l8RyI5kA7pctm6DlyyMz+fG11b46poOBDJPkl2JZPSw=
 github.com/oligo/gioview v0.8.5/go.mod h1:QZ8MpLvy/oYZD4Rj6gP9iNfcP4VTS1lnTnPeByxOI1c=
-github.com/oligo/gvcode v0.5.0 h1:ykviNPteJj64PMeYN/g5HeY4MCuA6CijxtNTJbwAEsw=
-github.com/oligo/gvcode v0.5.0/go.mod h1:Qo0e/5meJuHTX3Sy632x76ANINdk5WYZ6tFxLzEF9gY=
+github.com/oligo/gvcode v0.6.0 h1:77AyLE9NC9d+P09RfQRLGf3xpPCSdf/KEe9hQMvZgAo=
+github.com/oligo/gvcode v0.6.0/go.mod h1:Qo0e/5meJuHTX3Sy632x76ANINdk5WYZ6tFxLzEF9gY=
 github.com/pkg/errors v0.8.1 h1:iURUrRGxPUNPdy5/HRSm+Yj6okJ6UtLINN0Q9M4+h3I=
 github.com/pkg/errors v0.8.1/go.mod h1:bwawxfHBFNV+L2hUp1rHADufV3IMtnDRdf1r5NINEl0=
 github.com/pmezard/go-difflib v1.0.0 h1:4DBwDE0NGyQoBHbLQYPwSUPoCMWR5BEzIk/f1lZbAQM=

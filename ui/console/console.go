@@ -5,6 +5,7 @@ import (
 	"io"
 	"regexp"
 	"sync"
+	"sync/atomic"
 
 	"gioui.org/font"
 	"gioui.org/layout"
@@ -43,7 +44,7 @@ type ConsoleState struct {
 	yScroll     widget.Scrollbar
 	maxLines    int
 	err         error
-	textUpated  bool
+	textUpated  atomic.Bool
 	mu          sync.Mutex
 
 	ShowConsole bool
@@ -66,18 +67,20 @@ func NewConsoleState(maxLines int) *ConsoleState {
 }
 
 func (c *ConsoleState) Write(data []byte) (int, error) {
-	c.mu.Lock()
-	defer c.mu.Unlock()
-	if len(data) > 0 {
-		c.buf.Write(data)
-		c.textUpated = true
+	if len(data) == 0 {
+		return 0, nil
 	}
 
-	return len(data), nil
+	c.mu.Lock()
+	defer c.mu.Unlock()
+	n, err := c.buf.Write(data)
+	c.textUpated.Store(true)
+
+	return n, err
 }
 
 func (c *ConsoleState) HasMore() bool {
-	return c.textUpated
+	return c.textUpated.Load()
 }
 
 func (c *ConsoleState) Clear() {
@@ -88,10 +91,9 @@ func (c *ConsoleState) Clear() {
 
 func (c *ConsoleState) readBuffered() {
 	c.mu.Lock()
-	msg, err := io.ReadAll(&c.buf)
-	if err == nil {
-		c.state.Insert(string(msg))
-	}
+	msg := c.buf.String()
+	c.state.SetCaret(c.state.Len(), c.state.Len())
+	c.state.Insert(msg)
 	c.buf.Reset()
 	c.mu.Unlock()
 }
@@ -145,11 +147,13 @@ func (c *ConsoleState) update(gtx C, th *theme.Theme) {
 	c.state.WithOptions(
 		gvcode.WithTextSize(th.TextSize),
 		gvcode.WithFont(font.Font{Typeface: th.Face, Weight: font.Medium}),
+		gvcode.WithDefaultGutters(),
+		gvcode.WithGutterGap(unit.Dp(8)),
 	)
 
-	if c.textUpated {
+	if c.textUpated.CompareAndSwap(true, false) {
 		c.readBuffered()
-		c.textUpated = false
+		c.truncate()
 	}
 
 	yScrollDist := c.yScroll.ScrollDistance()
@@ -157,6 +161,20 @@ func (c *ConsoleState) update(gtx C, th *theme.Theme) {
 		c.state.Scroll(gtx, 0, yScrollDist)
 	}
 
+}
+
+func (c *ConsoleState) truncate() {
+	if c.state.Lines() <= c.maxLines {
+		return
+	}
+
+	overflows := c.state.Lines() - c.maxLines
+	c.state.SetCaret(0, 0)
+	c.state.SelectLines(overflows, false)
+	c.state.Delete(1)
+
+	textLen := c.state.Len()
+	c.state.SetCaret(textLen, textLen)
 }
 
 // ANSI escape sequence regexp
