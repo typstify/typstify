@@ -8,6 +8,7 @@ import (
 	"log"
 	"path/filepath"
 	"regexp"
+	"runtime"
 	"strings"
 
 	"github.com/inkeliz/giohyperlink"
@@ -194,6 +195,12 @@ func (te *TypstEditor) Actions() []view.ViewAction {
 
 				// If OpenInBrowser is true, the LSP handles opening the browser
 				if openInBrowser {
+					return
+				}
+
+				var isLinux = runtime.GOOS == "linux"
+				if isLinux && serverAddr != "" {
+					utils.OpenInExternalApp(serverAddr)
 					return
 				}
 
