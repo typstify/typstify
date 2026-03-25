@@ -2,7 +2,7 @@
 ; ---------------------------------
 
 !define APPNAME "Typstify"
-!define APPVERSION "v1.5.0"
+!define APPVERSION "v1.6.0"
 !define INSTALLDIR "$PROGRAMFILES64\${APPNAME}"
 
 Outfile "TypstifyInstaller.exe"
