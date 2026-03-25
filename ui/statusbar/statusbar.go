@@ -2,7 +2,6 @@ package statusbar
 
 import (
 	"image"
-	"log"
 	"time"
 
 	"gioui.org/layout"
@@ -26,11 +25,14 @@ type (
 	D = layout.Dimensions
 )
 
-var defaultIdleDuration = time.Second * 5
+var defaultActiveDuration = time.Second * 5
 var (
-	notifyIcon, _   = widget.NewIcon(icons.ActionInfoOutline)
-	warningIcon, _  = widget.NewIcon(icons.AlertErrorOutline)
-	warningIcon2, _ = widget.NewIcon(icons.AlertError)
+	notifyInfoIcon, _  = widget.NewIcon(icons.ActionInfoOutline)
+	notifyWarnIcon, _  = widget.NewIcon(icons.AlertWarning)
+	notifyErrorIcon, _ = widget.NewIcon(icons.AlertError)
+
+	consoleInfoIcon, _   = widget.NewIcon(icons.ActionInfoOutline)
+	consoleUpdateIcon, _ = widget.NewIcon(icons.ActionInfo)
 )
 
 // Views can implement StatusLine interface to let StatusBar render their
@@ -40,14 +42,13 @@ type StatusIndicator interface {
 }
 
 type NotificationBar struct {
-	message string
-	// reset notification after the specified duration.
-	idleDuration time.Duration
+	lastMessage *Notification
 	// last notification update time
 	lastUpdateTime time.Time
 }
 
 type Notification struct {
+	Level    int
 	Content  string
 	Duration time.Duration
 }
@@ -60,21 +61,18 @@ type StatusBar struct {
 }
 
 func (n *NotificationBar) Layout(gtx C, th *theme.Theme) D {
-	if n.message == "" {
+	if n.lastMessage == nil {
 		return D{}
 	}
 
 	// If idleDuration has zero value, the message will not expire.
-	if n.lastUpdateTime.IsZero() {
+	if n.lastUpdateTime.IsZero() && n.lastMessage.Duration > 0 {
 		n.lastUpdateTime = gtx.Now
-		if n.idleDuration > 0 {
-			gtx.Execute(op.InvalidateCmd{At: n.lastUpdateTime.Add(n.idleDuration)})
-		}
-
-	} else if n.idleDuration > 0 && gtx.Now.Sub(n.lastUpdateTime) > n.idleDuration {
+		gtx.Execute(op.InvalidateCmd{At: n.lastUpdateTime.Add(n.lastMessage.Duration)})
+	} else if n.lastMessage.Duration > 0 && gtx.Now.Sub(n.lastUpdateTime) > n.lastMessage.Duration {
 		defer func() {
-			n.lastUpdateTime = gtx.Now
-			n.message = ""
+			n.lastUpdateTime = time.Time{}
+			n.lastMessage = nil
 		}()
 	}
 
@@ -83,12 +81,25 @@ func (n *NotificationBar) Layout(gtx C, th *theme.Theme) D {
 		Alignment: layout.Middle,
 	}.Layout(gtx,
 		layout.Rigid(func(gtx C) D {
-			return misc.Icon{Icon: notifyIcon, Size: unit.Dp(16)}.Layout(gtx, th)
+			var icon *widget.Icon
+			switch n.lastMessage.Level {
+			case 0:
+				icon = notifyInfoIcon
+			case 1:
+				icon = notifyWarnIcon
+
+			case 2:
+				icon = notifyErrorIcon
+			default:
+				icon = notifyErrorIcon
+			}
+
+			return misc.Icon{Icon: icon, Size: unit.Dp(16)}.Layout(gtx, th)
 		}),
 
 		layout.Rigid(layout.Spacer{Width: unit.Dp(4)}.Layout),
 		layout.Rigid(func(gtx C) D {
-			return material.Label(th.Theme, th.TextSize*0.9, n.message).Layout(gtx)
+			return material.Label(th.Theme, th.TextSize*0.9, n.lastMessage.Content).Layout(gtx)
 		}),
 	)
 }
@@ -104,7 +115,7 @@ func (s *StatusBar) Update(gtx C) bool {
 func (s *StatusBar) Layout(gtx C, th *theme.Theme) D {
 	s.Update(gtx)
 
-	if s.notification.message == "" && s.vm.CurrentView() == nil {
+	if s.notification.lastMessage == nil && s.vm.CurrentView() == nil {
 		return D{}
 	}
 
@@ -141,9 +152,9 @@ func (s *StatusBar) Layout(gtx C, th *theme.Theme) D {
 			layout.Rigid(layout.Spacer{Width: unit.Dp(16)}.Layout),
 			layout.Rigid(func(gtx C) D {
 				return material.Clickable(gtx, &s.showConsoleBtn, func(gtx C) D {
-					icon := misc.Icon{Icon: warningIcon, Color: th.Fg, Size: unit.Dp(th.TextSize * 1.2)}
+					icon := misc.Icon{Icon: consoleInfoIcon, Color: th.Fg, Size: unit.Dp(th.TextSize * 1.2)}
 					if s.consoleState.HasMore() {
-						icon.Icon = warningIcon2
+						icon.Icon = consoleUpdateIcon
 						// icon.Color = misc.WithAlpha(icon.Color, 0xb6)
 					}
 					return icon.Layout(gtx, th)
@@ -172,13 +183,11 @@ func NewStatusBar(srv *service.ServiceFacade, vm view.ViewManager) *StatusBar {
 		switch topic {
 		case bus.TopicStatusbarNotifyEvent:
 			msg := data.(Notification)
-			sb.notification.message = msg.Content
-			sb.notification.idleDuration = msg.Duration
-			if sb.notification.idleDuration <= 0 {
-				sb.notification.idleDuration = defaultIdleDuration
+			if msg.Duration <= 0 {
+				msg.Duration = defaultActiveDuration
 			}
+			sb.notification.lastMessage = &msg
 			vm.Invalidate()
-			log.Println("notification: ", msg)
 		}
 	})
 
