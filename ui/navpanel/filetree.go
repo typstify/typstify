@@ -230,6 +230,7 @@ func (tn *FileTreeNav) onFileSelected(node *filetree.FileNode) {
 	// An empty also refresh the UI so do not drop it.
 	if err := tn.vm.RequestSwitch(intent); err != nil {
 		log.Printf("switching to view %s error: %v", intent.Target, err)
+		tn.srv.EventBus().Emit(bus.TopicStatusbarNotifyEvent, statusbar.Notification{Content: err.Error(), Level: 1})
 	}
 }
 
