@@ -1,6 +1,6 @@
 module looz.ws/typstify
 
-go 1.25
+go 1.25.4
 
 require (
 	gioui.org v0.9.1-0.20251215212054-7bcb315ee174
@@ -22,13 +22,14 @@ require (
 	github.com/rivo/uniseg v0.4.7
 	github.com/sahilm/fuzzy v0.1.1
 	github.com/saintfish/chardet v0.0.0-20230101081208-5e3ef4b5456d
+	github.com/typstify/tpix-cli v0.6.1
 	go.etcd.io/bbolt v1.3.11
 	golang.org/x/exp/jsonrpc2 v0.0.0-20250911091902-df9299821621
 	golang.org/x/exp/shiny v0.0.0-20250408133849-7e4ce0ab07d0
 	golang.org/x/image v0.26.0
-	golang.org/x/sys v0.39.0
-	golang.org/x/telemetry v0.0.0-20250105011419-6d9ea865d014
-	golang.org/x/text v0.32.0
+	golang.org/x/sys v0.40.0
+	golang.org/x/telemetry v0.0.0-20260109210033-bd525da824e2
+	golang.org/x/text v0.33.0
 )
 
 // use a local patch to fix the focus switching issue between the native webview and GioView
@@ -45,14 +46,16 @@ require (
 	github.com/go-text/typesetting v0.3.0 // indirect
 	github.com/inkeliz/go_inkwasm v0.1.23-0.20240519174017-989fbe5b10f6 // indirect
 	github.com/kylelemons/godebug v1.1.0 // indirect
+	github.com/pelletier/go-toml/v2 v2.2.4 // indirect
 	github.com/power-devops/perfstat v0.0.0-20210106213030-5aafc221ea8c // indirect
 	github.com/rdleal/intervalst v1.4.1 // indirect
 	github.com/shirou/gopsutil/v4 v4.24.9 // indirect
 	github.com/yuin/goldmark v1.4.13 // indirect
 	github.com/yusufpapurcu/wmi v1.2.4 // indirect
-	golang.org/x/crypto v0.46.0 // indirect
+	golang.org/x/crypto v0.47.0 // indirect
 	golang.org/x/exp v0.0.0-20250408133849-7e4ce0ab07d0 // indirect
 	golang.org/x/exp/event v0.0.0-20250819193227-8b4c13bb791b // indirect
-	golang.org/x/net v0.48.0 // indirect
+	golang.org/x/net v0.49.0 // indirect
+	golang.org/x/tools v0.41.0 // indirect
 	golang.org/x/xerrors v0.0.0-20240903120638-7835f813f4da // indirect
 )

@@ -19,6 +19,7 @@ type Settings struct {
 	general *GeneralSettings
 	editor  *EditorSettings
 	typst   *TypstSettings
+	tpix    *TpixSettings
 }
 
 func configRoot() string {
@@ -89,6 +90,17 @@ func (s *Settings) Typst() *TypstSettings {
 
 	s.typst.Load()
 	return s.typst
+}
+
+func (s *Settings) Tpix() *TpixSettings {
+	if s.tpix == nil {
+		s.tpix = &TpixSettings{
+			baseModel: s.initModel("tpix"),
+		}
+	}
+
+	s.tpix.Load()
+	return s.tpix
 }
 
 func (s *Settings) initModel(name string) baseModel {

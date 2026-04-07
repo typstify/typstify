@@ -9,6 +9,7 @@ import (
 	"github.com/oligo/gioview/explorer"
 	"github.com/oligo/gioview/image"
 	"github.com/oligo/gioview/view"
+	"github.com/typstify/tpix-cli/api"
 	"looz.ws/typstify/lsp"
 	"looz.ws/typstify/service/bus"
 	"looz.ws/typstify/service/net"
@@ -60,6 +61,8 @@ func NewService(ctx context.Context) *ServiceFacade {
 	typst.SetupCmdBuilder(s.settings.General().ExternalTypst)
 
 	s.RegisterDevice()
+
+	api.Init(&tpixCredentialProvider{setting: st.Tpix()})
 
 	return s
 }

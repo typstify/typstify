@@ -71,6 +71,14 @@ type TypstSettings struct {
 	OutputDir           string `key:"outputDir"`
 }
 
+type TpixSettings struct {
+	baseModel
+
+	AccessToken  string `key:"accessToken"`
+	RefreshToken string `key:"refreshToken"`
+	LoginAt      int64  `key:"loginAt"`
+}
+
 func (g *GeneralSettings) Save() error {
 	if err := g.Validate(); err != nil {
 		return err
@@ -196,6 +204,22 @@ func (t *TypstSettings) Validate() error {
 		}
 	}
 
+	return nil
+}
+
+func (t *TpixSettings) Save() error {
+	if err := t.Validate(); err != nil {
+		return err
+	}
+
+	return t.baseModel.save(t)
+}
+
+func (t *TpixSettings) Load() error {
+	return t.baseModel.load(t, &TpixSettings{})
+}
+
+func (t *TpixSettings) Validate() error {
 	return nil
 }
 
