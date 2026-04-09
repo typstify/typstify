@@ -30,19 +30,31 @@ import (
 	"looz.ws/typstify/ui/statusbar"
 	"looz.ws/typstify/utils"
 	wg "looz.ws/typstify/widgets"
+	appicons "looz.ws/typstify/widgets/icons"
 )
+
+// var (
+// 	openFolder     = icons.NewSvgIcon(icons.FolderOpen, 18)
+// 	newFolder     = icons.NewSvgIcon(icons.FolderPlus, 18)
+// 	pkgManagerIcon = icons.NewSvgIcon(icons.List, 18)
+// 	settingsIcon  = icons.NewSvgIcon(icons.Settings, 18)
+
+// 	warnIcon      = icons.NewSvgIcon(icons.Info, 18)
+// 	infoIcon     = icons.NewSvgIcon(icons.Info, 18)
+// )
 
 var (
 	openFolder, _     = widget.NewIcon(icons.FileFolderOpen)
 	newFolder, _      = widget.NewIcon(icons.AVLibraryAdd)
 	pkgManagerIcon, _ = widget.NewIcon(icons.ActionList)
 	settingsIcon, _   = widget.NewIcon(icons.ActionSettings)
-	viewListIcon, _   = widget.NewIcon(icons.ActionViewList)
-	historyIcon, _    = widget.NewIcon(icons.ActionHistory)
-	arrowRightIcon, _ = widget.NewIcon(icons.NavigationChevronRight)
-	arrowDownIcon, _  = widget.NewIcon(icons.NavigationExpandMore)
-	warnIcon, _       = widget.NewIcon(icons.ActionInfoOutline)
-	infoIcon, _       = widget.NewIcon(icons.ActionInfoOutline)
+
+	//infoIcon, _       = widget.NewIcon(icons.ActionInfoOutline)
+	infoIcon       = appicons.NewSvgIcon(appicons.Info)
+	viewListIcon   = appicons.NewSvgIcon(appicons.List)
+	historyIcon    = appicons.NewSvgIcon(appicons.History)
+	arrowRightIcon = appicons.NewSvgIcon(appicons.ChevronRight)
+	arrowDownIcon  = appicons.NewSvgIcon(appicons.ChevronDown)
 )
 
 type CommandPanel struct {
@@ -323,7 +335,7 @@ func (ut *UpdateTips) Layout(gtx C, th *theme.Theme) D {
 					Alignment: layout.Middle,
 				}.Layout(gtx,
 					layout.Rigid(func(gtx C) D {
-						return misc.Icon{Icon: infoIcon, Size: unit.Dp(th.TextSize) * 2}.Layout(gtx, th)
+						return infoIcon.Layout(gtx, th.Fg, th.TextSize)
 					}),
 					layout.Rigid(layout.Spacer{Height: unit.Dp(4)}.Layout),
 					layout.Rigid(func(gtx C) D {

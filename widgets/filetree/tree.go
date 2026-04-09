@@ -27,18 +27,12 @@ import (
 	"github.com/oligo/gioview/explorer"
 	"github.com/oligo/gioview/misc"
 	"github.com/oligo/gioview/theme"
-	"golang.org/x/exp/shiny/materialdesign/icons"
 	"looz.ws/typstify/utils"
 	"looz.ws/typstify/widgets"
 	"looz.ws/typstify/widgets/menu"
 )
 
 var (
-	IconSize          = unit.Dp(14)
-	FileIcon, _       = widget.NewIcon(icons.ActionDescription)
-	FolderIcon, _     = widget.NewIcon(icons.NavigationChevronRight)
-	FolderOpenIcon, _ = widget.NewIcon(icons.NavigationExpandMore)
-
 	NodePadding = unit.Dp(3)
 	IndentUnit  = unit.Dp(16)
 )
@@ -146,7 +140,7 @@ func (t *TreeView) flatten(node *FileNode, depth int) {
 			IndentUnit:      IndentUnit,
 		}
 		if !node.IsDir() {
-			flatNode.Icon = FileIcon
+			flatNode.Icon = ChooseFileIcon(node.Name())
 		}
 		flatNode.State = state
 		t.visibleNodes = append(t.visibleNodes, flatNode)

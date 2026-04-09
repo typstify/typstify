@@ -5,6 +5,7 @@ import (
 	"gioui.org/widget"
 	"github.com/oligo/gioview/explorer"
 	"looz.ws/typstify/widgets"
+	"looz.ws/typstify/widgets/icons"
 )
 
 // FileNode is the data representation of the file system node.
@@ -32,7 +33,7 @@ type FlatNode struct {
 	Node            *FileNode
 	State           *NodeState
 	Depth           int
-	Icon            *widget.Icon
+	Icon            *icons.SvgIcon
 	VerticalPadding unit.Dp
 	IndentUnit      unit.Dp
 }

@@ -11,6 +11,13 @@ import (
 	"github.com/oligo/gioview/theme"
 	"looz.ws/typstify/i18n"
 	"looz.ws/typstify/typst/pkg"
+	appIcons "looz.ws/typstify/widgets/icons"
+)
+
+var (
+	notFoundIcon      = appIcons.NewSvgIcon(appIcons.PackageOpen)
+	packageSearchIcon = appIcons.NewSvgIcon(appIcons.PackageSearch)
+	packageIcon       = appIcons.NewSvgIcon(appIcons.Package)
 )
 
 type PkgList struct {
@@ -60,9 +67,20 @@ func (p *PkgList) Layout(gtx C, th *theme.Theme) D {
 	// Empty state
 	if len(p.cards) <= 0 {
 		return layout.Center.Layout(gtx, func(gtx C) D {
-			lb := material.Label(th.Theme, th.TextSize, i18n.Translate("No packages/templates found"))
-			lb.Color = misc.WithAlpha(th.Fg, 0xb6)
-			return lb.Layout(gtx)
+			return layout.Flex{
+				Alignment: layout.Middle,
+				Gap:       gtx.Dp(unit.Dp(4)),
+			}.Layout(gtx,
+				layout.Rigid(func(gtx C) D {
+					return notFoundIcon.Layout(gtx, misc.WithAlpha(th.Fg, 0xb6), th.TextSize)
+				}),
+				layout.Rigid(func(gtx C) D {
+					lb := material.Label(th.Theme, th.TextSize, i18n.Translate("No packages/templates found"))
+					lb.Color = misc.WithAlpha(th.Fg, 0xb6)
+					return lb.Layout(gtx)
+				}),
+			)
+
 		})
 	}
 	return p.list.Layout(gtx, len(p.cards), func(gtx C, index int) D {

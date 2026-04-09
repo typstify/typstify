@@ -18,12 +18,12 @@ import (
 	"github.com/oligo/gioview/menu"
 	"github.com/oligo/gioview/misc"
 	"github.com/oligo/gioview/theme"
-	"golang.org/x/exp/shiny/materialdesign/icons"
+	"looz.ws/typstify/widgets/icons"
 )
 
 var (
-	arrowRightIcon, _ = widget.NewIcon(icons.NavigationChevronRight)
-	expandMoreIcon, _ = widget.NewIcon(icons.NavigationExpandMore)
+	arrowRightIcon = icons.NewSvgIcon(icons.ChevronRight)
+	expandMoreIcon = icons.NewSvgIcon(icons.ChevronDown)
 )
 
 type Dropdown struct {
@@ -118,9 +118,7 @@ func (d *Dropdown) layout(gtx C, th *theme.Theme, textSize unit.Sp, label any) D
 						icon = expandMoreIcon
 					}
 
-					iconSize := gtx.Dp(unit.Dp(18))
-					gtx.Constraints = layout.Exact(image.Pt(iconSize, iconSize))
-					return icon.Layout(gtx, th.Fg)
+					return icon.Layout(gtx, th.Fg, th.TextSize*1.2)
 				}),
 			)
 		})

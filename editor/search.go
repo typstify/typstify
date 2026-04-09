@@ -20,17 +20,17 @@ import (
 	"github.com/oligo/gvcode"
 	"github.com/oligo/gvcode/color"
 	"github.com/oligo/gvcode/textstyle/decoration"
-	"golang.org/x/exp/shiny/materialdesign/icons"
 	"looz.ws/typstify/i18n"
+	"looz.ws/typstify/widgets/icons"
 )
 
 var (
-	searchIcon, _      = widget.NewIcon(icons.ActionFindInPage)
-	closeSearchIcon, _ = widget.NewIcon(icons.NavigationClose)
-	backwardIcon, _    = widget.NewIcon(icons.NavigationArrowUpward)
-	forwardIcon, _     = widget.NewIcon(icons.NavigationArrowDownward)
-	dropdownIcon, _    = widget.NewIcon(icons.NavigationArrowDropDown)
-	dropupIcon, _      = widget.NewIcon(icons.NavigationArrowDropUp)
+	searchIcon      = icons.NewSvgIcon(icons.Search)
+	closeSearchIcon = icons.NewSvgIcon(icons.X)
+	backwardIcon    = icons.NewSvgIcon(icons.ArrowUp)
+	forwardIcon     = icons.NewSvgIcon(icons.ArrowDown)
+	dropdownIcon    = icons.NewSvgIcon(icons.ChevronDown)
+	dropupIcon      = icons.NewSvgIcon(icons.ChevronUp)
 )
 
 const inputBarWidth = unit.Dp(200)
@@ -318,7 +318,7 @@ func (sb *TextSearchBar) layout(gtx C, th *theme.Theme) D {
 						if sb.showReplace {
 							icon = dropupIcon
 						}
-						return misc.Icon{Icon: icon, Size: unit.Dp(18), Color: th.Fg}.Layout(gtx, th)
+						return icon.Layout(gtx, th.Fg, th.TextSize)
 					})
 				})
 			}),
@@ -402,21 +402,21 @@ func (sb *TextSearchBar) layoutSearchBar(gtx C, th *theme.Theme) D {
 
 			layout.Rigid(func(gtx C) D {
 				return material.Clickable(gtx, &sb.prevBtn, func(gtx C) D {
-					return misc.Icon{Icon: backwardIcon, Size: unit.Dp(18), Color: th.Fg}.Layout(gtx, th)
+					return backwardIcon.Layout(gtx, th.Fg, th.TextSize)
 				})
 			}),
 			layout.Rigid(layout.Spacer{Width: unit.Dp(4)}.Layout),
 
 			layout.Rigid(func(gtx C) D {
 				return material.Clickable(gtx, &sb.nextBtn, func(gtx C) D {
-					return misc.Icon{Icon: forwardIcon, Size: unit.Dp(18), Color: th.Fg}.Layout(gtx, th)
+					return forwardIcon.Layout(gtx, th.Fg, th.TextSize)
 				})
 			}),
 			layout.Rigid(layout.Spacer{Width: unit.Dp(4)}.Layout),
 
 			layout.Rigid(func(gtx C) D {
 				return material.Clickable(gtx, &sb.closeBtn, func(gtx C) D {
-					return misc.Icon{Icon: closeSearchIcon, Size: unit.Dp(18), Color: th.Fg}.Layout(gtx, th)
+					return closeSearchIcon.Layout(gtx, th.Fg, th.TextSize)
 				})
 			}),
 		)

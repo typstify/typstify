@@ -88,8 +88,7 @@ func (fn *FlatNode) layout(gtx layout.Context, th *theme.Theme) layout.Dimension
 					}
 
 					return layout.Inset{Right: unit.Dp(6)}.Layout(gtx, func(gtx layout.Context) layout.Dimensions {
-						iconColor := th.ContrastBg
-						return misc.Icon{Icon: icon, Color: iconColor, Size: IconSize}.Layout(gtx, th)
+						return icon.Layout(gtx, th.ContrastBg, th.TextSize*1.1)
 					})
 				}),
 				layout.Flexed(1, func(gtx layout.Context) layout.Dimensions {

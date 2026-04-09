@@ -46,6 +46,8 @@ github.com/hexops/gotextdiff v1.0.3 h1:gitA9+qJrrTCsiCl7+kh75nPqQt1cx4ZkudSTLoUq
 github.com/hexops/gotextdiff v1.0.3/go.mod h1:pSWU5MAI3yDq+fZBTazCSJysOMbxWL1BSow5/V2vxeg=
 github.com/inkeliz/giohyperlink v0.0.0-20220903215451-2ac5d54abdce h1:VY+88zGHu3up1GEdcSH9bFBrwF/0HJRLhaR7QGn+6II=
 github.com/inkeliz/giohyperlink v0.0.0-20220903215451-2ac5d54abdce/go.mod h1:aYfTeMhp1YaZo0welffItZD1SeIsccPQ7A4evWbHjmY=
+github.com/inkeliz/giosvg v0.0.0-20240821232107-3208d4350d55 h1:vX3T6DTuzENaVorHtFBZPNYhRmX9xwKA9x/DzdBYXwo=
+github.com/inkeliz/giosvg v0.0.0-20240821232107-3208d4350d55/go.mod h1:9cMSIlqFpG0OLzPNsUf/l+j7Icbs5nbxln/Ez0q6S94=
 github.com/inkeliz/go_inkwasm v0.1.23-0.20240519174017-989fbe5b10f6 h1:zOY3Po61l43KEg+6p+xxEaSAJlBR4a81HRmxqfVOuyw=
 github.com/inkeliz/go_inkwasm v0.1.23-0.20240519174017-989fbe5b10f6/go.mod h1:68mLNhLJuUItd5PbLmnwC4H5P6wI3l3l8gGnAvXQq9k=
 github.com/kylelemons/godebug v1.1.0 h1:RPNrshWIDI6G2gRW9EHilWtl7Z6Sb1BR0xunSBf0SNc=

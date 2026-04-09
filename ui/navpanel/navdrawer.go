@@ -11,6 +11,7 @@ import (
 	"github.com/oligo/gioview/view"
 	"looz.ws/typstify/i18n"
 	"looz.ws/typstify/service"
+	"looz.ws/typstify/widgets/icons"
 
 	"gioui.org/gesture"
 	"gioui.org/layout"
@@ -136,7 +137,7 @@ func (nv *NavDrawer) Layout(gtx C, th *theme.Theme) D {
 
 }
 
-func (ns *NavSection) Layout(gtx C, th *theme.Theme, icon *widget.Icon, title string, child layout.Widget) D {
+func (ns *NavSection) Layout(gtx C, th *theme.Theme, icon *icons.SvgIcon, title string, child layout.Widget) D {
 	if ns.anim == nil {
 		ns.anim = &cmp.VisibilityAnimation{
 			State:    cmp.Invisible,
@@ -177,7 +178,7 @@ func (ns *NavSection) Layout(gtx C, th *theme.Theme, icon *widget.Icon, title st
 	return dims
 }
 
-func (ns *NavSection) layout(gtx C, th *theme.Theme, icon *widget.Icon, title string, child layout.Widget) D {
+func (ns *NavSection) layout(gtx C, th *theme.Theme, icon *icons.SvgIcon, title string, child layout.Widget) D {
 
 	return layout.Flex{
 		Axis:      layout.Vertical,
@@ -211,7 +212,7 @@ func (ns *NavSection) layout(gtx C, th *theme.Theme, icon *widget.Icon, title st
 							macro := op.Record(gtx.Ops)
 							dims := layout.Flex{Alignment: layout.Middle}.Layout(gtx,
 								layout.Rigid(func(gtx C) D {
-									return misc.Icon{Icon: icon, Size: unit.Dp(th.TextSize) * 1.2}.Layout(gtx, th)
+									return icon.Layout(gtx, th.Fg, th.TextSize)
 								}),
 								layout.Rigid(layout.Spacer{Width: unit.Dp(4)}.Layout),
 								layout.Flexed(1, func(gtx C) D {
@@ -225,7 +226,7 @@ func (ns *NavSection) layout(gtx C, th *theme.Theme, icon *widget.Icon, title st
 										arrow = arrowDownIcon
 									}
 
-									return misc.Icon{Icon: arrow, Color: th.Fg, Size: unit.Dp(th.TextSize) * 1.2}.Layout(gtx, th)
+									return arrow.Layout(gtx, th.Fg, th.TextSize)
 
 								}),
 							)

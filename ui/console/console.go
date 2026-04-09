@@ -20,9 +20,9 @@ import (
 	"github.com/oligo/gvcode"
 	"github.com/oligo/gvcode/color"
 	"github.com/oligo/gvcode/textstyle/syntax"
-	"golang.org/x/exp/shiny/materialdesign/icons"
 	"looz.ws/typstify/i18n"
 	"looz.ws/typstify/utils"
+	"looz.ws/typstify/widgets/icons"
 )
 
 type (
@@ -31,8 +31,8 @@ type (
 )
 
 var (
-	closeIcon, _ = widget.NewIcon(icons.NavigationClose)
-	clearIcon, _ = widget.NewIcon(icons.CommunicationClearAll)
+	closeIcon = icons.NewSvgIcon(icons.X)
+	clearIcon = icons.NewSvgIcon(icons.BrushCleaning)
 )
 
 var _ io.Writer = (*ConsoleState)(nil)
@@ -250,13 +250,13 @@ func (c *Console) layoutBorder(gtx C, th *theme.Theme) D {
 			}),
 			layout.Rigid(func(gtx C) D {
 				return material.Clickable(gtx, &c.clearConsoleBtn, func(gtx C) D {
-					return misc.Icon{Icon: clearIcon, Color: th.Fg}.Layout(gtx, th)
+					return clearIcon.Layout(gtx, th.Fg, th.TextSize)
 				})
 			}),
 			layout.Rigid(layout.Spacer{Width: 4}.Layout),
 			layout.Rigid(func(gtx C) D {
 				return material.Clickable(gtx, &c.closeConsoleBtn, func(gtx C) D {
-					return misc.Icon{Icon: closeIcon, Color: th.Fg}.Layout(gtx, th)
+					return closeIcon.Layout(gtx, th.Fg, th.TextSize)
 				})
 			}),
 		)

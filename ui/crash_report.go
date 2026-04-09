@@ -14,18 +14,17 @@ import (
 	"gioui.org/unit"
 	"gioui.org/widget"
 	"gioui.org/widget/material"
-	"github.com/oligo/gioview/misc"
 	"github.com/oligo/gioview/theme"
 	"github.com/oligo/gvcode"
 	gvcolor "github.com/oligo/gvcode/color"
 	"github.com/oligo/gvcode/textstyle/syntax"
-	"golang.org/x/exp/shiny/materialdesign/icons"
 	"looz.ws/typstify/i18n"
 	"looz.ws/typstify/logger"
+	"looz.ws/typstify/widgets/icons"
 )
 
 var (
-	errIcon, _ = widget.NewIcon(icons.AlertErrorOutline)
+	errIcon = icons.NewSvgIcon(icons.CircleAlert)
 )
 
 type CrashReport struct {
@@ -69,7 +68,7 @@ func (cr *CrashReport) Layout(gtx C, th *theme.Theme) D {
 			layout.Rigid(func(gtx C) D {
 				return layout.Flex{Axis: layout.Horizontal, Alignment: layout.Middle}.Layout(gtx,
 					layout.Rigid(func(gtx C) D {
-						return misc.Icon{Icon: errIcon, Size: unit.Dp(th.TextSize) * 2}.Layout(gtx, th)
+						return errIcon.Layout(gtx, th.Fg, th.TextSize*2)
 					}),
 					layout.Rigid(layout.Spacer{Width: unit.Dp(8)}.Layout),
 					layout.Rigid(func(gtx C) D {

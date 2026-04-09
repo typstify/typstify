@@ -9,20 +9,19 @@ import (
 	"gioui.org/unit"
 	"gioui.org/widget"
 	"gioui.org/widget/material"
-	"github.com/oligo/gioview/misc"
 	"github.com/oligo/gioview/theme"
 	"github.com/oligo/gioview/view"
 	"github.com/oligo/gvcode"
 	"github.com/rivo/uniseg"
-	"golang.org/x/exp/shiny/materialdesign/icons"
 	"looz.ws/typstify/i18n"
 	"looz.ws/typstify/service"
 	"looz.ws/typstify/ui/dialog"
+	"looz.ws/typstify/widgets/icons"
 )
 
 var (
-	lockIcon, _   = widget.NewIcon(icons.ActionLockOutline)
-	unlockIcon, _ = widget.NewIcon(icons.ActionLockOpen)
+	lockedIcon   = icons.NewSvgIcon(icons.PencilOff)
+	unlockedIcon = icons.NewSvgIcon(icons.Pencil)
 )
 
 type EditorStatus struct {
@@ -139,11 +138,11 @@ func (s *EditorStatus) Layout(gtx C, th *theme.Theme, ed *TextEditor, srv *servi
 
 		layout.Rigid(layout.Spacer{Width: unit.Dp(12)}.Layout),
 		layout.Rigid(func(gtx C) D {
-			var icon = unlockIcon
+			var icon = unlockedIcon
 			if s.ReadOnly {
-				icon = lockIcon
+				icon = lockedIcon
 			}
-			return misc.Icon{Icon: icon, Color: th.Fg, Size: unit.Dp(th.TextSize * 1.1)}.Layout(gtx, th)
+			return icon.Layout(gtx, th.Fg, th.TextSize)
 		}),
 	)
 }

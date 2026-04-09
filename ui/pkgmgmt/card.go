@@ -108,7 +108,21 @@ func (c *PkgCard) layout(gtx C, th *theme.Theme) D {
 							Spacing:   layout.SpaceBetween,
 						}.Layout(gtx,
 							layout.Rigid(func(gtx C) D {
-								return material.H5(th.Theme, c.pkgInfo.Name).Layout(gtx)
+								return layout.Flex{
+									Alignment: layout.Middle,
+									Gap:       gtx.Dp(unit.Dp(4)),
+								}.Layout(gtx,
+									layout.Rigid(func(gtx C) D {
+										fillColor := th.Fg
+										if c.pkgInfo.IsTemplate {
+											fillColor = th.ContrastBg
+										}
+										return packageIcon.Layout(gtx, fillColor, th.TextSize*24.0/16.0)
+									}),
+									layout.Rigid(func(gtx C) D {
+										return material.H5(th.Theme, c.pkgInfo.Name).Layout(gtx)
+									}),
+								)
 							}),
 							layout.Rigid(layout.Spacer{Width: unit.Dp(16)}.Layout),
 							layout.Rigid(func(gtx C) D {

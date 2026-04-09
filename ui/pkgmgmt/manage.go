@@ -29,8 +29,8 @@ type (
 )
 
 var (
-	PkgListViewID   = view.NewViewID("PkgListView")
-	searchIcon, _   = widget.NewIcon(icons.ActionSearch)
+	PkgListViewID = view.NewViewID("PkgListView")
+	searchIcon, _ = widget.NewIcon(icons.ActionSearch)
 )
 
 type PkgListView struct {
@@ -111,8 +111,19 @@ func (vw *PkgListView) Layout(gtx C, th *theme.Theme) D {
 				}.Layout(gtx,
 					layout.Rigid(func(gtx C) D {
 						return layout.Center.Layout(gtx, func(gtx C) D {
-							return material.H6(th.Theme, i18n.Translate("Search packages/templates on TPIX")).Layout(gtx)
+							return layout.Flex{
+								Alignment: layout.Middle,
+								Gap:       gtx.Dp(unit.Dp(8)),
+							}.Layout(gtx,
+								layout.Rigid(func(gtx C) D {
+									return packageSearchIcon.Layout(gtx, th.Fg, th.TextSize*20.0/16.0)
+								}),
+								layout.Rigid(func(gtx C) D {
+									return material.H6(th.Theme, i18n.Translate("Search packages/templates on TPIX")).Layout(gtx)
+								}),
+							)
 						})
+
 					}),
 
 					layout.Rigid(layout.Spacer{Height: unit.Dp(24)}.Layout),

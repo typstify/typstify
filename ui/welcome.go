@@ -12,18 +12,18 @@ import (
 	"github.com/oligo/gioview/page"
 	"github.com/oligo/gioview/theme"
 	"github.com/oligo/gioview/view"
-	"golang.org/x/exp/shiny/materialdesign/icons"
 	"looz.ws/typstify/i18n"
 	"looz.ws/typstify/service"
 	"looz.ws/typstify/service/bus"
 	"looz.ws/typstify/ui/dialog"
 	"looz.ws/typstify/ui/pkgmgmt"
+	"looz.ws/typstify/widgets/icons"
 )
 
 var (
-	openFolderIcon, _    = widget.NewIcon(icons.FileFolderOpen)
-	createProjectIcon, _ = widget.NewIcon(icons.ContentCreate)
-	browseIcon, _        = widget.NewIcon(icons.ActionList)
+	openFolderIcon    = icons.NewSvgIcon(icons.FolderOpen)
+	createProjectIcon = icons.NewSvgIcon(icons.FolderPlus)
+	browseIcon        = icons.NewSvgIcon(icons.PackageSearch)
 )
 
 type WelcomeView struct {
@@ -87,14 +87,14 @@ func (vw *WelcomeView) Layout(gtx C, th *theme.Theme) D {
 
 }
 
-func layoutOp(gtx C, th *theme.Theme, btn *widget.Clickable, text string, icon *widget.Icon) D {
+func layoutOp(gtx C, th *theme.Theme, btn *widget.Clickable, text string, icon *icons.SvgIcon) D {
 	return layout.Flex{
 		Axis:      layout.Horizontal,
 		Alignment: layout.Middle,
 	}.Layout(gtx,
 		layout.Rigid(func(gtx C) D {
 			return layout.Inset{Right: unit.Dp(6)}.Layout(gtx, func(gtx C) D {
-				return misc.Icon{Icon: icon, Color: th.Fg, Size: unit.Dp(th.TextSize * 1.4)}.Layout(gtx, th)
+				return icon.Layout(gtx, th.Fg, th.TextSize*1.4)
 			})
 		}),
 		layout.Rigid(layout.Spacer{Width: unit.Dp(4)}.Layout),
