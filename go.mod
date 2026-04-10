@@ -14,6 +14,7 @@ require (
 	github.com/google/go-cmp v0.6.0
 	github.com/google/uuid v1.6.0
 	github.com/inkeliz/giohyperlink v0.0.0-20220903215451-2ac5d54abdce
+	github.com/inkeliz/giosvg v0.0.0-20240821232107-3208d4350d55
 	github.com/mustafaturan/bus/v3 v3.0.3
 	github.com/oligo/gioview v0.8.7
 	github.com/oligo/gvcode v0.6.0
@@ -21,7 +22,7 @@ require (
 	github.com/rivo/uniseg v0.4.7
 	github.com/sahilm/fuzzy v0.1.1
 	github.com/saintfish/chardet v0.0.0-20230101081208-5e3ef4b5456d
-	github.com/typstify/tpix-cli v0.8.0
+	github.com/typstify/tpix-cli v0.8.1
 	go.etcd.io/bbolt v1.3.11
 	golang.org/x/exp/jsonrpc2 v0.0.0-20250911091902-df9299821621
 	golang.org/x/exp/shiny v0.0.0-20250408133849-7e4ce0ab07d0
@@ -43,7 +44,6 @@ require (
 	github.com/ebitengine/purego v0.8.0 // indirect
 	github.com/go-ole/go-ole v1.2.6 // indirect
 	github.com/go-text/typesetting v0.3.0 // indirect
-	github.com/inkeliz/giosvg v0.0.0-20240821232107-3208d4350d55 // indirect
 	github.com/inkeliz/go_inkwasm v0.1.23-0.20240519174017-989fbe5b10f6 // indirect
 	github.com/kylelemons/godebug v1.1.0 // indirect
 	github.com/pelletier/go-toml/v2 v2.2.4 // indirect

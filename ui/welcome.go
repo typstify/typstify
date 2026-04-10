@@ -8,6 +8,7 @@ import (
 	"gioui.org/unit"
 	"gioui.org/widget"
 	"gioui.org/widget/material"
+	"github.com/inkeliz/giohyperlink"
 	"github.com/oligo/gioview/misc"
 	"github.com/oligo/gioview/page"
 	"github.com/oligo/gioview/theme"
@@ -20,19 +21,28 @@ import (
 	"looz.ws/typstify/widgets/icons"
 )
 
+const (
+	typstifyUrl = "https://typstify.com/"
+	tpixUrl     = "https://tpix.typstify.com"
+)
+
 var (
 	openFolderIcon    = icons.NewSvgIcon(icons.FolderOpen)
 	createProjectIcon = icons.NewSvgIcon(icons.FolderPlus)
 	browseIcon        = icons.NewSvgIcon(icons.PackageSearch)
+	userIcon          = icons.NewSvgIcon(icons.User)
+	userCogIcon       = icons.NewSvgIcon(icons.UserCog)
 )
 
 type WelcomeView struct {
 	vm view.ViewManager
 	page.PageStyle
-	srv          *service.ServiceFacade
-	createBtn    widget.Clickable
-	openBtn      widget.Clickable
-	browsePkgBtn widget.Clickable
+	srv             *service.ServiceFacade
+	createBtn       widget.Clickable
+	openBtn         widget.Clickable
+	browsePkgBtn    widget.Clickable
+	tpixWebsiteLink widget.Clickable
+	typstifyLink    widget.Clickable
 }
 
 // func (vw *WelcomeView) ID() view.ViewID {
@@ -46,23 +56,62 @@ func (vw *WelcomeView) Title() string {
 func (vw *WelcomeView) Layout(gtx C, th *theme.Theme) D {
 	vw.update(gtx)
 
+	top := gtx.Metric.PxToDp(int(float32(gtx.Constraints.Max.Y) * 0.2))
+
 	return vw.PageStyle.Layout(gtx, th, func(gtx C) D {
 		return layout.Inset{
 			Left:  unit.Dp(80),
 			Right: unit.Dp(80),
-			Top:   unit.Dp(200),
+			Top:   top,
 		}.Layout(gtx, func(gtx C) D {
 			return layout.Flex{
 				Axis: layout.Vertical,
 			}.Layout(gtx,
-				layout.Rigid(
-					func(gtx C) D {
-						label := material.H5(th.Theme, i18n.Translate("Getting Started"))
-						label.Color = th.Fg
-						return label.Layout(gtx)
-					}),
+				layout.Rigid(func(gtx C) D {
+					label := material.H3(th.Theme, i18n.Translate("Typstify"))
+					label.Color = th.Fg
+					return label.Layout(gtx)
+				}),
+				layout.Rigid(layout.Spacer{Height: unit.Dp(12)}.Layout),
 
-				layout.Rigid(layout.Spacer{Height: unit.Dp(20)}.Layout),
+				layout.Rigid(func(gtx C) D {
+					slogan := material.Label(th.Theme, th.TextSize*1.2, i18n.Translate("Crafting Typst documents at the speed of thought."))
+					slogan.Color = misc.WithAlpha(th.Fg, 0xb6)
+					slogan.Font.Weight = font.Medium
+					slogan.Font.Style = font.Italic
+					return slogan.Layout(gtx)
+				}),
+
+				layout.Rigid(layout.Spacer{Height: unit.Dp(36)}.Layout),
+
+				layout.Rigid(func(gtx C) D {
+					if vw.srv.Settings().Tpix().Username == "" {
+						return D{}
+					}
+
+					return layout.Flex{
+						Gap: gtx.Dp(unit.Dp(8)),
+					}.Layout(gtx,
+						layout.Rigid(func(gtx C) D {
+							return userIcon.Layout(gtx, th.Fg, th.TextSize)
+						}),
+						layout.Rigid(func(gtx C) D {
+							return material.Label(th.Theme, th.TextSize, i18n.Translate("Welcome, %s!", vw.srv.Settings().Tpix().Username)).Layout(gtx)
+						}),
+					)
+				}),
+
+				layout.Rigid(layout.Spacer{Height: unit.Dp(36)}.Layout),
+
+				layout.Rigid(layout.Spacer{Height: unit.Dp(36)}.Layout),
+
+				layout.Rigid(func(gtx C) D {
+					label := material.H5(th.Theme, i18n.Translate("Getting Started"))
+					label.Color = th.Fg
+					return label.Layout(gtx)
+				}),
+
+				layout.Rigid(layout.Spacer{Height: unit.Dp(24)}.Layout),
 				layout.Rigid(func(gtx C) D {
 					return layoutOp(gtx, th, &vw.createBtn, i18n.Translate("New project..."), createProjectIcon)
 				}),
@@ -76,10 +125,45 @@ func (vw *WelcomeView) Layout(gtx C, th *theme.Theme) D {
 				layout.Rigid(func(gtx C) D {
 					return layoutOp(gtx, th, &vw.browsePkgBtn, i18n.Translate("Browse Packages/Templates..."), browseIcon)
 				}),
-				layout.Rigid(layout.Spacer{Height: unit.Dp(8)}.Layout),
+
+				layout.Rigid(layout.Spacer{Height: unit.Dp(24)}.Layout),
 
 				layout.Rigid(func(gtx C) D {
-					return material.Label(th.Theme, th.TextSize, i18n.Translate("Or open a recent project by checking the Recent panel.")).Layout(gtx)
+					label := material.H5(th.Theme, i18n.Translate("Learn more"))
+					label.Color = th.Fg
+					return label.Layout(gtx)
+				}),
+				layout.Rigid(layout.Spacer{Height: unit.Dp(24)}.Layout),
+
+				layout.Rigid(func(gtx C) D {
+					return layout.Flex{}.Layout(gtx,
+						layout.Rigid(func(gtx C) D {
+							return material.Label(th.Theme, th.TextSize, i18n.Translate("To learn more about Typstify, go to ")).Layout(gtx)
+						}),
+						layout.Rigid(func(gtx C) D {
+							return material.Clickable(gtx, &vw.typstifyLink, func(gtx C) D {
+								label := material.Label(th.Theme, th.TextSize, typstifyUrl)
+								label.Color = th.ContrastBg
+								return label.Layout(gtx)
+							})
+						}),
+					)
+				}),
+				layout.Rigid(layout.Spacer{Height: unit.Dp(8)}.Layout),
+				layout.Rigid(func(gtx C) D {
+					return layout.Flex{}.Layout(gtx,
+						layout.Rigid(func(gtx C) D {
+							return material.Label(th.Theme, th.TextSize, i18n.Translate("To learn more about TPIX, click ")).Layout(gtx)
+						}),
+						layout.Rigid(func(gtx C) D {
+							return material.Clickable(gtx, &vw.tpixWebsiteLink, func(gtx C) D {
+								label := material.Label(th.Theme, th.TextSize, tpixUrl)
+								label.Color = th.ContrastBg
+								return label.Layout(gtx)
+							})
+						}),
+					)
+
 				}),
 			)
 		})
@@ -138,5 +222,17 @@ func (vw *WelcomeView) update(gtx C) {
 			Target:     pkgmgmt.PkgListViewID,
 			RequireNew: true,
 		})
+	}
+
+	if vw.tpixWebsiteLink.Clicked(gtx) {
+		if err := giohyperlink.Open(tpixUrl); err != nil {
+			log.Printf("error: opening hyperlink: %v", err)
+		}
+	}
+
+	if vw.typstifyLink.Clicked(gtx) {
+		if err := giohyperlink.Open(subscriptionUrl); err != nil {
+			log.Printf("error: opening hyperlink: %v", err)
+		}
 	}
 }

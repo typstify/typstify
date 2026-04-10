@@ -80,8 +80,8 @@ github.com/stretchr/objx v0.1.0/go.mod h1:HFkY916IF+rwdDfMAkV7OtwuqBVzrE8GR6GFx+
 github.com/stretchr/testify v1.7.0/go.mod h1:6Fq8oRcR53rry900zMqJjRRixrwX3KX962/h/Wwjteg=
 github.com/stretchr/testify v1.9.0 h1:HtqpIVDClZ4nwg75+f6Lvsy/wHu+3BoSGCbBAcpTsTg=
 github.com/stretchr/testify v1.9.0/go.mod h1:r2ic/lqez/lEtzL7wO/rwa5dbSLXVDPFyf8C91i36aY=
-github.com/typstify/tpix-cli v0.8.0 h1:Ff2Ocit9m1flgFueFlekmeIFDaWA9YDduN230Plwr8M=
-github.com/typstify/tpix-cli v0.8.0/go.mod h1:zn/jJUpAGVvEGoex959jwnp1KtY+PUKGJPfXy3q77hc=
+github.com/typstify/tpix-cli v0.8.1 h1:2n1wVzheS5FaJVZC3I5dzWzL7cFJ93J0i25bEAAOvGw=
+github.com/typstify/tpix-cli v0.8.1/go.mod h1:zn/jJUpAGVvEGoex959jwnp1KtY+PUKGJPfXy3q77hc=
 github.com/yuin/goldmark v1.4.13 h1:fVcFKWvrslecOb/tg+Cc05dkeYx540o0FuFt3nUVDoE=
 github.com/yuin/goldmark v1.4.13/go.mod h1:6yULJ656Px+3vBD8DxQVa3kxgyrAnzto9xy5taEt/CY=
 github.com/yusufpapurcu/wmi v1.2.4 h1:zFUKzehAFReQwLys1b/iSMl+JQGSCSjtVqQn9bBrPo0=

@@ -17,6 +17,7 @@ import (
 	tpix "github.com/typstify/tpix-cli"
 	"looz.ws/typstify/i18n"
 	"looz.ws/typstify/service/settings"
+	"looz.ws/typstify/widgets/icons"
 )
 
 const (
@@ -24,11 +25,15 @@ const (
 	tpixUrl         = "https://tpix.typstify.com"
 )
 
+var userIcon = icons.NewSvgIcon(icons.User)
+
 type tpixSession struct {
+	Username     string
+	Email        string
 	LastLoginAt  string
-	ExpiresAt    time.Time
 	AccessToken  string
 	RefreshToken string
+	Subscribed   bool
 }
 
 type TpixSettingsView struct {
@@ -49,10 +54,9 @@ func (t *TpixSettingsView) Title() string {
 
 func (t *TpixSettingsView) update(gtx C) {
 	if !t.isInitialized {
-		loginAt := time.UnixMilli(t.setting.LoginAt)
-		t.session.Store(&tpixSession{
-			LastLoginAt: loginAt.Format(time.DateTime),
-		})
+		if t.setting.LoginAt > 0 {
+			t.updateState()
+		}
 		t.isInitialized = true
 	}
 
@@ -62,9 +66,7 @@ func (t *TpixSettingsView) update(gtx C) {
 	}
 
 	if t.logoutBtn.Clicked(gtx) {
-		t.setting.AccessToken = ""
-		t.setting.RefreshToken = ""
-		t.setting.LoginAt = 0
+		t.setting.Clear()
 		t.session.Store(nil)
 	}
 
@@ -94,18 +96,53 @@ func (t *TpixSettingsView) login() {
 		return
 	}
 
-	session := tpixSession{
-		AccessToken:  tokenResp.AccessToken,
-		RefreshToken: tokenResp.RefreshToken,
-		LastLoginAt:  time.Now().Format(time.DateTime),
-		ExpiresAt:    time.Now().Add(time.Duration(tokenResp.ExpiresIn) * time.Second),
-	}
-
-	log.Println("login session is setup.", t.setting.AccessToken)
 	t.setting.AccessToken = tokenResp.AccessToken
 	t.setting.RefreshToken = tokenResp.RefreshToken
 	t.setting.LoginAt = time.Now().UnixMilli()
 	t.setting.Save()
+
+	profile, err := cli.GetUserProfile()
+	if err != nil {
+		log.Printf("Login failed: %v", err)
+		t.lastErr = err
+		return
+	}
+
+	session := tpixSession{
+		Username:     profile.Username,
+		Email:        profile.Email,
+		AccessToken:  tokenResp.AccessToken,
+		RefreshToken: tokenResp.RefreshToken,
+		LastLoginAt:  time.Now().Format(time.DateTime),
+		Subscribed:   profile.Subscribed,
+	}
+
+	t.setting.Username = profile.Username
+	t.setting.Email = profile.Email
+	t.setting.Save()
+
+	t.session.Store(&session)
+}
+
+func (t *TpixSettingsView) updateState() {
+	profile, err := cli.GetUserProfile()
+	if err != nil {
+		log.Printf("Login failed: %v", err)
+		t.lastErr = err
+		return
+	}
+
+	loginAt := time.UnixMilli(t.setting.LoginAt)
+
+	session := tpixSession{
+		Username:     profile.Username,
+		Email:        profile.Email,
+		AccessToken:  t.setting.AccessToken,
+		RefreshToken: t.setting.RefreshToken,
+		LastLoginAt:  loginAt.Format(time.DateTime),
+		Subscribed:   profile.Subscribed,
+	}
+
 	t.session.Store(&session)
 }
 
@@ -129,6 +166,8 @@ func (t *TpixSettingsView) Layout(gtx C, th *theme.Theme) D {
 				return layout.Dimensions{}
 			}
 
+			session := t.session.Load()
+
 			return settingItem{}.Layout(gtx, th, i18n.Translate("You have an active TPIX session"),
 				"",
 				func(gtx C) D {
@@ -137,9 +176,30 @@ func (t *TpixSettingsView) Layout(gtx C, th *theme.Theme) D {
 						Alignment: layout.Start,
 					}.Layout(gtx,
 						layout.Rigid(func(gtx C) D {
-							return material.Label(th.Theme, th.TextSize, fmt.Sprintf("Logged in at:    %s", t.session.Load().LastLoginAt)).Layout(gtx)
+							return layout.Flex{
+								Alignment: layout.Middle,
+								Gap:       gtx.Dp(unit.Dp(4)),
+							}.Layout(gtx,
+								layout.Rigid(func(gtx C) D {
+									return userIcon.Layout(gtx, th.ContrastBg, th.TextSize)
+								}),
+								layout.Rigid(func(gtx C) D {
+									return material.Label(th.Theme, th.TextSize, fmt.Sprintf("%s <%s>", session.Username, session.Email)).Layout(gtx)
+								}),
+							)
 						}),
 						layout.Rigid(layout.Spacer{Height: unit.Dp(8)}.Layout),
+
+						layout.Rigid(func(gtx C) D {
+							return material.Label(th.Theme, th.TextSize, fmt.Sprintf("Subscribed: %t", session.Subscribed)).Layout(gtx)
+						}),
+
+						layout.Rigid(layout.Spacer{Height: unit.Dp(8)}.Layout),
+
+						layout.Rigid(func(gtx C) D {
+							return material.Label(th.Theme, th.TextSize, fmt.Sprintf("Logged in at: %s", session.LastLoginAt)).Layout(gtx)
+						}),
+						layout.Rigid(layout.Spacer{Height: unit.Dp(16)}.Layout),
 						layout.Rigid(func(gtx C) D {
 							btn := material.Button(th.Theme, &t.logoutBtn, i18n.Translate("Logout TPIX"))
 							return btn.Layout(gtx)

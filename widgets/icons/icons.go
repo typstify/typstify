@@ -124,6 +124,12 @@ var PackageOpen []byte
 //go:embed lucide/package-plus.svg
 var PackagePlus []byte
 
+//go:embed lucide/user.svg
+var User []byte
+
+//go:embed lucide/user-cog.svg
+var UserCog []byte
+
 func newIcon(iconData []byte) *giosvg.Icon {
 	vector, err := giosvg.NewVector(iconData)
 	if err != nil {

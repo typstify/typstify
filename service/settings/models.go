@@ -74,6 +74,8 @@ type TypstSettings struct {
 type TpixSettings struct {
 	baseModel
 
+	Username     string `key:"username"`
+	Email        string `key:"email"`
 	AccessToken  string `key:"accessToken"`
 	RefreshToken string `key:"refreshToken"`
 	LoginAt      int64  `key:"loginAt"`
@@ -221,6 +223,15 @@ func (t *TpixSettings) Load() error {
 
 func (t *TpixSettings) Validate() error {
 	return nil
+}
+
+func (t *TpixSettings) Clear() {
+	t.Username = ""
+	t.Email = ""
+	t.AccessToken = ""
+	t.RefreshToken = ""
+	t.LoginAt = 0
+	t.Save()
 }
 
 func init() {

@@ -73,7 +73,7 @@ func (rp *WorkspaceService) Current() *WorkspaceState {
 	return &rp.currentWorkspace
 }
 
-func (rp *WorkspaceService) GetAll() []WorkspaceState {
+func (rp *WorkspaceService) GetHistory(maxSize int) []WorkspaceState {
 	if len(rp.allCache) > 0 {
 		return rp.allCache
 	}
@@ -88,7 +88,7 @@ func (rp *WorkspaceService) GetAll() []WorkspaceState {
 		return -a.LastAccessAt.Compare(b.LastAccessAt)
 	})
 
-	rp.allCache = append(rp.allCache, all[:min(len(all), 100)]...)
+	rp.allCache = append(rp.allCache, all[:min(len(all), maxSize)]...)
 	rp.shortenPaths(&rp.allCache)
 
 	return rp.allCache

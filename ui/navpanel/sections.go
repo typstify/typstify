@@ -228,7 +228,7 @@ func (rp *RecentProjects) openSelected(projectDir string) {
 }
 
 func (rp *RecentProjects) Update(gtx C) bool {
-	recent := rp.srv.Workspace().GetAll()
+	recent := rp.srv.Workspace().GetHistory(100)
 	if len(rp.recentList) != len(recent) {
 		rp.recentList = recent
 	} else if len(recent) > 0 {
