@@ -34,7 +34,6 @@ type NavDrawer struct {
 	vm           view.ViewManager
 	FileExplorer *FileTreeNav
 
-	cmdPanel       *CommandPanel
 	recentProjects *RecentProjects
 	updateTips     *UpdateTips
 

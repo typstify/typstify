@@ -18,14 +18,14 @@ var themeMap = map[string]UIPalette{
 	"Default Light": {
 		Palette: th.Palette{
 			Fg:            misc.HexColor(0x383A42),
-			Bg:            misc.HexColor(0xFCFCFC),
-			ContrastFg:    misc.HexColor(0xFFFFFF),
-			ContrastBg:    misc.HexColor(0x007AFF),
-			Bg2:           misc.HexColor(0xF2F2F2),
-			HoverAlpha:    36,
-			SelectedAlpha: 64,
+			Bg:            misc.HexColor(0xFAFAFA),
+			ContrastFg:    misc.HexColor(0xFAFAFA),
+			ContrastBg:    misc.HexColor(0x5A5A5A),
+			Bg2:           misc.HexColor(0xF0F0F0),
+			HoverAlpha:    30,
+			SelectedAlpha: 50,
 		},
-		CodeColorScheme: "monokailight",
+		CodeColorScheme: "github",
 	},
 
 	"Default Dark": {
@@ -56,13 +56,13 @@ var themeMap = map[string]UIPalette{
 
 	"Solarized Dark": {
 		Palette: th.Palette{
-			Fg:            misc.HexColor(0xeee8d5),
-			Bg:            misc.HexColor(0x002b36),
-			ContrastFg:    misc.HexColor(0x002b36),
-			ContrastBg:    misc.HexColor(0x586E75),
-			Bg2:           misc.HexColor(0x002b36),
-			HoverAlpha:    20,
-			SelectedAlpha: 30,
+			Fg:            misc.HexColor(0x839496), // Softer foreground
+			Bg:            misc.HexColor(0x002b36), // Deep navy
+			ContrastFg:    misc.HexColor(0x073642), // Slightly lighter
+			ContrastBg:    misc.HexColor(0x268BD2), // Solarized blue for accent
+			Bg2:           misc.HexColor(0x073642), // Lighter navy for surfaces
+			HoverAlpha:    25,
+			SelectedAlpha: 40,
 		},
 		CodeColorScheme: "solarized-dark",
 	},

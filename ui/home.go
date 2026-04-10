@@ -10,6 +10,7 @@ import (
 	"looz.ws/typstify/widgets"
 
 	"gioui.org/app"
+	"gioui.org/io/key"
 	"gioui.org/layout"
 	"gioui.org/op"
 	"gioui.org/op/clip"
@@ -32,7 +33,7 @@ type HomeView struct {
 	tabbar       *navpanel.Tabbar
 	statusBar    *statusbar.StatusBar
 	consolePanel *console.Console
-	cmdPanel     *navpanel.CommandPanel
+	menuPanel    *navpanel.MenuPanel
 
 	// horizontal resizer
 	resizer         widgets.Resize
@@ -56,18 +57,44 @@ type HomeView struct {
 func (hv *HomeView) ID() string {
 	return "Home"
 }
+
+func (hv *HomeView) toggleConsole() {
+	hv.srv.Console().ShowConsole = !hv.srv.Console().ShowConsole
+
+	if !hv.srv.Console().ShowConsole {
+		hv.lastYRatio = hv.yresizer.Ratio
+		hv.yresizer.Ratio = 1.0
+	} else {
+		hv.yresizer.Ratio = hv.lastYRatio
+
+	}
+}
 func (hv *HomeView) update(gtx C) {
 	// handle events and states update
 	showConsoleClicked := hv.statusBar.Update(gtx)
 	if showConsoleClicked {
-		hv.srv.Console().ShowConsole = !hv.srv.Console().ShowConsole
+		hv.toggleConsole()
+	}
 
-		if !hv.srv.Console().ShowConsole {
-			hv.lastYRatio = hv.yresizer.Ratio
-			hv.yresizer.Ratio = 1.0
-		} else {
-			hv.yresizer.Ratio = hv.lastYRatio
+	// global key handler, without a focused target.
+	for {
+		e, ok := gtx.Event(
+			key.Filter{Name: "D", Required: key.ModShortcut},
+			key.Filter{Name: "K", Required: key.ModShortcut},
+		)
+		if !ok {
+			break
+		}
 
+		switch event := e.(type) {
+		case key.Event:
+			if event.Name == "D" && event.Modifiers.Contain(key.ModShortcut) {
+				hv.menuPanel.IsDrawerHidden = !hv.menuPanel.IsDrawerHidden
+			}
+
+			if event.Name == "K" && event.Modifiers.Contain(key.ModShortcut) {
+				hv.toggleConsole()
+			}
 		}
 	}
 }
@@ -106,8 +133,11 @@ func (hv *HomeView) Layout(gtx C, th *theme.Theme, deco *widget.Decorations, tit
 				hv.lastResizeRatio = hv.resizer.Ratio
 			}
 
-			return hv.resizer.Layout(gtx,
+			if hv.menuPanel.IsDrawerHidden {
+				return hv.layoutMain(gtx, th)
+			}
 
+			return hv.resizer.Layout(gtx,
 				// navdrawer
 				func(gtx C) D {
 					return navpanel.NaviDrawerStyle{
@@ -118,31 +148,7 @@ func (hv *HomeView) Layout(gtx C, th *theme.Theme, deco *widget.Decorations, tit
 				},
 				// switchable view
 				func(gtx C) D {
-					// draw the background
-					gtx.Constraints.Min = gtx.Constraints.Max
-					rect := clip.Rect{Max: gtx.Constraints.Max}
-					paint.FillShape(gtx.Ops, th.Bg, rect.Op())
-
-					rightPanelH := gtx.Constraints.Max.Y
-
-					return layout.Flex{
-						Axis:      layout.Vertical,
-						Alignment: layout.Middle,
-					}.Layout(gtx,
-						// horizontal navbar
-						layout.Rigid(func(gtx C) D {
-							return hv.tabbar.Layout(gtx, th)
-						}),
-						layout.Rigid(func(gtx C) D {
-							return layout.Spacer{Height: unit.Dp(1)}.Layout(gtx)
-						}),
-
-						layout.Flexed(1, func(gtx C) D {
-							// Top offset = tabbar + spacer = rightPanelH - this child's height.
-							hv.srv.ViewAreaTopOffset = rightPanelH - gtx.Constraints.Max.Y
-							return hv.layoutMain(gtx, th)
-						}),
-					)
+					return hv.layoutMain(gtx, th)
 				},
 
 				func(gtx C) D {
@@ -156,13 +162,13 @@ func (hv *HomeView) Layout(gtx C, th *theme.Theme, deco *widget.Decorations, tit
 		}),
 		layout.Rigid(func(gtx C) D {
 			rect := clip.Rect{Max: gtx.Constraints.Max}
-			paint.FillShape(gtx.Ops, th.Bg, rect.Op())
+			paint.FillShape(gtx.Ops, th.Bg2, rect.Op())
 			return layout.Flex{
 				Gap:     gtx.Dp(unit.Dp(4)),
 				Spacing: layout.SpaceBetween,
 			}.Layout(gtx,
 				layout.Rigid(func(gtx C) D {
-					return hv.cmdPanel.Layout(gtx, th)
+					return hv.menuPanel.Layout(gtx, th)
 				}),
 				layout.Flexed(1, func(gtx C) D {
 					return hv.statusBar.Layout(gtx, th)
@@ -213,24 +219,48 @@ func (hv *HomeView) Layout(gtx C, th *theme.Theme, deco *widget.Decorations, tit
 }
 
 func (hv *HomeView) layoutMain(gtx C, th *theme.Theme) D {
-	if !hv.srv.Console().ShowConsole {
-		return hv.layoutView(gtx, th)
-	}
+	// draw the background
+	gtx.Constraints.Min = gtx.Constraints.Max
+	rect := clip.Rect{Max: gtx.Constraints.Max}
+	paint.FillShape(gtx.Ops, th.Bg, rect.Op())
 
-	return hv.yresizer.Layout(gtx,
-		func(gtx C) D {
-			return hv.layoutView(gtx, th)
-		},
-		func(gtx C) D {
-			return hv.consolePanel.Layout(gtx, th)
-		},
-		func(gtx C) D {
-			if hv.hbar == nil {
-				hv.hbar = widgets.NewResizeBar(layout.Horizontal)
+	rightPanelH := gtx.Constraints.Max.Y
+
+	return layout.Flex{
+		Axis:      layout.Vertical,
+		Alignment: layout.Middle,
+	}.Layout(gtx,
+		// horizontal navbar
+		layout.Rigid(func(gtx C) D {
+			return hv.tabbar.Layout(gtx, th)
+		}),
+		layout.Rigid(func(gtx C) D {
+			return layout.Spacer{Height: unit.Dp(1)}.Layout(gtx)
+		}),
+
+		layout.Flexed(1, func(gtx C) D {
+			// Top offset = tabbar + spacer = rightPanelH - this child's height.
+			hv.srv.ViewAreaTopOffset = rightPanelH - gtx.Constraints.Max.Y
+			if !hv.srv.Console().ShowConsole {
+				return hv.layoutView(gtx, th)
 			}
 
-			return hv.hbar.Layout(gtx, th)
-		},
+			return hv.yresizer.Layout(gtx,
+				func(gtx C) D {
+					return hv.layoutView(gtx, th)
+				},
+				func(gtx C) D {
+					return hv.consolePanel.Layout(gtx, th)
+				},
+				func(gtx C) D {
+					if hv.hbar == nil {
+						hv.hbar = widgets.NewResizeBar(layout.Horizontal)
+					}
+
+					return hv.hbar.Layout(gtx, th)
+				},
+			)
+		}),
 	)
 
 }
@@ -302,7 +332,7 @@ func newHome(window *app.Window, srv *service.ServiceFacade) *HomeView {
 		sidebar:      navpanel.NewNavDrawer(vm, srv),
 		statusBar:    statusbar.NewStatusBar(srv, vm),
 		consolePanel: console.NewConsolePanel(srv.Console()),
-		cmdPanel:     navpanel.NewCommandPanel(vm, srv),
+		menuPanel:    navpanel.NewMenuPanel(vm, srv),
 		yresizer:     &widgets.Resize{Axis: layout.Vertical, Ratio: 1.0},
 		lastYRatio:   0.7,
 		welcome:      WelcomeView{vm: vm, srv: srv},

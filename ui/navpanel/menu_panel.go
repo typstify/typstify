@@ -26,9 +26,11 @@ var (
 	newFolder      = icons.NewSvgIcon(icons.FolderPlus)
 	pkgManagerIcon = icons.NewSvgIcon(icons.PackageOpen)
 	settingsIcon   = icons.NewSvgIcon(icons.Cog)
+	panelHideIcon  = icons.NewSvgIcon(icons.PanelLeftClose)
+	panelShowIcon  = icons.NewSvgIcon(icons.PanelRightClose)
 )
 
-type CommandPanel struct {
+type MenuPanel struct {
 	openDirBtn        widget.Clickable
 	openDirTip        wg.TipArea
 	openPkgManagerBtn widget.Clickable
@@ -37,12 +39,15 @@ type CommandPanel struct {
 	newProjectTip     wg.TipArea
 	openSettingBtn    widget.Clickable
 	openSettingTip    wg.TipArea
+	hideDrawerBtn     widget.Clickable
+	hideDrawerTip     wg.TipArea
 
-	vm  view.ViewManager
-	srv *service.ServiceFacade
+	IsDrawerHidden bool
+	vm             view.ViewManager
+	srv            *service.ServiceFacade
 }
 
-func (cp *CommandPanel) Layout(gtx C, th *theme.Theme) D {
+func (cp *MenuPanel) Layout(gtx C, th *theme.Theme) D {
 	cp.update(gtx)
 
 	return layout.Inset{
@@ -55,7 +60,17 @@ func (cp *CommandPanel) Layout(gtx C, th *theme.Theme) D {
 			Spacing: layout.SpaceEnd,
 			Gap:     gtx.Dp(unit.Dp(16)),
 		}.Layout(gtx,
+			layout.Rigid(func(gtx C) D {
+				btn := wg.TipIconButton(th, &cp.hideDrawerTip, i18n.Translate("Hide explorer"))
 
+				return btn.Layout(gtx, func(gtx C) D {
+					icon := panelHideIcon
+					if cp.IsDrawerHidden {
+						icon = panelShowIcon
+					}
+					return cp.layoutBtn(gtx, th, &cp.hideDrawerBtn, icon)
+				})
+			}),
 			layout.Rigid(func(gtx C) D {
 				btn := wg.TipIconButton(th, &cp.openDirTip, i18n.Translate("Open folder"))
 
@@ -65,7 +80,7 @@ func (cp *CommandPanel) Layout(gtx C, th *theme.Theme) D {
 			}),
 
 			layout.Rigid(func(gtx C) D {
-				btn := wg.TipIconButton(th, &cp.newProjectTip, i18n.Translate("Create new project"))
+				btn := wg.TipIconButton(th, &cp.newProjectTip, i18n.Translate("New project"))
 
 				return btn.Layout(gtx, func(gtx C) D {
 					return cp.layoutBtn(gtx, th, &cp.newProjectBtn, newFolder)
@@ -73,14 +88,14 @@ func (cp *CommandPanel) Layout(gtx C, th *theme.Theme) D {
 			}),
 
 			layout.Rigid(func(gtx C) D {
-				btn := wg.TipIconButton(th, &cp.openPkgManagerTip, i18n.Translate("Open Typst package center"))
+				btn := wg.TipIconButton(th, &cp.openPkgManagerTip, i18n.Translate("Typst package center"))
 				return btn.Layout(gtx, func(gtx C) D {
 					return cp.layoutBtn(gtx, th, &cp.openPkgManagerBtn, pkgManagerIcon)
 				})
 			}),
 
 			layout.Rigid(func(gtx C) D {
-				btn := wg.TipIconButton(th, &cp.openSettingTip, i18n.Translate("Open settings"))
+				btn := wg.TipIconButton(th, &cp.openSettingTip, i18n.Translate("Settings"))
 				return btn.Layout(gtx, func(gtx C) D {
 					return cp.layoutBtn(gtx, th, &cp.openSettingBtn, settingsIcon)
 				})
@@ -89,7 +104,7 @@ func (cp *CommandPanel) Layout(gtx C, th *theme.Theme) D {
 	})
 }
 
-func (cp *CommandPanel) layoutBtn(gtx C, th *theme.Theme, btn *widget.Clickable, icon *icons.SvgIcon) D {
+func (cp *MenuPanel) layoutBtn(gtx C, th *theme.Theme, btn *widget.Clickable, icon *icons.SvgIcon) D {
 	return btn.Layout(gtx, func(gtx C) D {
 		return layout.UniformInset(unit.Dp(2)).Layout(gtx, func(gtx C) D {
 			return icon.Layout(gtx, th.Fg, th.TextSize)
@@ -97,11 +112,12 @@ func (cp *CommandPanel) layoutBtn(gtx C, th *theme.Theme, btn *widget.Clickable,
 	})
 }
 
-func (cp *CommandPanel) update(gtx C) {
+func (cp *MenuPanel) update(gtx C) {
 	cp.openDirTip.Direction = layout.E
 	cp.newProjectTip.Direction = layout.E
 	cp.openPkgManagerTip.Direction = layout.E
 	cp.openSettingTip.Direction = layout.E
+	cp.hideDrawerTip.Direction = layout.E
 
 	if cp.openSettingBtn.Clicked(gtx) {
 		cp.vm.RequestSwitch(view.Intent{
@@ -139,10 +155,14 @@ func (cp *CommandPanel) update(gtx C) {
 			RequireNew: true,
 		})
 	}
+
+	if cp.hideDrawerBtn.Clicked(gtx) {
+		cp.IsDrawerHidden = !cp.IsDrawerHidden
+	}
 }
 
-func NewCommandPanel(vm view.ViewManager, srv *service.ServiceFacade) *CommandPanel {
-	return &CommandPanel{
+func NewMenuPanel(vm view.ViewManager, srv *service.ServiceFacade) *MenuPanel {
+	return &MenuPanel{
 		vm:  vm,
 		srv: srv,
 	}

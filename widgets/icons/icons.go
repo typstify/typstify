@@ -130,6 +130,12 @@ var User []byte
 //go:embed lucide/user-cog.svg
 var UserCog []byte
 
+//go:embed lucide/panel-left-close.svg
+var PanelLeftClose []byte
+
+//go:embed lucide/panel-right-close.svg
+var PanelRightClose []byte
+
 func newIcon(iconData []byte) *giosvg.Icon {
 	vector, err := giosvg.NewVector(iconData)
 	if err != nil {
