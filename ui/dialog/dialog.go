@@ -11,7 +11,6 @@ import (
 	"gioui.org/unit"
 	"gioui.org/widget"
 	"gioui.org/widget/material"
-	"github.com/oligo/gioview/misc"
 	"github.com/oligo/gioview/theme"
 	"github.com/oligo/gioview/view"
 	"looz.ws/typstify/i18n"
@@ -105,15 +104,10 @@ func (d *DialogModal) Layout(gtx C, th *theme.Theme) D {
 
 			return layout.Flex{
 				Axis: layout.Vertical,
+				Gap:  gtx.Dp(unit.Dp(32)),
 			}.Layout(gtx,
 				layout.Rigid(func(gtx C) D {
 					return d.LayoutBody(gtx, th)
-				}),
-				layout.Rigid(func(gtx C) D {
-					gtx.Constraints.Min.X = gtx.Constraints.Max.X
-					divider := misc.Divider(layout.Horizontal, unit.Dp(1))
-					divider.Inset = layout.Inset{Top: unit.Dp(16), Bottom: unit.Dp(16)}
-					return divider.Layout(gtx, th)
 				}),
 				layout.Rigid(func(gtx C) D {
 					return d.layoutBtnArea(gtx, th)

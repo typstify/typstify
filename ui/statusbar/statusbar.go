@@ -1,13 +1,10 @@
 package statusbar
 
 import (
-	"image"
 	"time"
 
 	"gioui.org/layout"
 	"gioui.org/op"
-	"gioui.org/op/clip"
-	"gioui.org/op/paint"
 	"gioui.org/unit"
 	"gioui.org/widget"
 	"gioui.org/widget/material"
@@ -119,8 +116,7 @@ func (s *StatusBar) Layout(gtx C, th *theme.Theme) D {
 		return D{}
 	}
 
-	macro := op.Record(gtx.Ops)
-	dims := layout.Inset{
+	return layout.Inset{
 		Top:    unit.Dp(4),
 		Bottom: unit.Dp(4),
 		Left:   unit.Dp(12),
@@ -163,13 +159,6 @@ func (s *StatusBar) Layout(gtx C, th *theme.Theme) D {
 		)
 	})
 
-	statusOps := macro.Stop()
-
-	rect := clip.Rect(image.Rectangle{Max: dims.Size})
-	paint.FillShape(gtx.Ops, misc.WithAlpha(th.Bg2, 250), rect.Op())
-	statusOps.Add(gtx.Ops)
-
-	return dims
 }
 
 func NewStatusBar(srv *service.ServiceFacade, vm view.ViewManager) *StatusBar {

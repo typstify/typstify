@@ -57,7 +57,6 @@ func NewNavDrawer(vm view.ViewManager, srv *service.ServiceFacade) *NavDrawer {
 		srv:            srv,
 		vm:             vm,
 		FileExplorer:   NewFileTreeNav(i18n.Translate("File Explorer"), srv, vm),
-		cmdPanel:       NewCommandPanel(vm, srv),
 		recentProjects: NewRecentProjects(vm, srv),
 		updateTips:     &UpdateTips{srv: srv},
 		listState: &widget.List{
@@ -83,55 +82,26 @@ func (nv *NavDrawer) Layout(gtx C, th *theme.Theme) D {
 	}
 
 	return layout.Flex{
-		Axis: layout.Horizontal,
+		Axis: layout.Vertical,
 	}.Layout(gtx,
-		layout.Rigid(func(gtx C) D {
-			macro := op.Record(gtx.Ops)
-			dims := layout.Inset{
-				Top:   unit.Dp(8),
-				Left:  unit.Dp(6),
-				Right: unit.Dp(6),
-			}.Layout(gtx, func(gtx C) D {
-				return nv.cmdPanel.Layout(gtx, th)
-			})
-			callOp := macro.Stop()
-			defer clip.Rect{Max: dims.Size}.Push(gtx.Ops).Pop()
-			paint.Fill(gtx.Ops, th.Bg2)
-			callOp.Add(gtx.Ops)
-			return dims
-		}),
-
-		layout.Rigid(layout.Spacer{Width: unit.Dp(2)}.Layout),
-		layout.Rigid(func(gtx C) D {
-			d := misc.Divider(layout.Vertical, unit.Dp(1))
-			d.Fill = misc.WithAlpha(th.Fg, th.SelectedAlpha)
-			return d.Layout(gtx, th)
-		}),
 
 		layout.Flexed(1, func(gtx C) D {
-			return layout.Flex{
-				Axis: layout.Vertical,
-			}.Layout(gtx,
+			return nv.explorerSection.Layout(gtx, th, viewListIcon, nv.FileExplorer.Title(), func(gtx C) D {
+				return nv.FileExplorer.Layout(gtx, th)
+			})
+		}),
 
-				layout.Flexed(1, func(gtx C) D {
-					return nv.explorerSection.Layout(gtx, th, viewListIcon, nv.FileExplorer.Title(), func(gtx C) D {
-						return nv.FileExplorer.Layout(gtx, th)
-					})
-				}),
+		layout.Rigid(layout.Spacer{Height: unit.Dp(1)}.Layout),
 
-				layout.Rigid(layout.Spacer{Height: unit.Dp(1)}.Layout),
+		layout.Rigid(func(gtx C) D {
+			gtx.Constraints.Max.Y = min(gtx.Constraints.Max.Y/2, gtx.Dp(unit.Dp(400)))
+			return nv.recentSection.Layout(gtx, th, historyIcon, nv.recentProjects.Title(), func(gtx C) D {
+				return nv.recentProjects.Layout(gtx, th)
+			})
+		}),
 
-				layout.Rigid(func(gtx C) D {
-					gtx.Constraints.Max.Y = min(gtx.Constraints.Max.Y/2, gtx.Dp(unit.Dp(400)))
-					return nv.recentSection.Layout(gtx, th, historyIcon, nv.recentProjects.Title(), func(gtx C) D {
-						return nv.recentProjects.Layout(gtx, th)
-					})
-				}),
-
-				layout.Rigid(func(gtx C) D {
-					return nv.updateTips.Layout(gtx, th)
-				}),
-			)
+		layout.Rigid(func(gtx C) D {
+			return nv.updateTips.Layout(gtx, th)
 		}),
 	)
 

@@ -122,9 +122,6 @@ func (tb *Tabbar) Layout(gtx C, th *theme.Theme) D {
 				}),
 			)
 		}),
-		layout.Rigid(func(gtx C) D {
-			return misc.Divider(layout.Horizontal, unit.Dp(0.5)).Layout(gtx, th)
-		}),
 	)
 
 }

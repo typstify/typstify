@@ -186,12 +186,7 @@ func (m *ContextMenu) layoutOptions(gtx C, th *theme.Theme) D {
 
 	return surface.Layout(gtx, func(gtx C) D {
 		macro := op.Record(gtx.Ops)
-		dims := widget.Border{
-			Color:        misc.WithAlpha(th.Fg, 0xb6),
-			CornerRadius: unit.Dp(4),
-			Width:        unit.Dp(0.5),
-		}.Layout(gtx, func(gtx C) D {
-			return layout.Inset{
+		dims := layout.Inset{
 				Top:    unit.Dp(8),
 				Bottom: unit.Dp(8),
 			}.Layout(gtx, func(gtx C) D {
@@ -203,7 +198,6 @@ func (m *ContextMenu) layoutOptions(gtx C, th *theme.Theme) D {
 					Axis: layout.Vertical,
 				}.Layout(gtx, m.menuItems...)
 			})
-		})
 
 		call := macro.Stop()
 		defer clip.Rect(image.Rectangle{Max: dims.Size}).Push(gtx.Ops).Pop()

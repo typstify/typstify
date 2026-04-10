@@ -10,10 +10,7 @@ import (
 	"gioui.org/layout"
 	"gioui.org/op"
 	"gioui.org/op/clip"
-	"gioui.org/widget"
-	"gioui.org/widget/material"
 	cmp "gioui.org/x/component"
-	"github.com/oligo/gioview/misc"
 	"github.com/oligo/gioview/theme"
 )
 
@@ -152,54 +149,21 @@ func (t *TipArea) Layout(gtx C, tip cmp.Tooltip, w layout.Widget) D {
 	)
 }
 
-// type TipIconButtonStyle struct {
-// 	icon    *widget.Icon
-// 	button  *widget.Clickable
-// 	Color   color.NRGBA
-// 	Size    unit.Dp
-// 	State   *TipArea
-// 	tooltip cmp.Tooltip
-// }
-
-// func TipIconButton(th *theme.Theme, area *TipArea, button *widget.Clickable, label string, icon *widget.Icon) TipIconButtonStyle {
-// 	return TipIconButtonStyle{
-// 		icon:    icon,
-// 		button:  button,
-// 		State:   area,
-// 		Color:   th.ContrastBg,
-// 		Size:    unit.Dp(18),
-// 		tooltip: cmp.PlatformTooltip(th.Theme, label),
-// 	}
-
-// }
-
-// func (btn *TipIconButtonStyle) Layout(gtx layout.Context, th *theme.Theme) layout.Dimensions {
-// 	return btn.State.Layout(gtx, btn.tooltip, func(gtx layout.Context) layout.Dimensions {
-// 		return material.Clickable(gtx, btn.button, func(gtx layout.Context) layout.Dimensions {
-// 			return misc.Icon{Icon: btn.icon, Color: btn.Color, Size: btn.Size}.Layout(gtx, th)
-// 		})
-// 	})
-
-// }
-
 // TipIconButtonStyle lays out an IconButton with a tooltip configured.
 type TipIconButtonStyle struct {
 	cmp.Tooltip
-	material.IconButtonStyle
 	State *TipArea
 }
 
 // TipIconButton creates a TipIconButtonStyle.
-func TipIconButton(th *theme.Theme, area *TipArea, button *widget.Clickable, label string, icon *widget.Icon) TipIconButtonStyle {
-	btn := misc.IconButton(th, icon, button, label)
+func TipIconButton(th *theme.Theme, area *TipArea, label string) TipIconButtonStyle {
 	return TipIconButtonStyle{
-		IconButtonStyle: btn,
-		State:           area,
-		Tooltip:         cmp.PlatformTooltip(th.Theme, label),
+		State:   area,
+		Tooltip: cmp.PlatformTooltip(th.Theme, label),
 	}
 }
 
 // Layout renders the TipIconButton.
-func (t TipIconButtonStyle) Layout(gtx C) D {
-	return t.State.Layout(gtx, t.Tooltip, t.IconButtonStyle.Layout)
+func (t TipIconButtonStyle) Layout(gtx C, w layout.Widget) D {
+	return t.State.Layout(gtx, t.Tooltip, w)
 }

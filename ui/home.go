@@ -32,6 +32,7 @@ type HomeView struct {
 	tabbar       *navpanel.Tabbar
 	statusBar    *statusbar.StatusBar
 	consolePanel *console.Console
+	cmdPanel     *navpanel.CommandPanel
 
 	// horizontal resizer
 	resizer         widgets.Resize
@@ -154,7 +155,20 @@ func (hv *HomeView) Layout(gtx C, th *theme.Theme, deco *widget.Decorations, tit
 			)
 		}),
 		layout.Rigid(func(gtx C) D {
-			return hv.statusBar.Layout(gtx, th)
+			rect := clip.Rect{Max: gtx.Constraints.Max}
+			paint.FillShape(gtx.Ops, th.Bg, rect.Op())
+			return layout.Flex{
+				Gap:     gtx.Dp(unit.Dp(4)),
+				Spacing: layout.SpaceBetween,
+			}.Layout(gtx,
+				layout.Rigid(func(gtx C) D {
+					return hv.cmdPanel.Layout(gtx, th)
+				}),
+				layout.Flexed(1, func(gtx C) D {
+					return hv.statusBar.Layout(gtx, th)
+
+				}),
+			)
 		}),
 	)
 
@@ -288,6 +302,7 @@ func newHome(window *app.Window, srv *service.ServiceFacade) *HomeView {
 		sidebar:      navpanel.NewNavDrawer(vm, srv),
 		statusBar:    statusbar.NewStatusBar(srv, vm),
 		consolePanel: console.NewConsolePanel(srv.Console()),
+		cmdPanel:     navpanel.NewCommandPanel(vm, srv),
 		yresizer:     &widgets.Resize{Axis: layout.Vertical, Ratio: 1.0},
 		lastYRatio:   0.7,
 		welcome:      WelcomeView{vm: vm, srv: srv},

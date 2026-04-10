@@ -22,7 +22,7 @@ import (
 )
 
 const (
-	typstifyUrl = "https://typstify.com/"
+	typstifyUrl = "https://typstify.com"
 	tpixUrl     = "https://tpix.typstify.com"
 )
 
@@ -31,7 +31,6 @@ var (
 	createProjectIcon = icons.NewSvgIcon(icons.FolderPlus)
 	browseIcon        = icons.NewSvgIcon(icons.PackageSearch)
 	userIcon          = icons.NewSvgIcon(icons.User)
-	userCogIcon       = icons.NewSvgIcon(icons.UserCog)
 )
 
 type WelcomeView struct {
@@ -100,8 +99,6 @@ func (vw *WelcomeView) Layout(gtx C, th *theme.Theme) D {
 						}),
 					)
 				}),
-
-				layout.Rigid(layout.Spacer{Height: unit.Dp(36)}.Layout),
 
 				layout.Rigid(layout.Spacer{Height: unit.Dp(36)}.Layout),
 
@@ -231,7 +228,7 @@ func (vw *WelcomeView) update(gtx C) {
 	}
 
 	if vw.typstifyLink.Clicked(gtx) {
-		if err := giohyperlink.Open(subscriptionUrl); err != nil {
+		if err := giohyperlink.Open(typstifyUrl); err != nil {
 			log.Printf("error: opening hyperlink: %v", err)
 		}
 	}
