@@ -181,7 +181,7 @@ func (vw *PkgListView) update(gtx C) {
 		vw.packageList = newPkgList(nil, true)
 
 		go func() {
-			vw.loadData(vw.kindSelect.Value().(string), vw.categoryList.GetChecked(), vw.searchInput.Text())
+			vw.loadData(vw.kindSelect.Value(), vw.categoryList.GetChecked(), vw.searchInput.Text())
 		}()
 	}
 
@@ -248,7 +248,7 @@ func NewPkgListView(srv *service.ServiceFacade, vm view.ViewManager) view.View {
 		srv:          srv,
 		vm:           vm,
 		categoryList: newCategoryList(),
-		kindSelect:   widgets.NewDropDown([]any{"all", "pkg", "template"}),
+		kindSelect:   widgets.NewDropDown(map[string]any{"all": "All", "pkg": "Package", "template": "Template"}),
 		packageList:  newPkgList(nil, false),
 	}
 }

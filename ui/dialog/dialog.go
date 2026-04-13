@@ -124,7 +124,7 @@ func (d *DialogModal) layoutBtnArea(gtx C, th *theme.Theme) D {
 		Alignment: layout.Middle,
 		Spacing:   layout.SpaceBetween,
 	}.Layout(gtx,
-		layout.Rigid(func(gtx C) D {
+		layout.Flexed(1, func(gtx C) D {
 			return d.layoutError(gtx, th)
 		}),
 
@@ -174,7 +174,7 @@ func (d *DialogModal) layoutError(gtx C, th *theme.Theme) D {
 	return layout.Inset{Right: unit.Dp(36)}.Layout(gtx, func(gtx C) D {
 		label := material.Label(th.Theme, th.TextSize, d.err.Error())
 		label.Color = color.NRGBA{R: 255, A: 255}
-		label.Alignment = text.Middle
+		label.Alignment = text.Start
 		return label.Layout(gtx)
 	})
 }

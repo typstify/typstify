@@ -117,13 +117,21 @@ func (s *TypstPkgService) PullDependencies(projectDir string) error {
 	return tpix.DownloadProjectDependencies(projectDir, s.cacheDir, false, s.reporter)
 }
 
-func (s *TypstPkgService) Bundle(projectDir string, outputDir string) error {
+func (s *TypstPkgService) Bundle(projectDir string, outputDir string) (string, error) {
 	outputFile := filepath.Join(outputDir, filepath.Base(projectDir)+".tar.gz")
 
-	_, err := tpix.BundlePackage(projectDir, outputFile, nil)
-	return err
+	return tpix.BundlePackage(projectDir, outputFile, nil)
 }
 
 func (s *TypstPkgService) Push(packagePath string, namespace string) error {
 	return tpix.PushPackage(packagePath, namespace, s.reporter)
+}
+
+func (s *TypstPkgService) AccessibleNamesapces() ([]api.UserNamespace, error) {
+	profile, err := tpix.GetUserProfile()
+	if err != nil {
+		return nil, err
+	}
+
+	return profile.Namespaces, nil
 }

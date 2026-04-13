@@ -31,8 +31,8 @@ type Dropdown struct {
 	Inset       layout.Inset
 	TextSize    unit.Sp
 
-	labels        []any
-	selected      int
+	labels        map[string]any
+	selected      string
 	selectChanged bool
 	expanded      bool
 	click         gesture.Click
@@ -40,7 +40,7 @@ type Dropdown struct {
 	options       *menu.DropdownMenu
 }
 
-func NewDropDown(optionLabels []any) *Dropdown {
+func NewDropDown(optionLabels map[string]any) *Dropdown {
 	return &Dropdown{
 		labels:      optionLabels,
 		BorderRadus: unit.Dp(4),
@@ -159,11 +159,16 @@ func (d *Dropdown) layoutForeground(gtx C, th *theme.Theme) D {
 func (d *Dropdown) Update(gtx C) bool {
 	if d.options == nil {
 		menuOpts := make([]menu.MenuOption, 0)
-		for idx, opt := range d.labels {
+		for key, opt := range d.labels {
+			if d.selected == "" {
+				// pick a inital value
+				d.selected = key
+			}
+
 			menuOpts = append(menuOpts, menu.MenuOption{
 				OnClicked: func() error {
-					d.selectChanged = d.selected != idx
-					d.selected = idx
+					d.selectChanged = d.selected != key
+					d.selected = key
 					return nil
 				},
 				Layout: func(gtx C, th *theme.Theme) D {
@@ -217,6 +222,6 @@ func (d *Dropdown) Update(gtx C) bool {
 	return d.selectChanged
 }
 
-func (d *Dropdown) Value() any {
-	return d.labels[d.selected]
+func (d *Dropdown) Value() string {
+	return d.selected
 }

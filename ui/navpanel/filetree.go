@@ -270,6 +270,13 @@ func (tn *FileTreeNav) extraMenuOptions(node *filetree.FileNode) [][]menu.MenuOp
 				return nil
 			}
 
+			// open the publish dialog
+			tn.vm.RequestSwitch(view.Intent{
+				Target:      dialog.PublishPkgDialogViewID,
+				ShowAsModal: true,
+				Params:      map[string]any{"projectDir": tn.tree.Root()},
+			})
+
 			return nil
 		},
 
