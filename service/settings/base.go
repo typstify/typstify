@@ -49,6 +49,13 @@ func (m *baseModel) save(model Model) error {
 	return nil
 }
 
+// loadPersisted loads only persisted values from storage without merging defaults.
+// Used by Validate() to compare current values against persisted ones.
+func (m *baseModel) loadPersisted(model Model) error {
+	m.load(model, nil)
+	return nil
+}
+
 func (m *baseModel) load(model Model, defaultVal Model) error {
 	if m.bucket == nil {
 		return errors.New("model is detached")

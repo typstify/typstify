@@ -94,27 +94,44 @@ func (g *GeneralSettings) Load() error {
 }
 
 func (g *GeneralSettings) Validate() error {
-	if err := isDir(g.RootDir); err != nil {
-		return fmt.Errorf("%s is not a directory", g.RootDir)
+	// Load persisted values to determine what actually changed
+	persisted := &GeneralSettings{}
+	g.baseModel.loadPersisted(persisted)
+
+	// Validate RootDir if changed
+	if g.RootDir != persisted.RootDir {
+		if err := isDir(g.RootDir); err != nil {
+			return fmt.Errorf("%s is not a directory", g.RootDir)
+		}
 	}
 
-	if g.Language == "" {
-		return fmt.Errorf("Language is not set")
+	// Validate Language if changed
+	if g.Language != persisted.Language {
+		if g.Language == "" {
+			return fmt.Errorf("Language is not set")
+		}
 	}
 
+	// DeviceID is read-only, always validate
 	if g.DeviceID == "" {
 		return fmt.Errorf("DeviceID is missing")
 	}
 
-	if g.ExternalTypst != "" {
-		if err := isFile(g.ExternalTypst); err != nil {
-			return err
+	// Validate ExternalTypst if changed
+	if g.ExternalTypst != persisted.ExternalTypst {
+		if g.ExternalTypst != "" {
+			if err := isFile(g.ExternalTypst); err != nil {
+				return err
+			}
 		}
 	}
 
-	if g.ExternalTinymist != "" {
-		if err := isFile(g.ExternalTinymist); err != nil {
-			return err
+	// Validate ExternalTinymist if changed
+	if g.ExternalTinymist != persisted.ExternalTinymist {
+		if g.ExternalTinymist != "" {
+			if err := isFile(g.ExternalTinymist); err != nil {
+				return err
+			}
 		}
 	}
 
@@ -134,36 +151,49 @@ func (e *EditorSettings) Load() error {
 }
 
 func (e *EditorSettings) Validate() error {
+	// Load persisted values to determine what actually changed
+	persisted := &EditorSettings{}
+	e.baseModel.loadPersisted(persisted)
+
 	e2 := defaultEditorSettings
 
-	if e.LineHeightScale <= 0 {
+	// Apply default for LineHeightScale if changed and invalid
+	if e.LineHeightScale != persisted.LineHeightScale && e.LineHeightScale <= 0 {
 		e.LineHeightScale = e2.LineHeightScale
 	}
 
-	if e.TextSize <= 0 {
+	// Apply default for TextSize if changed and invalid
+	if e.TextSize != persisted.TextSize && e.TextSize <= 0 {
 		e.TextSize = e2.TextSize
 	}
 
-	if font.Weight(e.Weight) < font.Thin || font.Weight(e.Weight) > font.Black {
-		e.Weight = e2.Weight
+	// Apply default for Weight if changed and out of range
+	if e.Weight != persisted.Weight {
+		if font.Weight(e.Weight) < font.Thin || font.Weight(e.Weight) > font.Black {
+			e.Weight = e2.Weight
+		}
 	}
 
-	if e.TypeFace == "" {
+	// Apply default for TypeFace if changed and empty
+	if e.TypeFace != persisted.TypeFace && e.TypeFace == "" {
 		e.TypeFace = e2.TypeFace
 	}
 
-	if e.TabSize <= 0 {
+	// Apply default for TabSize if changed and invalid
+	if e.TabSize != persisted.TabSize && e.TabSize <= 0 {
 		e.TabSize = e2.TabSize
 	}
 
-	if e.UseSoftTab == "" {
+	// Apply default for UseSoftTab if changed and empty
+	if e.UseSoftTab != persisted.UseSoftTab && e.UseSoftTab == "" {
 		e.UseSoftTab = e2.UseSoftTab
 	}
-	if e.WrapLine == "" {
+	if e.WrapLine != persisted.WrapLine && e.WrapLine == "" {
 		e.WrapLine = e2.WrapLine
 	}
 
-	if e.AutoSaveInterval <= 0 {
+	// Validate AutoSaveInterval if changed - must be > 0
+	if e.AutoSaveInterval != persisted.AutoSaveInterval && e.AutoSaveInterval <= 0 {
 		return fmt.Errorf("AutoSaveInterval should > 0")
 	}
 
@@ -182,25 +212,33 @@ func (t *TypstSettings) Load() error {
 }
 
 func (t *TypstSettings) Validate() error {
-	if t.PackageCacheDir != "" {
+	// Load persisted values to determine what actually changed
+	persisted := &TypstSettings{}
+	t.baseModel.loadPersisted(persisted)
+
+	// Validate PackageCacheDir if changed
+	if t.PackageCacheDir != persisted.PackageCacheDir && t.PackageCacheDir != "" {
 		if err := isDir(t.PackageCacheDir); err != nil {
 			return err
 		}
 	}
 
-	if t.PackageDir != "" {
+	// Validate PackageDir if changed
+	if t.PackageDir != persisted.PackageDir && t.PackageDir != "" {
 		if err := isDir(t.PackageDir); err != nil {
 			return err
 		}
 	}
 
-	if t.ExtraFontPath != "" {
+	// Validate ExtraFontPath if changed
+	if t.ExtraFontPath != persisted.ExtraFontPath && t.ExtraFontPath != "" {
 		if err := isDir(t.ExtraFontPath); err != nil {
 			return err
 		}
 	}
 
-	if t.OutputDir != "" {
+	// Validate OutputDir if changed
+	if t.OutputDir != persisted.OutputDir && t.OutputDir != "" {
 		if err := isDir(t.OutputDir); err != nil {
 			return err
 		}
