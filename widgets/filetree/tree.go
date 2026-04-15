@@ -9,6 +9,7 @@ import (
 	"path/filepath"
 	"slices"
 	"strings"
+	"sync"
 
 	"gioui.org/f32"
 	"gioui.org/io/clipboard"
@@ -44,7 +45,8 @@ type MenuOptionFunc func(node *FileNode) [][]menu.MenuOption
 type TreeView struct {
 	root *FileNode
 	// states maps a file path to its persistent UI state.
-	states map[string]*NodeState
+	states     map[string]*NodeState
+	statesLock sync.Mutex
 
 	// The visible, flattened list updated only when expansion changes.
 	visibleNodes []FlatNode
@@ -110,6 +112,9 @@ func (t *TreeView) Root() string {
 
 // GetState retrieves or initializes the UI state for a specific path.
 func (t *TreeView) GetState(path string) *NodeState {
+	t.statesLock.Lock()
+	defer t.statesLock.Unlock()
+
 	if state, exists := t.states[path]; exists {
 		return state
 	}
@@ -120,6 +125,8 @@ func (t *TreeView) GetState(path string) *NodeState {
 }
 
 func (t *TreeView) deleteState(path string) {
+	t.statesLock.Lock()
+	defer t.statesLock.Unlock()
 	delete(t.states, path)
 }
 
@@ -718,7 +725,11 @@ func (t *TreeView) Snapshot() *TreeState {
 
 	state := &TreeState{Path: t.root.Path}
 
-	for path, nodeState := range t.states {
+	t.statesLock.Lock()
+	treeStates := t.states
+	t.statesLock.Unlock()
+
+	for path, nodeState := range treeStates {
 		node := t.findVisibleNode(path)
 		if node == nil {
 			continue
