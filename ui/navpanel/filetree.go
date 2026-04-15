@@ -264,9 +264,10 @@ func (tn *FileTreeNav) onFileDeleted(node *filetree.FileNode) {
 
 func (tn *FileTreeNav) extraMenuOptions(node *filetree.FileNode) [][]menu.MenuOption {
 	isPackage := isPackageProject(tn.tree.Root())
+	isTpixLoggedIn := tn.srv.Settings().Tpix().LoginAt > 0
 	publishPackageOpt := menu.MenuOption{
 		OnClicked: func(gtx layout.Context) error {
-			if !isPackage {
+			if !isPackage || !isTpixLoggedIn {
 				return nil
 			}
 
@@ -283,7 +284,7 @@ func (tn *FileTreeNav) extraMenuOptions(node *filetree.FileNode) [][]menu.MenuOp
 		Layout: func(gtx layout.Context, th *theme.Theme) layout.Dimensions {
 			name := i18n.Translate("Publish Package")
 			label := material.Label(th.Theme, th.TextSize, name)
-			if !isPackage {
+			if !isPackage || !isTpixLoggedIn {
 				label.Color = utils.DisableColor(th.Fg)
 			}
 			return label.Layout(gtx)
@@ -292,6 +293,10 @@ func (tn *FileTreeNav) extraMenuOptions(node *filetree.FileNode) [][]menu.MenuOp
 
 	syncDependenciesOpt := menu.MenuOption{
 		OnClicked: func(gtx layout.Context) error {
+			if !isTpixLoggedIn {
+				return nil
+			}
+
 			go func() {
 				err := tn.srv.PkgService().PullDependencies(tn.tree.Root())
 				if err != nil {
@@ -306,19 +311,38 @@ func (tn *FileTreeNav) extraMenuOptions(node *filetree.FileNode) [][]menu.MenuOp
 
 		Layout: func(gtx layout.Context, th *theme.Theme) layout.Dimensions {
 			name := i18n.Translate("Sync Dependencies")
-			return material.Label(th.Theme, th.TextSize, name).Layout(gtx)
+			label := material.Label(th.Theme, th.TextSize, name)
+			if !isTpixLoggedIn {
+				label.Color = utils.DisableColor(th.Fg)
+			}
+			return label.Layout(gtx)
 		},
 	}
 
 	syncBibOpt := menu.MenuOption{
 		OnClicked: func(gtx layout.Context) error {
+			if !isTpixLoggedIn {
+				return nil
+			}
+
+			relPath, _ := filepath.Rel(tn.tree.Root(), node.Path)
+			// open the publish dialog
+			tn.vm.RequestSwitch(view.Intent{
+				Target:      dialog.SyncBibDialogViewID,
+				ShowAsModal: true,
+				Params:      map[string]any{"parentDir": relPath},
+			})
 
 			return nil
 		},
 
 		Layout: func(gtx layout.Context, th *theme.Theme) layout.Dimensions {
 			name := i18n.Translate("Sync Bibliographies")
-			return material.Label(th.Theme, th.TextSize, name).Layout(gtx)
+			label := material.Label(th.Theme, th.TextSize, name)
+			if !isTpixLoggedIn {
+				label.Color = utils.DisableColor(th.Fg)
+			}
+			return label.Layout(gtx)
 		},
 	}
 

@@ -133,6 +133,7 @@ func (ui *UI) registerViews() {
 	vm.Register(dialog.ChangeIndentationDialogViewID, func() view.View { return dialog.NewChangeIndentationDialog() })
 	vm.Register(dialog.OpenWithExternalAppDialogViewID, dialog.NewOpenWithExternalAppDialog)
 	vm.Register(dialog.PublishPkgDialogViewID, func() view.View { return dialog.NewPublishPkgDialog(ui.srv) })
+	vm.Register(dialog.SyncBibDialogViewID, func() view.View { return dialog.NewSyncBibDialog(ui.srv) })
 
 	ui.vm = vm
 	ui.srv.SetViewManager(vm.ViewManager)
