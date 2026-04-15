@@ -67,7 +67,7 @@ func (d *SyncBibDialog) OnInit(intent view.Intent) error {
 			for _, collection := range lib.Collections {
 				label := fmt.Sprintf("%s | %s", lib.Library.Name, collection.Name)
 				if lib.Namespace != "" {
-					label = fmt.Sprintf("(@%s)%s | %s", lib.Namespace, lib.Library.Name, collection.Name)
+					label = fmt.Sprintf("@%s | %s | %s", lib.Namespace, lib.Library.Name, collection.Name)
 				}
 				opts[collection.Key] = label
 			}
@@ -160,7 +160,7 @@ func (d *SyncBibDialog) LayoutBody(gtx C, th *theme.Theme) D {
 
 		layout.Rigid(func(gtx C) D {
 			return formItem{Axis: layout.Vertical}.Layout(gtx, th, i18n.Translate("Bibliography File Name"),
-				i18n.Translate("The name of the managed bibliography file."),
+				i18n.Translate("The name of the managed bibliography file, such as 'bib-file-name.bib'. You can leave it empty to use a auto generated one."),
 				func(gtx C) D {
 					d.nameInput.Alignment = text.Start
 					d.nameInput.SingleLine = true

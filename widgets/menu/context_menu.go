@@ -38,10 +38,11 @@ var (
 type ContextMenu struct {
 	state       MenuState
 	contextArea ContextArea
+	list        layout.List
 	// position hint
 	PositionHint layout.Direction
 
-	menuItems      []layout.FlexChild
+	menuItems      []layout.Widget
 	optionsUpdated bool
 
 	// Background color of the menu. If unset, bg2 of theme will be used.
@@ -110,17 +111,17 @@ func (m *ContextMenu) buildMenus(th *theme.Theme, options [][]MenuOption) {
 	idx := 0
 	for i, group := range options {
 		if i != 0 {
-			m.menuItems = append(m.menuItems, layout.Rigid(func(gtx layout.Context) layout.Dimensions {
+			m.menuItems = append(m.menuItems, func(gtx layout.Context) layout.Dimensions {
 				return misc.Divider(layout.Horizontal, unit.Dp(1)).Layout(gtx, th)
-			}))
+			})
 		}
 
 		for _, opt := range group {
 			state := m.state.OptionStates[idx]
 			idx++
-			m.menuItems = append(m.menuItems, layout.Rigid(func(gtx layout.Context) layout.Dimensions {
+			m.menuItems = append(m.menuItems, func(gtx layout.Context) layout.Dimensions {
 				return m.layoutOption(gtx, th, state, &opt)
-			}))
+			})
 		}
 	}
 	m.optionsUpdated = false
@@ -134,7 +135,6 @@ func (m *ContextMenu) layout(gtx C, th *theme.Theme, surface func(gtx C, w layou
 	m.buildMenus(th, m.state.Options)
 
 	macro := op.Record(gtx.Ops)
-	gtx.Constraints.Min = gtx.Constraints.Max
 	dims := surface(gtx, func(gtx C) D {
 		gtx.Constraints.Min = image.Point{}
 		return m.layoutOptions(gtx, th)
@@ -187,17 +187,19 @@ func (m *ContextMenu) layoutOptions(gtx C, th *theme.Theme) D {
 	return surface.Layout(gtx, func(gtx C) D {
 		macro := op.Record(gtx.Ops)
 		dims := layout.Inset{
-				Top:    unit.Dp(8),
-				Bottom: unit.Dp(8),
-			}.Layout(gtx, func(gtx C) D {
-				if maxWidth > 0 {
-					gtx.Constraints.Max.X = maxWidth
-					gtx.Constraints.Min.X = gtx.Constraints.Max.X
-				}
-				return layout.Flex{
-					Axis: layout.Vertical,
-				}.Layout(gtx, m.menuItems...)
+			Top:    unit.Dp(8),
+			Bottom: unit.Dp(8),
+		}.Layout(gtx, func(gtx C) D {
+			if maxWidth > 0 {
+				gtx.Constraints.Max.X = maxWidth
+				gtx.Constraints.Min.X = gtx.Constraints.Max.X
+			}
+
+			m.list.Axis = layout.Vertical
+			return m.list.Layout(gtx, len(m.menuItems), func(gtx layout.Context, index int) layout.Dimensions {
+				return m.menuItems[index](gtx)
 			})
+		})
 
 		call := macro.Stop()
 		defer clip.Rect(image.Rectangle{Max: dims.Size}).Push(gtx.Ops).Pop()

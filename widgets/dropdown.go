@@ -3,7 +3,11 @@ package widgets
 import (
 	"fmt"
 	"image"
+	"image/color"
+	"maps"
+	"slices"
 
+	"gioui.org/f32"
 	"gioui.org/font"
 	"gioui.org/gesture"
 	"gioui.org/io/event"
@@ -15,10 +19,12 @@ import (
 	"gioui.org/text"
 	"gioui.org/unit"
 	"gioui.org/widget"
-	"github.com/oligo/gioview/menu"
+	"gioui.org/widget/material"
+	"gioui.org/x/component"
 	"github.com/oligo/gioview/misc"
 	"github.com/oligo/gioview/theme"
 	"looz.ws/typstify/widgets/icons"
+	"looz.ws/typstify/widgets/menu"
 )
 
 var (
@@ -29,22 +35,30 @@ var (
 type Dropdown struct {
 	BorderRadus unit.Dp
 	Inset       layout.Inset
-	TextSize    unit.Sp
+	// MaxHeightRatio set the height of the popup to ensure
+	// it will not be cliped.
+	MaxHeight    unit.Dp
+	optionList   layout.List
+	optionLabels []*InteractiveLabel
+	optionArea   menu.ContextArea
 
 	labels        map[string]any
+	labelIdx      []string
 	selected      string
 	selectChanged bool
 	expanded      bool
+	pendingOpen   bool
 	click         gesture.Click
 	hovering      bool
-	options       *menu.DropdownMenu
 }
 
 func NewDropDown(optionLabels map[string]any) *Dropdown {
 	return &Dropdown{
 		labels:      optionLabels,
+		labelIdx:    slices.Collect(maps.Keys(optionLabels)),
 		BorderRadus: unit.Dp(4),
 		Inset:       layout.UniformInset(unit.Dp(8)),
+		MaxHeight:   unit.Dp(100),
 	}
 }
 
@@ -52,8 +66,6 @@ func (d *Dropdown) Layout(gtx C, th *theme.Theme) D {
 	d.Update(gtx)
 
 	gtx.Constraints.Min.Y = 0
-	d.options.MaxWidth = unit.Dp(gtx.Constraints.Max.X / int(gtx.Metric.PxPerDp))
-	d.options.Background = misc.WithAlpha(th.Bg, 0xb6)
 
 	macro := op.Record(gtx.Ops)
 	dims := layout.Stack{Alignment: layout.Center}.Layout(gtx,
@@ -63,7 +75,20 @@ func (d *Dropdown) Layout(gtx C, th *theme.Theme) D {
 			callOp := macro.Stop()
 
 			macro2 := op.Record(gtx.Ops)
-			d.options.Layout(gtx, th)
+			func() {
+				if d.pendingOpen {
+					d.optionArea.PositionHint = layout.N
+					d.optionArea.Show(f32.Pt(0, float32(boxDims.Size.Y)))
+					d.pendingOpen = false
+				}
+				d.optionArea.Layout(gtx, func(gtx C) D {
+					gtx.Constraints.Min = image.Point{}
+					gtx.Constraints.Max.X = boxDims.Size.X
+					gtx.Constraints.Max.Y = min(gtx.Constraints.Max.Y, gtx.Dp(d.MaxHeight))
+					return d.layoutOptions(gtx, th)
+				})
+			}()
+
 			menuCall := macro2.Stop()
 
 			defer clip.Rect(image.Rectangle{Max: boxDims.Size}).Push(gtx.Ops).Pop()
@@ -146,7 +171,7 @@ func (d *Dropdown) layoutText(gtx C, th *theme.Theme, size unit.Sp, txt string) 
 }
 
 func (d *Dropdown) layoutForeground(gtx C, th *theme.Theme) D {
-	if !d.hovering {
+	if !d.hovering && !d.expanded {
 		return layout.Dimensions{Size: gtx.Constraints.Min}
 	}
 
@@ -155,33 +180,50 @@ func (d *Dropdown) layoutForeground(gtx C, th *theme.Theme) D {
 	return layout.Dimensions{Size: gtx.Constraints.Min}
 }
 
-// Update dropdown states and report if the selection changed.
-func (d *Dropdown) Update(gtx C) bool {
-	if d.options == nil {
-		menuOpts := make([]menu.MenuOption, 0)
-		for key, opt := range d.labels {
-			if d.selected == "" {
-				// pick a inital value
-				d.selected = key
+func (d *Dropdown) layoutOptions(gtx C, th *theme.Theme) D {
+	if !d.expanded || !d.optionArea.Active() {
+		return D{}
+	}
+	surface := component.Surface(th.Theme)
+	surface.Fill = misc.WithAlpha(th.Bg, 0xff)
+	surface.CornerRadius = unit.Dp(4)
+	d.optionList.Axis = layout.Vertical
+
+	return surface.Layout(gtx, func(gtx C) D {
+		return d.optionList.Layout(gtx, len(d.labels), func(gtx C, index int) D {
+			if len(d.optionLabels) <= index {
+				d.optionLabels = append(d.optionLabels, &InteractiveLabel{})
 			}
 
-			menuOpts = append(menuOpts, menu.MenuOption{
-				OnClicked: func() error {
-					d.selectChanged = d.selected != key
-					d.selected = key
-					return nil
-				},
-				Layout: func(gtx C, th *theme.Theme) D {
-					return d.layoutText(gtx, th, th.TextSize, fmt.Sprint(opt))
-				},
-			})
-		}
-		d.options = menu.NewDropdownMenu([][]menu.MenuOption{menuOpts})
+			return d.layoutOption(gtx, th, d.optionLabels[index], d.labelIdx[index])
+		})
+	})
+}
+
+func (d *Dropdown) layoutOption(gtx C, th *theme.Theme, state *InteractiveLabel, optKey string) D {
+	return state.Layout(gtx, th, func(gtx C, _ color.NRGBA) D {
+		gtx.Constraints.Min.X = gtx.Constraints.Max.X
+		return layout.Inset{
+			Top:    unit.Dp(3),
+			Bottom: unit.Dp(3),
+			Left:   unit.Dp(12),
+			Right:  unit.Dp(12),
+		}.Layout(gtx, func(gtx C) D {
+			return material.Label(th.Theme, th.TextSize, fmt.Sprintf("%s", d.labels[optKey])).Layout(gtx)
+		})
+	})
+}
+
+// Update dropdown states and report if the selection changed.
+func (d *Dropdown) Update(gtx C) bool {
+	d.optionArea.Update(gtx)
+	if d.optionArea.Dismissed() {
+		d.expanded = false
 	}
 
-	justDismissed := d.options.Update(gtx)
-	if justDismissed {
-		d.expanded = false
+	if d.selected == "" && len(d.labelIdx) > 0 {
+		// pick a inital value
+		d.selected = d.labelIdx[0]
 	}
 
 	for {
@@ -211,10 +253,26 @@ func (d *Dropdown) Update(gtx C) bool {
 			break
 		}
 		if e.Kind == gesture.KindClick {
-			d.expanded = !d.expanded
 			if d.expanded {
-				d.options.ToggleVisibility(gtx)
+				d.expanded = false
+				d.optionArea.Dismiss()
+			} else {
+				d.expanded = true
+				d.pendingOpen = true
+				gtx.Execute(op.InvalidateCmd{})
 			}
+		}
+	}
+
+	for idx, lb := range d.optionLabels {
+		if lb.Update(gtx) {
+			d.selectChanged = d.selected != d.labelIdx[idx]
+			d.selected = d.labelIdx[idx]
+			d.expanded = false
+			d.optionArea.Dismiss()
+			gtx.Execute(op.InvalidateCmd{})
+		} else {
+			lb.Unselect()
 		}
 	}
 
