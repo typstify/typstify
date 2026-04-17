@@ -90,6 +90,11 @@ func (hv *HomeView) update(gtx C) {
 
 		switch event := e.(type) {
 		case key.Event:
+			// A Press triggers the handler, but not Release.
+			if event.State != key.Press {
+				continue
+			}
+
 			if event.Name == "D" && event.Modifiers.Contain(key.ModShortcut) {
 				hv.menuPanel.IsDrawerHidden = !hv.menuPanel.IsDrawerHidden
 			}
