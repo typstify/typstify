@@ -212,8 +212,8 @@ func (h *Highlighter) PendingTokens() *[]syntax.Token {
 }
 
 func (h *Highlighter) LexerName() string {
-	if h.lexer == nil {
-		return "unknown"
+	if h.lexer == nil || h.lexer.Config().Name == "fallback" {
+		return "Plaintext"
 	}
 
 	return h.lexer.Config().Name

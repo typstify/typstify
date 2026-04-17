@@ -63,7 +63,7 @@ type TextEditor struct {
 
 	contextMenu *menu.ContextMenu
 	//editorConf  *editor.EditorConf
-	status    *EditorStatus
+	status    EditorStatus
 	searchbar *TextSearchBar
 	xScroll   widget.Scrollbar
 	yScroll   widget.Scrollbar
@@ -412,10 +412,6 @@ func (me *TextEditor) updateDiagnostics() {
 }
 
 func (me *TextEditor) updateStatusBar(settings *settings.EditorSettings) {
-	if me.status == nil {
-		me.status = &EditorStatus{}
-	}
-
 	me.status.Pos.Y, me.status.Pos.X = me.state.CaretPos()
 	me.status.SelectedChars = me.state.SelectionLen()
 	if indent, size := me.state.TabStyle(); indent == gvcode.Spaces {
@@ -618,9 +614,6 @@ func NewTextEditor(path string, createOnMissing bool, readonly bool, settings *s
 			return err
 		}
 
-		if ed.status == nil {
-			ed.status = &EditorStatus{}
-		}
 		if newHash := calcDigest(content); newHash != ed.originalHash {
 			err := errors.New("cannot save file as it has beed edited elsewhere")
 			ed.status.SaveErr = err
