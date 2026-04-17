@@ -13,8 +13,9 @@ entrypoint = "{{ .Package.Entrypoint }}"
 # URLs must start with http:// or https://.
 authors = [{{range $i, $v := .Package.Authors}}{{if $i}}, {{end}}"{{$v}}"{{end}}]
 
-# The package's license. Must contain a valid SPDX-2 expression describing one or 
-# multiple OSI-approved licenses.
+# The package's license. If it's to be published via Typst Universe, this needs to be a valid SPDX-2 
+# expression describing one or multiple OSI-approved licenses. To publish via TPIX, you have more choices, check
+# https://tpix.typstify.com/docs for more detail.
 license = "{{ .Package.License }}"
 
 # A short description of the package. Double-check this for grammar and spelling mistakes 
