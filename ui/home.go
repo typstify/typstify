@@ -48,9 +48,9 @@ type HomeView struct {
 	hbar       *widgets.ResizeBar
 
 	// preview resizer (view | preview split)
-	previewResizer    *widgets.Resize
-	previewBar        *widgets.ResizeBar
-	previewer         *preview.Previewer
+	previewResizer *widgets.Resize
+	previewBar     *widgets.ResizeBar
+	previewer      *preview.Previewer
 
 	welcome WelcomeView
 }
@@ -91,6 +91,10 @@ func (hv *HomeView) update(gtx C) {
 
 		switch event := e.(type) {
 		case key.Event:
+			if event.State != key.Press {
+				continue
+			}
+			
 			if event.Name == "D" && event.Modifiers.Contain(key.ModShortcut) {
 				hv.menuPanel.IsDrawerHidden = !hv.menuPanel.IsDrawerHidden
 			}

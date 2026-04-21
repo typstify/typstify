@@ -205,6 +205,10 @@ func (te *TypstEditor) update(gtx C) {
 
 		switch event := e.(type) {
 		case key.Event:
+			if event.State != key.Press {
+				continue
+			}
+
 			if event.Name == "P" && event.Modifiers.Contain(key.ModShortcut) {
 				te.togglePreview(gtx)
 				gtx.Execute(op.InvalidateCmd{})
