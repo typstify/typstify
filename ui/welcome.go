@@ -4,6 +4,7 @@ import (
 	"log"
 
 	"gioui.org/font"
+	"gioui.org/io/key"
 	"gioui.org/layout"
 	"gioui.org/unit"
 	"gioui.org/widget"
@@ -54,118 +55,136 @@ func (vw *WelcomeView) Title() string {
 
 func (vw *WelcomeView) Layout(gtx C, th *theme.Theme) D {
 	vw.update(gtx)
-
-	top := gtx.Metric.PxToDp(int(float32(gtx.Constraints.Max.Y) * 0.2))
+	viewport := gtx.Constraints
 
 	return vw.PageStyle.Layout(gtx, th, func(gtx C) D {
-		return layout.Inset{
-			Left:  unit.Dp(80),
-			Right: unit.Dp(80),
-			Top:   top,
-		}.Layout(gtx, func(gtx C) D {
-			return layout.Flex{
-				Axis: layout.Vertical,
-			}.Layout(gtx,
-				layout.Rigid(func(gtx C) D {
-					label := material.H3(th.Theme, i18n.Translate("Typstify"))
-					label.Color = th.Fg
-					return label.Layout(gtx)
-				}),
-				layout.Rigid(layout.Spacer{Height: unit.Dp(12)}.Layout),
+		gtx.Constraints.Min.Y = viewport.Max.Y
+		gtx.Constraints.Max.Y = viewport.Max.Y
 
-				layout.Rigid(func(gtx C) D {
-					slogan := material.Label(th.Theme, th.TextSize*1.2, i18n.Translate("Crafting Typst documents at the speed of thought."))
-					slogan.Color = misc.WithAlpha(th.Fg, 0xb6)
-					slogan.Font.Weight = font.Medium
-					slogan.Font.Style = font.Italic
-					return slogan.Layout(gtx)
-				}),
+		return layout.Flex{
+			Axis: layout.Vertical,
+		}.Layout(gtx,
+			layout.Flexed(1, func(gtx C) D {
+				return vw.layoutMain(gtx, th)
+			}),
+			layout.Rigid(func(gtx C) D {
+				return vw.layoutShortcuts(gtx, th)
 
-				layout.Rigid(layout.Spacer{Height: unit.Dp(36)}.Layout),
-
-				layout.Rigid(func(gtx C) D {
-					if vw.srv.Settings().Tpix().Username == "" {
-						return D{}
-					}
-
-					return layout.Flex{
-						Gap: gtx.Dp(unit.Dp(8)),
-					}.Layout(gtx,
-						layout.Rigid(func(gtx C) D {
-							return userIcon.Layout(gtx, th.Fg, th.TextSize)
-						}),
-						layout.Rigid(func(gtx C) D {
-							return material.Label(th.Theme, th.TextSize, i18n.Translate("Welcome, %s!", vw.srv.Settings().Tpix().Username)).Layout(gtx)
-						}),
-					)
-				}),
-
-				layout.Rigid(layout.Spacer{Height: unit.Dp(36)}.Layout),
-
-				layout.Rigid(func(gtx C) D {
-					label := material.H5(th.Theme, i18n.Translate("Getting Started"))
-					label.Color = th.Fg
-					return label.Layout(gtx)
-				}),
-
-				layout.Rigid(layout.Spacer{Height: unit.Dp(24)}.Layout),
-				layout.Rigid(func(gtx C) D {
-					return layoutOp(gtx, th, &vw.createBtn, i18n.Translate("New project..."), createProjectIcon)
-				}),
-				layout.Rigid(layout.Spacer{Height: unit.Dp(8)}.Layout),
-
-				layout.Rigid(func(gtx C) D {
-					return layoutOp(gtx, th, &vw.openBtn, i18n.Translate("Open exiting project..."), openFolderIcon)
-				}),
-				layout.Rigid(layout.Spacer{Height: unit.Dp(8)}.Layout),
-
-				layout.Rigid(func(gtx C) D {
-					return layoutOp(gtx, th, &vw.browsePkgBtn, i18n.Translate("Browse Packages/Templates..."), browseIcon)
-				}),
-
-				layout.Rigid(layout.Spacer{Height: unit.Dp(24)}.Layout),
-
-				layout.Rigid(func(gtx C) D {
-					label := material.H5(th.Theme, i18n.Translate("Learn more"))
-					label.Color = th.Fg
-					return label.Layout(gtx)
-				}),
-				layout.Rigid(layout.Spacer{Height: unit.Dp(24)}.Layout),
-
-				layout.Rigid(func(gtx C) D {
-					return layout.Flex{}.Layout(gtx,
-						layout.Rigid(func(gtx C) D {
-							return material.Label(th.Theme, th.TextSize, i18n.Translate("To learn more about Typstify, go to ")).Layout(gtx)
-						}),
-						layout.Rigid(func(gtx C) D {
-							return material.Clickable(gtx, &vw.typstifyLink, func(gtx C) D {
-								label := material.Label(th.Theme, th.TextSize, typstifyUrl)
-								label.Color = th.ContrastBg
-								return label.Layout(gtx)
-							})
-						}),
-					)
-				}),
-				layout.Rigid(layout.Spacer{Height: unit.Dp(8)}.Layout),
-				layout.Rigid(func(gtx C) D {
-					return layout.Flex{}.Layout(gtx,
-						layout.Rigid(func(gtx C) D {
-							return material.Label(th.Theme, th.TextSize, i18n.Translate("To learn more about TPIX, click ")).Layout(gtx)
-						}),
-						layout.Rigid(func(gtx C) D {
-							return material.Clickable(gtx, &vw.tpixWebsiteLink, func(gtx C) D {
-								label := material.Label(th.Theme, th.TextSize, tpixUrl)
-								label.Color = th.ContrastBg
-								return label.Layout(gtx)
-							})
-						}),
-					)
-
-				}),
-			)
-		})
+			}),
+		)
 	})
 
+}
+
+func (vw *WelcomeView) layoutMain(gtx C, th *theme.Theme) D {
+	top := gtx.Metric.PxToDp(int(float32(gtx.Constraints.Max.Y) * 0.2))
+
+	return layout.Inset{
+		Left:  unit.Dp(80),
+		Right: unit.Dp(80),
+		Top:   top,
+	}.Layout(gtx, func(gtx C) D {
+		return layout.Flex{
+			Axis: layout.Vertical,
+		}.Layout(gtx,
+			layout.Rigid(func(gtx C) D {
+				label := material.H3(th.Theme, i18n.Translate("Typstify"))
+				label.Color = th.Fg
+				return label.Layout(gtx)
+			}),
+			layout.Rigid(layout.Spacer{Height: unit.Dp(12)}.Layout),
+
+			layout.Rigid(func(gtx C) D {
+				slogan := material.Label(th.Theme, th.TextSize*1.2, i18n.Translate("Crafting Typst documents at the speed of thought."))
+				slogan.Color = misc.WithAlpha(th.Fg, 0xb6)
+				slogan.Font.Weight = font.Medium
+				slogan.Font.Style = font.Italic
+				return slogan.Layout(gtx)
+			}),
+
+			layout.Rigid(layout.Spacer{Height: unit.Dp(36)}.Layout),
+
+			layout.Rigid(func(gtx C) D {
+				if vw.srv.Settings().Tpix().Username == "" {
+					return D{}
+				}
+
+				return layout.Flex{
+					Gap: gtx.Dp(unit.Dp(8)),
+				}.Layout(gtx,
+					layout.Rigid(func(gtx C) D {
+						return userIcon.Layout(gtx, th.Fg, th.TextSize)
+					}),
+					layout.Rigid(func(gtx C) D {
+						return material.Label(th.Theme, th.TextSize, i18n.Translate("Welcome, %s!", vw.srv.Settings().Tpix().Username)).Layout(gtx)
+					}),
+				)
+			}),
+
+			layout.Rigid(layout.Spacer{Height: unit.Dp(36)}.Layout),
+
+			layout.Rigid(func(gtx C) D {
+				label := material.H5(th.Theme, i18n.Translate("Getting Started"))
+				label.Color = th.Fg
+				return label.Layout(gtx)
+			}),
+
+			layout.Rigid(layout.Spacer{Height: unit.Dp(24)}.Layout),
+			layout.Rigid(func(gtx C) D {
+				return layoutOp(gtx, th, &vw.createBtn, i18n.Translate("New project..."), createProjectIcon)
+			}),
+			layout.Rigid(layout.Spacer{Height: unit.Dp(8)}.Layout),
+
+			layout.Rigid(func(gtx C) D {
+				return layoutOp(gtx, th, &vw.openBtn, i18n.Translate("Open exiting project..."), openFolderIcon)
+			}),
+			layout.Rigid(layout.Spacer{Height: unit.Dp(8)}.Layout),
+
+			layout.Rigid(func(gtx C) D {
+				return layoutOp(gtx, th, &vw.browsePkgBtn, i18n.Translate("Browse Packages/Templates..."), browseIcon)
+			}),
+
+			layout.Rigid(layout.Spacer{Height: unit.Dp(24)}.Layout),
+
+			layout.Rigid(func(gtx C) D {
+				label := material.H5(th.Theme, i18n.Translate("Learn more"))
+				label.Color = th.Fg
+				return label.Layout(gtx)
+			}),
+			layout.Rigid(layout.Spacer{Height: unit.Dp(24)}.Layout),
+
+			layout.Rigid(func(gtx C) D {
+				return layout.Flex{}.Layout(gtx,
+					layout.Rigid(func(gtx C) D {
+						return material.Label(th.Theme, th.TextSize, i18n.Translate("To learn more about Typstify, go to ")).Layout(gtx)
+					}),
+					layout.Rigid(func(gtx C) D {
+						return material.Clickable(gtx, &vw.typstifyLink, func(gtx C) D {
+							label := material.Label(th.Theme, th.TextSize, typstifyUrl)
+							label.Color = th.ContrastBg
+							return label.Layout(gtx)
+						})
+					}),
+				)
+			}),
+			layout.Rigid(layout.Spacer{Height: unit.Dp(8)}.Layout),
+			layout.Rigid(func(gtx C) D {
+				return layout.Flex{}.Layout(gtx,
+					layout.Rigid(func(gtx C) D {
+						return material.Label(th.Theme, th.TextSize, i18n.Translate("To learn more about TPIX, click ")).Layout(gtx)
+					}),
+					layout.Rigid(func(gtx C) D {
+						return material.Clickable(gtx, &vw.tpixWebsiteLink, func(gtx C) D {
+							label := material.Label(th.Theme, th.TextSize, tpixUrl)
+							label.Color = th.ContrastBg
+							return label.Layout(gtx)
+						})
+					}),
+				)
+
+			}),
+		)
+	})
 }
 
 func layoutOp(gtx C, th *theme.Theme, btn *widget.Clickable, text string, icon *icons.SvgIcon) D {
@@ -232,4 +251,32 @@ func (vw *WelcomeView) update(gtx C) {
 			log.Printf("error: opening hyperlink: %v", err)
 		}
 	}
+}
+
+func (vw *WelcomeView) layoutShortcuts(gtx C, th *theme.Theme) D {
+	shortcutLabel := func(gtx C, text string) D {
+		label := material.Caption(th.Theme, text)
+		label.Color = misc.WithAlpha(th.Fg, 0xb0)
+		return label.Layout(gtx)
+	}
+
+	return layout.Inset{
+		Left:  unit.Dp(80),
+		Right: unit.Dp(80),
+	}.Layout(gtx, func(gtx C) D {
+		return layout.Flex{
+			Axis: layout.Horizontal,
+			Gap:  gtx.Dp(unit.Dp(8)),
+		}.Layout(gtx,
+			layout.Rigid(func(gtx C) D {
+				return shortcutLabel(gtx, i18n.Translate("Open/Hide File Explorer: %s + D", key.ModShortcut.String()))
+			}),
+			layout.Rigid(func(gtx C) D {
+				return shortcutLabel(gtx, i18n.Translate("Open/Hide Console: %s + K", key.ModShortcut.String()))
+			}),
+			layout.Rigid(func(gtx C) D {
+				return shortcutLabel(gtx, i18n.Translate("Open/Hide Previewer: %s + P", key.ModShortcut.String()))
+			}),
+		)
+	})
 }
