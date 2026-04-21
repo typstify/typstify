@@ -24,6 +24,7 @@ import (
 	"gioui.org/layout"
 	"gioui.org/op"
 	"gioui.org/op/clip"
+	"gioui.org/op/paint"
 	"gioui.org/unit"
 	"gioui.org/widget"
 	"gioui.org/x/component"
@@ -191,10 +192,13 @@ func (me *TextEditor) layoutSearchBar(gtx C, th *theme.Theme) D {
 		return D{}
 	}
 
+	defer clip.Rect{Max: gtx.Constraints.Max}.Push(gtx.Ops).Pop()
+	paint.FillShape(gtx.Ops, th.Bg, clip.Rect{Max: gtx.Constraints.Max}.Op())
+
 	// surface return zero dimensions, so we have to use the inner widget's dims here.
 	defer op.Offset(image.Point{X: gtx.Constraints.Max.X - dims.Size.X}).Push(gtx.Ops).Pop()
 	surface := component.Surface(th.Theme)
-	surface.Fill = th.Bg2
+	surface.CornerRadius = unit.Dp(4)
 	surface.Layout(gtx, func(gtx C) D {
 		callOp.Add(gtx.Ops)
 		return dims
