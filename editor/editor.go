@@ -207,6 +207,14 @@ func (me *TextEditor) layoutSearchBar(gtx C, th *theme.Theme) D {
 	return dims
 }
 
+func (me *TextEditor) ToggleSearchBar(gtx C) {
+	if me.searchbar.Visible() {
+		me.searchbar.Hide(gtx)
+	} else {
+		me.searchbar.Show(gtx)
+	}
+}
+
 func (me *TextEditor) LayoutStatus(gtx C, th *theme.Theme, srv *service.ServiceFacade) D {
 	return me.status.Layout(gtx, th, me, srv)
 }
@@ -448,6 +456,13 @@ func (me *TextEditor) onTextChanged() {
 	me.autoSaver.Update()
 }
 
+// Let the LSP server(tinymist) detect the focused file.
+func (me *TextEditor) FocusLsp() {
+	if me.lspClient != nil {
+		me.lspClient.OnEditorUpdated(me.filename, me.state)
+	}
+}
+
 func (me *TextEditor) convertIndentation(kind gvcode.TabStyle, tabWidth int, text string) string {
 	reader := bufio.NewReader(strings.NewReader(text))
 	buf := &bytes.Buffer{}
@@ -509,10 +524,13 @@ func (me *TextEditor) convertIndentation(kind gvcode.TabStyle, tabWidth int, tex
 func (me *TextEditor) Close() error {
 	me.autoSaver.Stop()
 	me.highlighter.Close()
+	if me.lspClient != nil {
+		me.lspClient.OnEditorClosed(me.filename)
+	}
 	return nil
 }
 
-func (te *TextEditor) SetupLsp(gtx layout.Context, th *theme.Theme, client *lsp.Client) {
+func (te *TextEditor) SetupLsp(gtx layout.Context, client *lsp.Client) {
 	te.lspClient = client
 
 	// Setting up auto-completion.

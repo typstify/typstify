@@ -73,8 +73,8 @@ var TriangleAlert []byte
 //go:embed lucide/info.svg
 var Info []byte
 
-//go:embed lucide/eye.svg
-var Eye []byte
+//go:embed lucide/scan-search.svg
+var ScanSearch []byte
 
 //go:embed lucide/arrow-left-right.svg
 var ArrowLeftRight []byte

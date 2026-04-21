@@ -24,10 +24,11 @@ import (
 	"looz.ws/typstify/utils"
 	appIcons "looz.ws/typstify/widgets/icons"
 
+	"gioui.org/io/key"
 	"gioui.org/layout"
+	"gioui.org/op"
 	"gioui.org/unit"
 	"gioui.org/widget"
-	"golang.org/x/exp/shiny/materialdesign/icons"
 )
 
 type (
@@ -37,19 +38,19 @@ type (
 
 var (
 	TypstEditorViewID = view.NewViewID("TypstEditor")
-	previewIcon, _    = widget.NewIcon(icons.ActionPageview)
-	exportIcon, _     = widget.NewIcon(icons.CommunicationImportExport)
+	searchIcon        = appIcons.NewSvgIcon(appIcons.Search)
+	previewIcon       = appIcons.NewSvgIcon(appIcons.ScanSearch)
+	exportIcon        = appIcons.NewSvgIcon(appIcons.ArrowLeftRight)
 	presentationIcon  = appIcons.NewSvgIcon(appIcons.Presentation)
 )
 
 type TypstEditor struct {
 	*view.BaseView
-	srv         *service.ServiceFacade
-	srcEditor   *editor.TextEditor
-	targetFile  string // the main file
-	currentFile string // switched temp file
-	breadcrums  *fileBreadcrums
-	lspReady    bool
+	srv        *service.ServiceFacade
+	srcEditor  *editor.TextEditor
+	targetFile string
+	header     *editorHeader
+	lspReady   bool
 
 	// Preview
 	uiPreviewer    *uipreview.Previewer
@@ -77,26 +78,53 @@ func (te *TypstEditor) OnNavTo(intent view.Intent) error {
 	}
 
 	te.targetFile = path
-	te.currentFile = te.targetFile
 
 	rootDir := te.srv.CurrentProjectDir()
 	if rootDir == "" {
 		rootDir = filepath.Dir(te.targetFile)
 	}
 
-	err := te.setupEditor(path, false, false)
+	err := te.setupEditor(path)
 	if err != nil {
 		return err
 	}
 
-	te.breadcrums = newBreadcrums(rootDir, te.targetFile, te.onSelectFile)
+	te.header = newEditorHeader(rootDir, te.targetFile, te.headerActions())
 	te.lspReady = false
 
 	return nil
 }
 
-func (te *TypstEditor) setupEditor(path string, createOnMissing bool, readonly bool) error {
-	srcEditor, err := editor.NewTextEditor(path, createOnMissing, readonly, te.srv.Settings().Editor())
+func (te *TypstEditor) OnResume() {
+	log.Println("onResume called for: ", te.targetFile)
+	previewSrv := te.srv.PreviewService()
+	if previewSrv == nil {
+		return
+	}
+
+	serverAddr := previewSrv.Address()
+	if serverAddr == "" {
+		return
+	}
+
+	openInBrowser := te.srv.Settings().General().OpenPreviewInBrowser != 0
+	var isLinux = runtime.GOOS == "linux"
+	if openInBrowser || isLinux {
+		return
+	}
+
+	if !te.previewVisible {
+		return
+	}
+
+	if serverAddr != "" && te.uiPreviewer != nil {
+		te.srcEditor.FocusLsp()
+		te.uiPreviewer.Navigate(serverAddr)
+	}
+}
+
+func (te *TypstEditor) setupEditor(path string) error {
+	srcEditor, err := editor.NewTextEditor(path, false, false, te.srv.Settings().Editor())
 	if err != nil {
 		return err
 	}
@@ -113,7 +141,7 @@ func (te *TypstEditor) setupEditor(path string, createOnMissing bool, readonly b
 	return nil
 }
 
-func (te *TypstEditor) setupLsp(gtx layout.Context, th *theme.Theme) {
+func (te *TypstEditor) setupLsp(gtx layout.Context) {
 	if te.lspReady {
 		return
 	}
@@ -127,61 +155,19 @@ func (te *TypstEditor) setupLsp(gtx layout.Context, th *theme.Theme) {
 		return
 	}
 
-	te.srcEditor.SetupLsp(gtx, th, client)
+	te.srcEditor.SetupLsp(gtx, client)
 }
 
-func (te *TypstEditor) isExternalFile(file string) bool {
-	if te.srv.CurrentProjectDir() == "" {
-		return false
-	}
+func (te *TypstEditor) headerActions() []editorHeaderAction {
+	return []editorHeaderAction{
 
-	return !strings.HasPrefix(file, te.srv.CurrentProjectDir())
-}
-
-func (te *TypstEditor) onSelectFile(path string) {
-	te.currentFile = path
-	log.Println("open editor: ", path)
-}
-
-func (te *TypstEditor) Actions() []view.ViewAction {
-	return []view.ViewAction{
 		{
 			Name: "Preview",
 			Icon: previewIcon,
 			OnClicked: func(gtx C) {
-				previewSrv := te.srv.PreviewService()
-				if previewSrv == nil {
-					return
-				}
-
-				serverAddr := previewSrv.Address()
-				if serverAddr == "" {
-					log.Println("preview ERR: no preview server address")
-					return
-				}
-
-				openInBrowser := te.srv.Settings().General().OpenPreviewInBrowser != 0
-				var isLinux = runtime.GOOS == "linux"
-				if (openInBrowser || isLinux) && serverAddr != "" {
-					utils.OpenInExternalApp(serverAddr)
-					te.previewVisible = false
-					return
-				}
-
-				// built-in previewer
-				te.previewVisible = !te.previewVisible
-
-				if !te.previewVisible {
-					return
-				}
-
-				if serverAddr != "" && te.uiPreviewer != nil {
-					te.uiPreviewer.Restart()
-				}
-
+				te.togglePreview(gtx)
 			},
 		},
-
 		{
 			Name: "Export",
 			Icon: exportIcon,
@@ -195,20 +181,40 @@ func (te *TypstEditor) Actions() []view.ViewAction {
 				})
 			},
 		},
+		{
+			Name: "Search & Replace",
+			Icon: searchIcon,
+			OnClicked: func(gtx C) {
+				te.srcEditor.ToggleSearchBar(gtx)
+			},
+		},
+	}
+}
+
+func (te *TypstEditor) update(gtx C) {
+	te.setupLsp(gtx)
+
+	// global key handler.
+	for {
+		e, ok := gtx.Event(
+			key.Filter{Name: "P", Required: key.ModShortcut}, // toggle hide/show of previewer.
+		)
+		if !ok {
+			break
+		}
+
+		switch event := e.(type) {
+		case key.Event:
+			if event.Name == "P" && event.Modifiers.Contain(key.ModShortcut) {
+				te.togglePreview(gtx)
+				gtx.Execute(op.InvalidateCmd{})
+			}
+		}
 	}
 }
 
 func (te *TypstEditor) Layout(gtx layout.Context, th *theme.Theme) layout.Dimensions {
-	if te.currentFile != te.srcEditor.File() {
-		isExternal := te.isExternalFile(te.currentFile)
-		// close old one
-		te.srcEditor.Close()
-		// only project local file path can be created.
-		te.setupEditor(te.currentFile, !isExternal, isExternal)
-		te.lspReady = false
-	}
-
-	te.setupLsp(gtx, th)
+	te.update(gtx)
 
 	return layout.Inset{
 		Left:  unit.Dp(1),
@@ -219,7 +225,7 @@ func (te *TypstEditor) Layout(gtx layout.Context, th *theme.Theme) layout.Dimens
 			Axis: layout.Vertical,
 		}.Layout(gtx,
 			layout.Rigid(func(gtx C) D {
-				return te.breadcrums.Layout(gtx, th)
+				return te.header.Layout(gtx, th)
 			}),
 			layout.Rigid(layout.Spacer{Height: unit.Dp(4)}.Layout),
 			layout.Flexed(1, func(gtx C) D {
@@ -241,6 +247,41 @@ func (te *TypstEditor) IsVisible() bool {
 // LayoutPreview renders the preview panel. Called by home.go when preview is active.
 func (te *TypstEditor) LayoutPreview(gtx C, th *theme.Theme) D {
 	return te.uiPreviewer.Layout(gtx, th)
+}
+
+func (te *TypstEditor) togglePreview(gtx C) {
+	previewSrv := te.srv.PreviewService()
+	if previewSrv == nil {
+		return
+	}
+
+	serverAddr := previewSrv.Address()
+	if serverAddr == "" {
+		log.Println("preview ERR: no preview server address")
+		return
+	}
+
+	// focus LSP triggers a refresh of the preview server.
+	te.srcEditor.FocusLsp()
+
+	openInBrowser := te.srv.Settings().General().OpenPreviewInBrowser != 0
+	var isLinux = runtime.GOOS == "linux"
+	if (openInBrowser || isLinux) && serverAddr != "" {
+		utils.OpenInExternalApp(serverAddr)
+		te.previewVisible = false
+		return
+	}
+
+	// built-in previewer
+	te.previewVisible = !te.previewVisible
+
+	if !te.previewVisible {
+		return
+	}
+
+	if serverAddr != "" && te.uiPreviewer != nil {
+		te.uiPreviewer.Navigate(serverAddr)
+	}
 }
 
 // Implements StatusIndicator to let statusbar render it.

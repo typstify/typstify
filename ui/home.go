@@ -50,7 +50,6 @@ type HomeView struct {
 	// preview resizer (view | preview split)
 	previewResizer    *widgets.Resize
 	previewBar        *widgets.ResizeBar
-	activePreviewView previewable // tracks which view has an active preview webview
 	previewer         *preview.Previewer
 
 	welcome WelcomeView

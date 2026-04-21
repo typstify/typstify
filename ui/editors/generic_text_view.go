@@ -7,11 +7,9 @@ import (
 
 	"gioui.org/layout"
 	"gioui.org/unit"
-	"gioui.org/widget/material"
 	"looz.ws/typstify/editor"
 	"looz.ws/typstify/service"
 
-	"github.com/oligo/gioview/misc"
 	"github.com/oligo/gioview/page"
 	"github.com/oligo/gioview/theme"
 	"github.com/oligo/gioview/view"
@@ -28,8 +26,8 @@ type GenericTextEditor struct {
 	srv *service.ServiceFacade
 
 	srcEditor   *editor.TextEditor
+	header      *editorHeader
 	currentFile string
-	relPath     string
 }
 
 func (te *GenericTextEditor) ID() view.ViewID {
@@ -40,7 +38,7 @@ func (te *GenericTextEditor) Title() string {
 	if te.currentFile == "" {
 		return "Text Editor"
 	} else {
-		return te.currentFile
+		return filepath.Base(te.currentFile)
 	}
 }
 
@@ -54,28 +52,31 @@ func (te *GenericTextEditor) OnNavTo(intent view.Intent) error {
 	rootDir := te.srv.CurrentProjectDir()
 	isChildEntry := false
 	if rootDir == "" {
-		te.relPath = path
 	} else {
-		relPath, err := filepath.Rel(rootDir, path)
-		if err != nil {
-			relPath = path
-		}
-		te.relPath = relPath
 		isChildEntry = strings.HasPrefix(path, rootDir)
 	}
 
-	te.currentFile = filepath.Base(path)
+	te.currentFile = path
 	srcEditor, err := editor.NewTextEditor(path, false, !isChildEntry, te.srv.Settings().Editor())
 	if err != nil {
 		return err
 	}
 
 	te.srcEditor = srcEditor
+	te.header = newEditorHeader(rootDir, te.currentFile, te.headerActions())
 	return nil
 }
 
-func (te *GenericTextEditor) Actions() []view.ViewAction {
-	return []view.ViewAction{}
+func (te *GenericTextEditor) headerActions() []editorHeaderAction {
+	return []editorHeaderAction{
+		{
+			Name: "Search & Replace",
+			Icon: searchIcon,
+			OnClicked: func(gtx C) {
+				te.srcEditor.ToggleSearchBar(gtx)
+			},
+		},
+	}
 }
 
 func (te *GenericTextEditor) Layout(gtx layout.Context, th *theme.Theme) layout.Dimensions {
@@ -93,25 +94,14 @@ func (te *GenericTextEditor) layoutEditor(gtx C, th *theme.Theme) D {
 			Axis: layout.Vertical,
 		}.Layout(gtx,
 			layout.Rigid(func(gtx C) D {
-				return te.layoutFileInfo(gtx, th)
+				te.header.SetCurrentPath(te.currentFile)
+				return te.header.Layout(gtx, th)
 			}),
-			layout.Rigid(layout.Spacer{Height: unit.Dp(4)}.Layout),
+			layout.Rigid(layout.Spacer{Height: unit.Dp(2)}.Layout),
 			layout.Rigid(func(gtx C) D {
 				return te.srcEditor.Layout(gtx, th, te.srv.Settings().Editor())
 			}),
 		)
-	})
-}
-
-func (te *GenericTextEditor) layoutFileInfo(gtx C, th *theme.Theme) D {
-	return layout.Inset{
-		Left:   unit.Dp(8),
-		Top:    unit.Dp(1),
-		Bottom: unit.Dp(1),
-	}.Layout(gtx, func(gtx C) D {
-		lb := material.Label(th.Theme, th.TextSize, te.relPath)
-		lb.Color = misc.WithAlpha(th.Fg, 0xb6)
-		return lb.Layout(gtx)
 	})
 }
 
