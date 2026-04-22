@@ -96,7 +96,6 @@ func (te *TypstEditor) OnNavTo(intent view.Intent) error {
 }
 
 func (te *TypstEditor) OnResume() {
-	log.Println("onResume called for: ", te.targetFile)
 	previewSrv := te.srv.PreviewService()
 	if previewSrv == nil {
 		return
