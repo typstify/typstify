@@ -4,6 +4,10 @@ package preview
 
 import (
 	"image"
+	"os"
+	"path/filepath"
+	"runtime"
+	"log"
 	"sync"
 
 	"gioui.org/f32"
@@ -22,7 +26,42 @@ type WebView struct {
 }
 
 func NewWebView() *WebView {
+	if runtime.GOOS == "windows" {
+		ensureWebView2UserDataFolder()
+	}
+
 	return &WebView{}
+}
+
+// ensureWebView2UserDataFolder set the UDF for WebView2 on Windows.
+// For UDF in WebView2, see https://learn.microsoft.com/en-us/microsoft-edge/webview2/concepts/user-data-folder?tabs=win32.
+//
+// If the app is installed in folder like 'Program Files', we may have no
+// privileges to write to the installation folder.
+func ensureWebView2UserDataFolder() {
+	candidates := []string{}
+
+	if cacheDir, err := os.UserCacheDir(); err == nil && cacheDir != "" {
+		candidates = append(candidates, filepath.Join(cacheDir, "Typstify", "WebView2"))
+	}
+	candidates = append(candidates,
+		filepath.Join(os.TempDir(), "Typstify", "WebView2"),
+		os.TempDir(),
+	)
+
+	for _, dataDir := range candidates {
+		if err := os.MkdirAll(dataDir, 0o755); err != nil {
+			continue
+		}
+
+		// WebView2 needs a writable user-data folder. When the app is run elevated
+		// from Program Files, the default sibling folder is not writable.
+		if err := os.Setenv("WEBVIEW2_USER_DATA_FOLDER", dataDir); err == nil {
+			return
+		}
+	}
+
+	log.Println("WebView2: could not set a writable user-data folder; preview may fail when run elevated")
 }
 
 func (wv *WebView) Navigate(url string) {
