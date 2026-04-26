@@ -17,7 +17,7 @@ require (
 	github.com/inkeliz/giosvg v0.0.0-20240821232107-3208d4350d55
 	github.com/mustafaturan/bus/v3 v3.0.3
 	github.com/oligo/gioview v0.9.0
-	github.com/oligo/gvcode v0.6.1
+	github.com/oligo/gvcode v0.7.0
 	github.com/pkg/errors v0.8.1
 	github.com/rivo/uniseg v0.4.7
 	github.com/sahilm/fuzzy v0.1.1
