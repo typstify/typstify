@@ -432,9 +432,7 @@ func (me *TextEditor) updateDiagnostics() {
 }
 
 func (me *TextEditor) updateStatusBar(settings *settings.EditorSettings) {
-	if me.status == nil {
-		me.status = &EditorStatus{}
-	}
+	me.ensureStatus()
 
 	me.status.Pos.Y, me.status.Pos.X = me.state.CaretPos()
 	me.status.SelectedChars = me.state.SelectionLen()
@@ -443,12 +441,21 @@ func (me *TextEditor) updateStatusBar(settings *settings.EditorSettings) {
 	} else {
 		me.status.Indentation = fmt.Sprintf("Tab: %d", size)
 	}
-	me.status.EndOfLine = "LF" // fixed for now.
 	me.status.ReadOnly = me.state.Mode() == gvcode.ModeReadOnly
 
 	if me.status.Encoding == "" {
 		me.status.Encoding = fileEncoding(me.filename)
 	}
+
+	if me.status.EndOfLine == "" {
+		lineEnding := me.state.DetectedLineEnding()
+		if lineEnding == gvcode.CRLF {
+			me.status.EndOfLine = "CRLF"
+		} else {
+			me.status.EndOfLine = "LF"
+		}
+	}
+
 	me.status.Language = me.highlighter.LexerName()
 
 	if strings.EqualFold(me.status.Language, "Typst") {
@@ -753,7 +760,8 @@ func NewTextEditor(path string, createOnMissing bool, readonly bool, settings *s
 		file.Truncate(0)
 		file.Seek(0, 0)
 
-		editorContent := []byte(ed.state.Text())
+		editorContent := []byte(ed.state.PrepareForSave(ed.state.Text()))
+
 		written, err := file.Write(editorContent)
 		// written, err := io.Copy(file, ed.state.Text())
 		if err != nil {
