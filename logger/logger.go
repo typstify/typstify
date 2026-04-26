@@ -37,6 +37,7 @@ func NewFileLogger(filename string) *FileLogger {
 
 	wrt := io.MultiWriter(os.Stdout, f)
 
+	logger.file = f
 	logger.SetOutput(wrt)
 	logger.Logger.SetFlags(log.Default().Flags() | log.Lshortfile)
 
