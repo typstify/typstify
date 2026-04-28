@@ -265,9 +265,11 @@ func (me *TextEditor) update(gtx layout.Context, th *theme.Theme, settings *sett
 		me.OnOpenLink(link, external)
 	}
 
-	if hunks := me.differ.PendingHunks(); hunks != nil {
-		me.diffProvider.UpdateDiff(hunks)
-		me.overviewRuler.UpdateDiffMarkers(hunks)
+	if me.differ != nil {
+		if hunks := me.differ.PendingHunks(); hunks != nil {
+			me.diffProvider.UpdateDiff(hunks)
+			me.overviewRuler.UpdateDiffMarkers(hunks)
+		}
 	}
 
 	if tokens := me.highlighter.PendingTokens(); tokens != nil && len(*tokens) > 0 {
