@@ -40,14 +40,20 @@ type WorkspaceSettings struct {
 	BibFiles    []ManagedBibliography `json:"managed_bibs"`
 }
 
+type GitRepoState struct {
+	// current git branch
+	Branch      string
+	Changes     []utils.GitFileChange
+	AllBranches []string
+}
+
 type WorkspaceState struct {
 	Path         string
 	RelPath      string
 	LastAccessAt time.Time
 	TreeState    *filetree.TreeState
 	OpenedFiles  []string
-	// current git branch
-	GitBranch string
+	GitRepoState GitRepoState
 }
 
 type AppState struct {
@@ -67,6 +73,7 @@ type WorkspaceService struct {
 	settingCache  *WorkspaceSettings
 
 	fileWatcher *WorkspaceFileWatcher
+	eventBus    *bus.EventBus
 }
 
 func NewWorkspaceService(dataDir string, eventBus *bus.EventBus) *WorkspaceService {
@@ -79,6 +86,7 @@ func NewWorkspaceService(dataDir string, eventBus *bus.EventBus) *WorkspaceServi
 		stateIndex:    stateIndex,
 		appStateIndex: appStateIndex,
 		fileWatcher:   NewWorkspaceFileWatcher(eventBus),
+		eventBus:      eventBus,
 	}
 }
 
@@ -106,11 +114,9 @@ func (rp *WorkspaceService) SwitchWorkspace(projectDir string) {
 		rp.unwatchGitRepo(lastWorkspaceDir)
 	}
 
-	// detect if this project is a git repo, and its current branch.
-	// Must be synchronous: editor setup reads GitBranch immediately after
-	// SwitchWorkspace to decide whether to enable diff features.
-	if branch, err := utils.CurrentGitBranch(projectDir); err == nil && branch != "" {
-		rp.currentWorkspace.GitBranch = branch
+	rp.currentWorkspace.GitRepoState = GitRepoState{}
+
+	if rp.updateGitRepoState(projectDir); rp.currentWorkspace.GitRepoState.Branch != "" {
 		rp.watchGitRepo()
 	}
 
@@ -537,6 +543,12 @@ func (rp *WorkspaceService) watchGitRepo() {
 		log.Println("watch git staging failed: ", err)
 		return
 	}
+
+	// watch for event bus events:
+	rp.eventBus.Subscribe(rp, "workspace.gitrepo.changed", `git\..*`, func(topic string, data interface{}) {
+		go rp.updateGitRepoState(workspaceRoot)
+	})
+
 }
 
 func (rp *WorkspaceService) unwatchGitRepo(workspaceDir string) {
@@ -550,6 +562,23 @@ func (rp *WorkspaceService) unwatchGitRepo(workspaceDir string) {
 	if err != nil && !errors.Is(err, fsnotify.ErrNonExistentWatch) {
 		log.Println("unwatch file failed: ", err)
 	}
+
+	rp.eventBus.Unsubscribe(rp)
+}
+
+func (rp *WorkspaceService) updateGitRepoState(workspaceRoot string) {
+	branch, err := utils.CurrentGitBranch(workspaceRoot)
+	if err != nil {
+		return
+	}
+
+	rp.currentWorkspace.GitRepoState.Branch = branch
+
+	if branch != "" {
+		rp.currentWorkspace.GitRepoState.Changes = utils.GitRepoStatus(workspaceRoot)
+	}
+
+	log.Printf("%s: branch: %s, changes: %v", workspaceRoot, branch, rp.currentWorkspace.GitRepoState.Changes)
 }
 
 func openDB(dbFile string) *bolt.DB {

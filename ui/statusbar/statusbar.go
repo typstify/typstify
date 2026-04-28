@@ -1,6 +1,7 @@
 package statusbar
 
 import (
+	"fmt"
 	"time"
 
 	"gioui.org/layout"
@@ -11,10 +12,10 @@ import (
 	"github.com/oligo/gioview/misc"
 	"github.com/oligo/gioview/theme"
 	"github.com/oligo/gioview/view"
-	"golang.org/x/exp/shiny/materialdesign/icons"
 	"looz.ws/typstify/service"
 	"looz.ws/typstify/service/bus"
 	"looz.ws/typstify/ui/console"
+	"looz.ws/typstify/widgets/icons"
 )
 
 type (
@@ -24,12 +25,11 @@ type (
 
 var defaultActiveDuration = time.Second * 5
 var (
-	notifyInfoIcon, _  = widget.NewIcon(icons.ActionInfoOutline)
-	notifyWarnIcon, _  = widget.NewIcon(icons.AlertWarning)
-	notifyErrorIcon, _ = widget.NewIcon(icons.AlertError)
-
-	consoleInfoIcon, _   = widget.NewIcon(icons.ActionInfoOutline)
-	consoleUpdateIcon, _ = widget.NewIcon(icons.ActionInfo)
+	consoleIcon   = icons.NewSvgIcon(icons.Terminal)
+	infoIcon      = icons.NewSvgIcon(icons.Info)
+	warnIcon      = icons.NewSvgIcon(icons.CircleAlert)
+	errorIcon     = icons.NewSvgIcon(icons.CircleX)
+	gitBranchIcon = icons.NewSvgIcon(icons.GitBranch)
 )
 
 // Views can implement StatusLine interface to let StatusBar render their
@@ -51,10 +51,11 @@ type Notification struct {
 }
 
 type StatusBar struct {
-	vm             view.ViewManager
-	notification   *NotificationBar
-	consoleState   *console.ConsoleState
-	showConsoleBtn widget.Clickable
+	vm                 view.ViewManager
+	notification       *NotificationBar
+	gitStatusIndicator *GitStatusIndicator
+	consoleState       *console.ConsoleState
+	showConsoleBtn     widget.Clickable
 }
 
 func (n *NotificationBar) Layout(gtx C, th *theme.Theme) D {
@@ -78,20 +79,20 @@ func (n *NotificationBar) Layout(gtx C, th *theme.Theme) D {
 		Alignment: layout.Middle,
 	}.Layout(gtx,
 		layout.Rigid(func(gtx C) D {
-			var icon *widget.Icon
+			var icon *icons.SvgIcon
 			switch n.lastMessage.Level {
 			case 0:
-				icon = notifyInfoIcon
+				icon = infoIcon
 			case 1:
-				icon = notifyWarnIcon
+				icon = warnIcon
 
 			case 2:
-				icon = notifyErrorIcon
+				icon = errorIcon
 			default:
-				icon = notifyErrorIcon
+				icon = errorIcon
 			}
 
-			return misc.Icon{Icon: icon, Size: unit.Dp(16)}.Layout(gtx, th)
+			return icon.Layout(gtx, th.Fg, th.TextSize)
 		}),
 
 		layout.Rigid(layout.Spacer{Width: unit.Dp(4)}.Layout),
@@ -125,50 +126,65 @@ func (s *StatusBar) Layout(gtx C, th *theme.Theme) D {
 		return layout.Flex{
 			Axis:      layout.Horizontal,
 			Alignment: layout.Middle,
-			Spacing:   layout.SpaceStart,
+			Spacing:   layout.SpaceBetween,
 		}.Layout(gtx,
+			layout.Rigid(func(gtx C) D {
+				return s.gitStatusIndicator.Layout(gtx, th)
+			}),
+
 			layout.Flexed(1, func(gtx C) D {
+				return layout.Flex{
+					Axis:      layout.Horizontal,
+					Alignment: layout.Middle,
+					Spacing:   layout.SpaceStart,
+				}.Layout(gtx,
 
-				return s.notification.Layout(gtx, th)
-			}),
+					layout.Flexed(1, func(gtx C) D {
+						return s.notification.Layout(gtx, th)
+					}),
 
-			layout.Rigid(func(gtx C) D {
-				vw := s.vm.CurrentView()
-				if vw == nil {
-					return D{}
-				}
+					layout.Rigid(func(gtx C) D {
+						vw := s.vm.CurrentView()
+						if vw == nil {
+							return D{}
+						}
 
-				status, ok := vw.(StatusIndicator)
-				if !ok {
-					return D{}
-				}
+						status, ok := vw.(StatusIndicator)
+						if !ok {
+							return D{}
+						}
 
-				return status.LayoutStatus(gtx, th)
-			}),
-			layout.Rigid(layout.Spacer{Width: unit.Dp(16)}.Layout),
-			layout.Rigid(func(gtx C) D {
-				return material.Clickable(gtx, &s.showConsoleBtn, func(gtx C) D {
-					icon := misc.Icon{Icon: consoleInfoIcon, Color: th.Fg, Size: unit.Dp(th.TextSize * 1.2)}
-					if s.consoleState.HasMore() {
-						icon.Icon = consoleUpdateIcon
-						// icon.Color = misc.WithAlpha(icon.Color, 0xb6)
-					}
-					return icon.Layout(gtx, th)
-				})
+						return status.LayoutStatus(gtx, th)
+					}),
+					layout.Rigid(layout.Spacer{Width: unit.Dp(16)}.Layout),
+					layout.Rigid(func(gtx C) D {
+						return material.Clickable(gtx, &s.showConsoleBtn, func(gtx C) D {
+							fillColor := th.Fg
+							if s.consoleState.HasMore() {
+								fillColor = th.ContrastBg
+							}
+							return layout.UniformInset(unit.Dp(2)).Layout(gtx, func(gtx C) D {
+								return consoleIcon.Layout(gtx, fillColor, th.TextSize)
+							})
+						})
+					}),
+				)
 			}),
 		)
+
 	})
 
 }
 
 func NewStatusBar(srv *service.ServiceFacade, vm view.ViewManager) *StatusBar {
 	sb := &StatusBar{
-		vm:           vm,
-		notification: &NotificationBar{},
-		consoleState: srv.Console(),
+		vm:                 vm,
+		notification:       &NotificationBar{},
+		consoleState:       srv.Console(),
+		gitStatusIndicator: &GitStatusIndicator{workspaceSrv: srv.Workspace()},
 	}
 	eventbus := srv.EventBus()
-	eventbus.Subscribe(sb, "statusbar.event", `statusbar\.*`, func(topic string, data interface{}) {
+	eventbus.Subscribe(sb, "statusbar.event", `statusbar\..*`, func(topic string, data interface{}) {
 		switch topic {
 		case bus.TopicStatusbarNotifyEvent:
 			msg := data.(Notification)
@@ -181,4 +197,50 @@ func NewStatusBar(srv *service.ServiceFacade, vm view.ViewManager) *StatusBar {
 	})
 
 	return sb
+}
+
+type GitStatusIndicator struct {
+	workspaceSrv *service.WorkspaceService
+
+	switchBranchBtn widget.Clickable
+}
+
+func (gs *GitStatusIndicator) Layout(gtx C, th *theme.Theme) D {
+	branchName := gs.workspaceSrv.Current().GitRepoState.Branch
+
+	if branchName == "" {
+		return D{}
+	}
+
+	hasChanges := len(gs.workspaceSrv.Current().GitRepoState.Changes) > 0
+	labelText := branchName
+	if hasChanges {
+		labelText = fmt.Sprintf("%s*", branchName)
+	}
+
+	fill := misc.WithAlpha(th.Fg, 0xb6)
+	if gs.switchBranchBtn.Hovered() {
+		fill = th.ContrastBg
+	}
+
+	return gs.switchBranchBtn.Layout(gtx, func(gtx C) D {
+		return layout.UniformInset(unit.Dp(2)).Layout(gtx, func(gtx C) D {
+
+			return layout.Flex{
+				Axis:      layout.Horizontal,
+				Alignment: layout.Middle,
+			}.Layout(gtx,
+				layout.Rigid(func(gtx C) D {
+					return gitBranchIcon.Layout(gtx, fill, th.TextSize)
+
+				}),
+				layout.Rigid(layout.Spacer{Width: unit.Dp(2)}.Layout),
+				layout.Rigid(func(gtx C) D {
+					label := material.Label(th.Theme, th.TextSize, labelText)
+					label.Color = fill
+					return label.Layout(gtx)
+				}),
+			)
+		})
+	})
 }

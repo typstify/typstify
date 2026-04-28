@@ -139,6 +139,18 @@ var PanelRightClose []byte
 //go:embed lucide/presentation.svg
 var Presentation []byte
 
+//go:embed lucide/git-branch.svg
+var GitBranch []byte
+
+//go:embed lucide/git-branch-plus.svg
+var GitBranchPlus []byte
+
+//go:embed lucide/git-branch-minus.svg
+var GitBranchMinus []byte
+
+//go:embed lucide/terminal.svg
+var Terminal []byte
+
 func newIcon(iconData []byte) *giosvg.Icon {
 	vector, err := giosvg.NewVector(iconData)
 	if err != nil {

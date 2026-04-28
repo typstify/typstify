@@ -1,12 +1,18 @@
 package utils
 
 import (
+	"bytes"
 	"context"
 	"log"
 	"os/exec"
 	"path/filepath"
 	"strings"
 )
+
+type GitFileChange struct {
+	Status Status
+	File   string
+}
 
 func IsGitRepo(filePath string) bool {
 	if _, err := exec.LookPath("git"); err != nil {
@@ -104,7 +110,7 @@ func mapCharsToStatus(x, y rune) Status {
 	}
 }
 
-// GitFileStatus returns the status of the file: 'M ' (staged), ' M' (unstaged), 'MM' (both)
+// GitFileStatus returns the status of the file.
 func GitFileStatus(filePath string) Status {
 	absPath, err := filepath.Abs(filePath)
 	if err != nil {
@@ -129,4 +135,34 @@ func GitFileStatus(filePath string) Status {
 	x, y := rune(out[0]), rune(out[1])
 
 	return mapCharsToStatus(x, y)
+}
+
+// GitRepoStatus returns the status of the repository.
+func GitRepoStatus(projectDir string) []GitFileChange {
+	// --porcelain=v1 for stable output.
+	cmd := BuildCmd(context.Background(), "git", "status", "--porcelain=v1")
+	cmd.Dir = projectDir
+	out, err := cmd.Output()
+	if err != nil || len(out) == 0 {
+		return nil
+	}
+
+	entries := bytes.Split(out, []byte{'\n'})
+	changes := make([]GitFileChange, 0)
+
+	for _, entry := range entries {
+		if len(entry) < 2 {
+			continue
+		}
+
+		x := rune(entry[0])
+		y := rune(entry[1])
+
+		changes = append(changes, GitFileChange{
+			Status: mapCharsToStatus(x, y),
+			File:   string(entry[3:]),
+		})
+	}
+
+	return changes
 }

@@ -50,7 +50,7 @@ func (te *GenericTextEditor) OnNavTo(intent view.Intent) error {
 
 	rootDir := te.srv.CurrentProjectDir()
 
-	showDiff := te.srv.Workspace().Current().GitBranch != ""
+	showDiff := te.srv.Workspace().Current().GitRepoState.Branch != ""
 
 	te.currentFile = path
 	srcEditor, err := editor.NewTextEditor(path, showDiff, te.srv.Settings().Editor())
