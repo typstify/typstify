@@ -114,5 +114,17 @@ func (w *WorkspaceFileWatcher) handleEvent(event fsnotify.Event) {
 		return
 	}
 
+	// Emit git-specific events for .git repo state changes, skip the
+	// generic workspace.file.changed event for these internal files.
+	if filepath.Base(filepath.Dir(cleanPath)) == ".git" {
+		switch filepath.Base(cleanPath) {
+		case "HEAD":
+			w.eventbus.Emit(bus.TopicGitBranchChanged, nil)
+		case "index":
+			w.eventbus.Emit(bus.TopicGitFileStaged, nil)
+		}
+		return
+	}
+
 	w.eventbus.Emit(bus.TopicWorkspaceFileChanged, bus.FileChangedEvent{Path: cleanPath})
 }

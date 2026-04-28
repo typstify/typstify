@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"context"
 	"encoding/json"
+	"errors"
 	"log"
 	"os"
 	"path/filepath"
@@ -12,8 +13,10 @@ import (
 	"sync"
 	"time"
 
+	"github.com/fsnotify/fsnotify"
 	cli "github.com/typstify/tpix-cli"
 	bolt "go.etcd.io/bbolt"
+	"looz.ws/typstify/service/bus"
 	"looz.ws/typstify/utils"
 	"looz.ws/typstify/widgets/filetree"
 )
@@ -62,9 +65,11 @@ type WorkspaceService struct {
 	mu            sync.Mutex
 	watcherCancel context.CancelFunc
 	settingCache  *WorkspaceSettings
+
+	fileWatcher *WorkspaceFileWatcher
 }
 
-func NewWorkspaceService(dataDir string) *WorkspaceService {
+func NewWorkspaceService(dataDir string, eventBus *bus.EventBus) *WorkspaceService {
 	db := openDB(filepath.Join(dataDir, "recent.db"))
 	stateIndex := utils.NewBucket[utils.SKey]("recent-projects", db, &utils.JsonEncoder[WorkspaceState]{})
 	appStateIndex := utils.NewBucket[utils.SKey]("app-state", db, &utils.JsonEncoder[AppState]{})
@@ -73,10 +78,15 @@ func NewWorkspaceService(dataDir string) *WorkspaceService {
 		db:            db,
 		stateIndex:    stateIndex,
 		appStateIndex: appStateIndex,
+		fileWatcher:   NewWorkspaceFileWatcher(eventBus),
 	}
 }
 
-func (rp *WorkspaceService) AddRecent(projectDir string) {
+// SwitchWorkspace switches projects.
+func (rp *WorkspaceService) SwitchWorkspace(projectDir string) {
+	lastWorkspaceDir := rp.currentWorkspace.Path
+
+	// restore or build states for the new workspace.
 	project, err := rp.stateIndex.Get(utils.SKey(projectDir))
 	if err == nil {
 		rp.currentWorkspace = project
@@ -87,18 +97,23 @@ func (rp *WorkspaceService) AddRecent(projectDir string) {
 	rp.stateIndex.Save(utils.SKey(projectDir), rp.currentWorkspace)
 	rp.allCache = rp.allCache[:0] // invalidate cache
 
+	// restart watcher for bibliography syncer.
 	rp.restartWatcher()
 	rp.clearSettingsCache()
 
-	// detect if this project is a git repo, and its current branch.
-	go func() {
-		branch, err := utils.CurrentGitBranch(projectDir)
-		if err != nil || branch == "" {
-			return
-		}
+	// unwatch last git repo if it is a git repo.
+	if lastWorkspaceDir != "" {
+		rp.unwatchGitRepo(lastWorkspaceDir)
+	}
 
+	// detect if this project is a git repo, and its current branch.
+	// Must be synchronous: editor setup reads GitBranch immediately after
+	// SwitchWorkspace to decide whether to enable diff features.
+	if branch, err := utils.CurrentGitBranch(projectDir); err == nil && branch != "" {
 		rp.currentWorkspace.GitBranch = branch
-	}()
+		rp.watchGitRepo()
+	}
+
 }
 
 func (rp *WorkspaceService) SaveSnapshot(treeState *filetree.TreeState, openedFiles []string) {
@@ -186,6 +201,10 @@ func (rp *WorkspaceService) Close() {
 
 	if rp.watcherCancel != nil {
 		rp.watcherCancel()
+	}
+
+	if rp.fileWatcher != nil {
+		rp.fileWatcher.Close()
 	}
 }
 
@@ -480,6 +499,57 @@ func (rp *WorkspaceService) SetPreviewMode(mode string) {
 
 	existing.PreviewMode = mode
 	rp.saveWorkspaceSetting(existing)
+}
+
+func (rp *WorkspaceService) WatchFile(path string) error {
+	if rp.fileWatcher == nil {
+		return nil
+	}
+
+	return rp.fileWatcher.WatchFile(path)
+}
+
+func (rp *WorkspaceService) UnwatchFile(path string) error {
+	if rp.fileWatcher == nil {
+		return nil
+	}
+
+	return rp.fileWatcher.UnwatchFile(path)
+}
+
+// watchGitRepo watches git branch switching, staging, etc., and emits events
+// via eventbus. Editors or other components subscribe to these events to update
+// their states.
+func (rp *WorkspaceService) watchGitRepo() {
+	if rp.currentWorkspace.Path == "" {
+		return
+	}
+
+	workspaceRoot := rp.currentWorkspace.Path
+	log.Println("watch git repo: ", workspaceRoot)
+
+	if err := rp.WatchFile(filepath.Join(workspaceRoot, ".git", "HEAD")); err != nil {
+		log.Println("watch git branch switch failed: ", err)
+		return
+	}
+
+	if err := rp.WatchFile(filepath.Join(workspaceRoot, ".git", "index")); err != nil {
+		log.Println("watch git staging failed: ", err)
+		return
+	}
+}
+
+func (rp *WorkspaceService) unwatchGitRepo(workspaceDir string) {
+
+	err := rp.UnwatchFile(filepath.Join(workspaceDir, ".git", "HEAD"))
+	if err != nil && !errors.Is(err, fsnotify.ErrNonExistentWatch) {
+		log.Println("unwatch file failed: ", err)
+	}
+
+	err = rp.UnwatchFile(filepath.Join(workspaceDir, ".git", "index"))
+	if err != nil && !errors.Is(err, fsnotify.ErrNonExistentWatch) {
+		log.Println("unwatch file failed: ", err)
+	}
 }
 
 func openDB(dbFile string) *bolt.DB {

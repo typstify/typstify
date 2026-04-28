@@ -26,7 +26,6 @@ type ServiceFacade struct {
 	settings           *settings.Settings
 	eventbus           *bus.EventBus
 	workspaceSrv       *WorkspaceService
-	fileWatcher        *WorkspaceFileWatcher
 	pkgService         *pkg.TypstPkgService
 	windowSrv          *WindowService
 	previewSrv         *lsp.PreviewService
@@ -49,8 +48,7 @@ func NewService(ctx context.Context) *ServiceFacade {
 		eventbus:     eventbus,
 		settings:     st,
 		pkgService:   pkg.NewTypstPkgService(st.Typst(), st.Tpix()),
-		workspaceSrv: NewWorkspaceService(st.General().RootDir),
-		fileWatcher:  NewWorkspaceFileWatcher(eventbus),
+		workspaceSrv: NewWorkspaceService(st.General().RootDir, eventbus),
 		windowSrv:    NewWindowService(ctx, st),
 		consoleState: console.NewConsoleState(1000),
 	}
@@ -107,11 +105,12 @@ func (s *ServiceFacade) RequestSwitch(intent view.Intent) {
 	s.vm.RequestSwitch(intent)
 }
 
+func (s *ServiceFacade) RefreshWindow() {
+	s.vm.Invalidate()
+}
+
 func (s *ServiceFacade) Close(ctx context.Context) {
 	image.ClearCache()
-	if s.fileWatcher != nil {
-		s.fileWatcher.Close()
-	}
 	s.workspaceSrv.Close()
 	s.windowSrv.Shutdown()
 	s.windowSrv.Wait()
@@ -182,7 +181,7 @@ func (s *ServiceFacade) SetProjectDir(dir string) {
 
 	s.currentProjectDir = dir
 
-	s.Workspace().AddRecent(s.currentProjectDir)
+	s.Workspace().SwitchWorkspace(s.currentProjectDir)
 
 	// init executable lookup path.
 	lsp.SetupCmdBuilder(s.settings.General().ExternalTinymist)
@@ -243,20 +242,4 @@ func (s *ServiceFacade) CurrentProjectDir() string {
 
 func (s *ServiceFacade) Console() *console.ConsoleState {
 	return s.consoleState
-}
-
-func (s *ServiceFacade) WatchFile(path string) error {
-	if s.fileWatcher == nil {
-		return nil
-	}
-
-	return s.fileWatcher.WatchFile(path)
-}
-
-func (s *ServiceFacade) UnwatchFile(path string) error {
-	if s.fileWatcher == nil {
-		return nil
-	}
-
-	return s.fileWatcher.UnwatchFile(path)
 }

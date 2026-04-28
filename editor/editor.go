@@ -479,7 +479,7 @@ func (me *TextEditor) hasPendingChanges() bool {
 func (me *TextEditor) BindWorkspaceWatcher(srv *service.ServiceFacade) error {
 	me.srv = srv
 
-	if err := srv.WatchFile(me.filename); err != nil {
+	if err := srv.Workspace().WatchFile(me.filename); err != nil {
 		return err
 	}
 
@@ -490,25 +490,22 @@ func (me *TextEditor) BindWorkspaceWatcher(srv *service.ServiceFacade) error {
 		}
 
 		me.pendingExternalChange.Store(true)
+		me.srv.RefreshWindow()
 	})
 
 	// watch git branch switch
 	if me.differ != nil {
-		workspaceRoot := srv.CurrentProjectDir()
-		if err := srv.WatchFile(filepath.Join(workspaceRoot, ".git", "HEAD")); err != nil {
-			return err
-		}
-
-		if err := srv.WatchFile(filepath.Join(workspaceRoot, ".git", "index")); err != nil {
-			return err
-		}
-
 		srv.EventBus().Subscribe(me, "editor.gitbranch.changed", `git\.branch\.changed`, func(topic string, data interface{}) {
-			me.differ.ReloadBaseline(false)
+			me.differ.ReloadBaseline(false) // blocking call, can be optimized.
+			me.updateDiff()
+			me.srv.RefreshWindow()
 		})
 
 		srv.EventBus().Subscribe(me, "editor.git.staged", `git\.file\.staged`, func(topic string, data interface{}) {
 			me.differ.ReloadBaseline(true)
+			me.updateDiff()
+			me.srv.RefreshWindow()
+
 		})
 	}
 
@@ -648,17 +645,7 @@ func (me *TextEditor) Close() error {
 	me.highlighter.Close()
 	if me.srv != nil {
 		me.srv.EventBus().Unsubscribe(me)
-		if err := me.srv.UnwatchFile(me.filename); err != nil && !errors.Is(err, fsnotify.ErrNonExistentWatch) {
-			log.Println("unwatch file failed: ", err)
-		}
-
-		err := me.srv.UnwatchFile(filepath.Join(me.srv.CurrentProjectDir(), ".git", "HEAD"))
-		if err != nil && !errors.Is(err, fsnotify.ErrNonExistentWatch) {
-			log.Println("unwatch file failed: ", err)
-		}
-
-		err = me.srv.UnwatchFile(filepath.Join(me.srv.CurrentProjectDir(), ".git", "index"))
-		if err != nil && !errors.Is(err, fsnotify.ErrNonExistentWatch) {
+		if err := me.srv.Workspace().UnwatchFile(me.filename); err != nil && !errors.Is(err, fsnotify.ErrNonExistentWatch) {
 			log.Println("unwatch file failed: ", err)
 		}
 	}

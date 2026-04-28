@@ -175,9 +175,6 @@ func NewUI(srv *service.ServiceFacade, enableProfiler bool) *UI {
 		i18n.SetLocale(srv.Settings().General().Language)
 		appUI.window.Invalidate()
 	})
-	srv.EventBus().Subscribe(appUI, "ui.onWorkspaceFileChanged", `workspace\.file\.changed`, func(topic string, data interface{}) {
-		appUI.window.Invalidate()
-	})
 
 	return appUI
 }
