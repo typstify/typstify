@@ -7,6 +7,8 @@ const (
 	// request to create a new project.
 	TopicProjectCreate        = "project.create"
 	TopicWorkspaceFileChanged = "workspace.file.changed"
+	TopicGitBranchChanged     = "git.branch.changed"
+	TopicGitFileStaged        = "git.file.staged"
 )
 
 type FileChangedEvent struct {
@@ -19,4 +21,6 @@ var allTopics = []string{
 	TopicProjectSwitched,
 	TopicProjectCreate,
 	TopicWorkspaceFileChanged,
+	TopicGitBranchChanged,
+	TopicGitFileStaged,
 }

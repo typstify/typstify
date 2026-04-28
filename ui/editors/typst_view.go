@@ -123,7 +123,8 @@ func (te *TypstEditor) OnResume() {
 }
 
 func (te *TypstEditor) setupEditor(path string) error {
-	srcEditor, err := editor.NewTextEditor(path, false, false, te.srv.Settings().Editor())
+	showDiff := te.srv.Workspace().Current().GitBranch != ""
+	srcEditor, err := editor.NewTextEditor(path, showDiff, te.srv.Settings().Editor())
 	if err != nil {
 		return err
 	}

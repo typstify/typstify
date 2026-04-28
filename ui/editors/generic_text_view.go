@@ -3,7 +3,6 @@ package editors
 import (
 	"errors"
 	"path/filepath"
-	"strings"
 
 	"gioui.org/layout"
 	"gioui.org/unit"
@@ -50,14 +49,11 @@ func (te *GenericTextEditor) OnNavTo(intent view.Intent) error {
 	}
 
 	rootDir := te.srv.CurrentProjectDir()
-	isChildEntry := false
-	if rootDir == "" {
-	} else {
-		isChildEntry = strings.HasPrefix(path, rootDir)
-	}
+
+	showDiff := te.srv.Workspace().Current().GitBranch != ""
 
 	te.currentFile = path
-	srcEditor, err := editor.NewTextEditor(path, false, !isChildEntry, te.srv.Settings().Editor())
+	srcEditor, err := editor.NewTextEditor(path, showDiff, te.srv.Settings().Editor())
 	if err != nil {
 		return err
 	}

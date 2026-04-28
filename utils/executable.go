@@ -69,5 +69,5 @@ func (b *CmdBuilder) Build(ctx context.Context, args ...string) *exec.Cmd {
 	}
 
 	args = append(b.DefaultArgs, args...)
-	return buildCmd(ctx, path, args...)
+	return BuildCmd(ctx, path, args...)
 }

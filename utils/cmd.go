@@ -10,7 +10,7 @@ import (
 	"runtime"
 )
 
-func buildCmd(ctx context.Context, path string, args ...string) *exec.Cmd {
+func BuildCmd(ctx context.Context, path string, args ...string) *exec.Cmd {
 	cmd := exec.CommandContext(ctx, path, args...)
 	cmd.Env = append(cmd.Env, os.Environ()...)
 	return cmd

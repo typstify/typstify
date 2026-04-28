@@ -43,11 +43,12 @@ type WorkspaceState struct {
 	LastAccessAt time.Time
 	TreeState    *filetree.TreeState
 	OpenedFiles  []string
+	// current git branch
+	GitBranch string
 }
 
 type AppState struct {
-	WindowSize   []int
-	WorkspaceDir string
+	WindowSize []int
 }
 
 type WorkspaceService struct {
@@ -88,6 +89,16 @@ func (rp *WorkspaceService) AddRecent(projectDir string) {
 
 	rp.restartWatcher()
 	rp.clearSettingsCache()
+
+	// detect if this project is a git repo, and its current branch.
+	go func() {
+		branch, err := utils.CurrentGitBranch(projectDir)
+		if err != nil || branch == "" {
+			return
+		}
+
+		rp.currentWorkspace.GitBranch = branch
+	}()
 }
 
 func (rp *WorkspaceService) SaveSnapshot(treeState *filetree.TreeState, openedFiles []string) {

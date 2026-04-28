@@ -33,7 +33,6 @@ import (
 	"github.com/oligo/gioview/theme"
 	"github.com/oligo/gvcode"
 	"github.com/oligo/gvcode/addons/completion"
-	"github.com/oligo/gvcode/addons/diff"
 	gvcolor "github.com/oligo/gvcode/color"
 	"github.com/oligo/gvcode/gutter/providers"
 	"github.com/oligo/gvcode/textstyle/decoration"
@@ -76,11 +75,11 @@ type TextEditor struct {
 	hoverTips *HoverTips
 	popup     *completion.CompletionPopup
 	// diagnostics decorations
-	diagnosticsDecos      []decoration.Decoration
-	overviewRuler         OverviewRuler
+	diagnosticsDecos []decoration.Decoration
+	overviewRuler    OverviewRuler
+
 	diffProvider          *providers.VCSDiffProvider
-	differ                *diff.GitDiff
-	pendingHunks          atomic.Pointer[[]*providers.DiffHunk]
+	differ                *GitDiff
 	pendingExternalChange atomic.Bool
 	srv                   *service.ServiceFacade
 
@@ -266,9 +265,9 @@ func (me *TextEditor) update(gtx layout.Context, th *theme.Theme, settings *sett
 		me.OnOpenLink(link, external)
 	}
 
-	if hunks := me.pendingHunks.Swap(nil); hunks != nil && len(*hunks) >= 0 {
-		me.diffProvider.UpdateDiff(*hunks)
-		me.overviewRuler.UpdateDiffMarkers(*hunks)
+	if hunks := me.differ.PendingHunks(); hunks != nil {
+		me.diffProvider.UpdateDiff(hunks)
+		me.overviewRuler.UpdateDiffMarkers(hunks)
 	}
 
 	if tokens := me.highlighter.PendingTokens(); tokens != nil && len(*tokens) > 0 {
@@ -491,6 +490,26 @@ func (me *TextEditor) BindWorkspaceWatcher(srv *service.ServiceFacade) error {
 		me.pendingExternalChange.Store(true)
 	})
 
+	// watch git branch switch
+	if me.differ != nil {
+		workspaceRoot := srv.CurrentProjectDir()
+		if err := srv.WatchFile(filepath.Join(workspaceRoot, ".git", "HEAD")); err != nil {
+			return err
+		}
+
+		if err := srv.WatchFile(filepath.Join(workspaceRoot, ".git", "index")); err != nil {
+			return err
+		}
+
+		srv.EventBus().Subscribe(me, "editor.gitbranch.changed", `git\.branch\.changed`, func(topic string, data interface{}) {
+			me.differ.ReloadBaseline(false)
+		})
+
+		srv.EventBus().Subscribe(me, "editor.git.staged", `git\.file\.staged`, func(topic string, data interface{}) {
+			me.differ.ReloadBaseline(true)
+		})
+	}
+
 	return nil
 }
 
@@ -630,7 +649,22 @@ func (me *TextEditor) Close() error {
 		if err := me.srv.UnwatchFile(me.filename); err != nil && !errors.Is(err, fsnotify.ErrNonExistentWatch) {
 			log.Println("unwatch file failed: ", err)
 		}
+
+		err := me.srv.UnwatchFile(filepath.Join(me.srv.CurrentProjectDir(), ".git", "HEAD"))
+		if err != nil && !errors.Is(err, fsnotify.ErrNonExistentWatch) {
+			log.Println("unwatch file failed: ", err)
+		}
+
+		err = me.srv.UnwatchFile(filepath.Join(me.srv.CurrentProjectDir(), ".git", "index"))
+		if err != nil && !errors.Is(err, fsnotify.ErrNonExistentWatch) {
+			log.Println("unwatch file failed: ", err)
+		}
 	}
+
+	if me.differ != nil {
+		me.differ.Stop()
+	}
+
 	if me.lspClient != nil {
 		me.lspClient.OnEditorClosed(me.filename)
 	}
@@ -666,27 +700,20 @@ func (me *TextEditor) updateDiff() {
 		return
 	}
 
-	// Capture the current buffer content to diffs against the in-memory state
-	content := []byte(me.state.Text())
-	go func() {
-		hunks := me.differ.ParseDiff(content)
-		me.pendingHunks.Store(&hunks)
-	}()
+	me.differ.Trigger(me.state)
 }
 
-func NewTextEditor(path string, createOnMissing bool, readonly bool, settings *settings.EditorSettings) (*TextEditor, error) {
+func NewTextEditor(path string, showDiff bool, settings *settings.EditorSettings) (*TextEditor, error) {
 	ed := &TextEditor{
 		filename:     path,
 		highlighter:  NewHighlighter(path),
 		state:        &gvcode.Editor{},
 		wrapLine:     false,
 		diffProvider: providers.NewVCSDiffProvider(),
-		differ:       diff.NewGitDiff(path),
 	}
 
 	ed.state.WithOptions(
 		gvcode.WrapLine(false),
-		gvcode.ReadOnlyMode(readonly),
 		gvcode.WithGutterGap(unit.Dp(24)),
 		gvcode.WithCornerRadius(unit.Dp(4)),
 		gvcode.WithGutter(providers.NewLineNumberProvider()),
@@ -697,18 +724,11 @@ func NewTextEditor(path string, createOnMissing bool, readonly bool, settings *s
 	ed.overviewRuler.UseDefaultColors()
 	ed.diffProvider.SetIndicatorWidth(unit.Dp(3))
 	ed.hoverTips = newHoverTips(ed.state)
-
-	flag := os.O_RDWR
-	if createOnMissing {
-		err := os.MkdirAll(filepath.Dir(path), 0755)
-		if err != nil {
-			return nil, err
-		}
-
-		flag = os.O_RDWR | os.O_CREATE
+	if showDiff {
+		ed.differ = NewGitDiff(ed.filename)
 	}
 
-	originalFile, err := os.OpenFile(path, flag, 0755)
+	originalFile, err := os.OpenFile(path, os.O_RDWR, 0755)
 	if err != nil {
 		return nil, err
 	}
