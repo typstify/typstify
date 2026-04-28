@@ -38,7 +38,7 @@ func IsGitRepo(filePath string) bool {
 }
 
 func CurrentGitBranch(projectPath string) (string, error) {
-	cmd := BuildCmd(context.Background(), "git", "rev-parse", "--abbrev-ref", "HEAD")
+	cmd := BuildCmd(context.Background(), "git", "branch", "--show-current")
 	cmd.Dir = projectPath
 
 	out, err := cmd.Output()
