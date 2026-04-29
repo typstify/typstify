@@ -3,6 +3,7 @@ package editor
 import (
 	"image/color"
 	"io"
+	"log"
 	"os"
 	"path/filepath"
 	"regexp"
@@ -18,29 +19,20 @@ import (
 	gvcolor "github.com/oligo/gvcode/color"
 	"github.com/oligo/gvcode/textstyle/syntax"
 	"github.com/saintfish/chardet"
+	"looz.ws/typstify/utils"
 )
-
-const highlightDebounce = 50 * time.Millisecond
 
 var camelCaseRe = regexp.MustCompile(`([A-Z]+)`)
 
-type highlightResult struct {
-	seq    uint64
-	tokens *[]syntax.Token
-}
-
-type highlightJob struct {
-	seq    uint64
-	editor *gvcode.Editor
-}
+var (
+	defaultHighlightDebounce    = time.Millisecond * 150
+	defaultMaxHighlightInterval = time.Millisecond * 250
+)
 
 type Highlighter struct {
 	lexer         chroma.Lexer
-	seq           atomic.Uint64
-	pendingResult atomic.Pointer[highlightResult]
-	jobs          chan highlightJob
-	done          chan struct{}
-	closed        atomic.Bool
+	pendingResult atomic.Pointer[[]syntax.Token]
+	debouncer     *utils.Debouncer
 }
 
 func NewHighlighter(filename string) *Highlighter {
@@ -52,14 +44,14 @@ func NewHighlighter(filename string) *Highlighter {
 
 	lexer = chroma.Coalesce(lexer)
 
-	h := &Highlighter{
+	return &Highlighter{
 		lexer: lexer,
-		jobs:  make(chan highlightJob, 1),
-		done:  make(chan struct{}),
+		debouncer: &utils.Debouncer{
+			Debounce:    defaultHighlightDebounce,
+			MaxInterval: defaultMaxHighlightInterval,
+		},
 	}
 
-	h.startWorker()
-	return h
 }
 
 func chromaTokenType2Scope(t chroma.TokenType) syntax.StyleScope {
@@ -82,104 +74,35 @@ func convertChromaColor(c chroma.Colour) gvcolor.Color {
 	})
 }
 
-// Highlight debounces and tokenizes the editor content asynchronously.
+// Highlight debounces and tokenizes the editor content.
 // Results are picked up via PendingTokens on the next frame.
 func (h *Highlighter) Highlight(editor *gvcode.Editor) {
-	if h.closed.Load() {
-		return
-	}
-	seq := h.seq.Add(1)
-	job := highlightJob{seq: seq, editor: editor}
-	h.enqueueLatest(job)
-}
-
-// enqueueLatest keeps only the newest job in the 1-slot queue without blocking the caller.
-func (h *Highlighter) enqueueLatest(job highlightJob) {
-	for {
-		select {
-		case <-h.done:
-			return
-		case h.jobs <- job:
-			return
-		default:
-			// Queue full: drop stale job and retry.
-			select {
-			case <-h.jobs:
-			default:
-			}
-		}
-	}
-}
-
-func (h *Highlighter) startWorker() {
-	go func() {
-		var (
-			timer      *time.Timer
-			timerCh    <-chan time.Time
-			latest     highlightJob
-			haveLatest bool
-		)
-
-		for {
-			select {
-			case <-h.done:
-				if timer != nil {
-					timer.Stop()
-				}
-				return
-			case job := <-h.jobs:
-				latest = job
-				haveLatest = true
-				if timer == nil {
-					timer = time.NewTimer(highlightDebounce)
-					timerCh = timer.C
-				} else {
-					if !timer.Stop() {
-						select {
-						case <-timer.C:
-						default:
-						}
-					}
-					timer.Reset(highlightDebounce)
-				}
-			case <-timerCh:
-				if !haveLatest {
-					continue
-				}
-				haveLatest = false
-				if latest.seq != h.seq.Load() {
-					continue
-				}
-				tokens := h.tokenize(latest.editor)
-				if latest.seq != h.seq.Load() {
-					continue
-				}
-				h.pendingResult.Store(&highlightResult{seq: latest.seq, tokens: &tokens})
-			}
-		}
-	}()
-}
-
-func (h *Highlighter) Close() {
-	if !h.closed.CompareAndSwap(false, true) {
-		return
-	}
-	close(h.done)
-}
-
-func (h *Highlighter) tokenize(editor *gvcode.Editor) []syntax.Token {
 	if editor == nil {
-		return nil
+		return
 	}
 	reader := editor.GetReader()
 	reader.Seek(0, io.SeekStart)
+
+	h.debouncer.Run(func() {
+		h.tokenize(reader)
+	})
+
+}
+
+func (h *Highlighter) Close() {
+	h.debouncer.Stop()
+}
+
+func (h *Highlighter) tokenize(reader io.Reader) {
 	source, err := io.ReadAll(reader)
 	if err != nil {
-		return nil
+		log.Println("read from editor error: ", err)
+		return
 	}
+
 	iterator, err := h.lexer.Tokenise(nil, string(source))
 	if err != nil {
-		return nil
+		return
 	}
 
 	newTokens := make([]syntax.Token, 0)
@@ -200,18 +123,20 @@ func (h *Highlighter) tokenize(editor *gvcode.Editor) []syntax.Token {
 		offset = textStyle.End
 	}
 
-	return newTokens
+	// newTokens will never be nil, so we can dictinct no changes and not computed.
+	h.pendingResult.Store(&newTokens)
 }
 
-func (h *Highlighter) PendingTokens() *[]syntax.Token {
-	result := h.pendingResult.Swap(nil)
-	if result == nil || result.seq != h.seq.Load() {
-		return nil // no result, or stale result from before a newer edit
+func (h *Highlighter) PendingTokens() []syntax.Token {
+	lastResult := h.pendingResult.Swap(nil)
+	if lastResult == nil {
+		return nil
 	}
-	return result.tokens
+
+	return *lastResult
 }
 
-func (h *Highlighter) LexerName() string {
+func (h *Highlighter) Language() string {
 	if h.lexer == nil {
 		return "unknown"
 	}
@@ -308,7 +233,10 @@ func buildColorScheme(schemeName string) *syntax.ColorScheme {
 		// 	tokenBg = gvcolor.MakeColor(c)
 		// }
 
-		scheme.AddStyle(chromaTokenType2Scope(t), textStyle, tokenFg, tokenBg)
+		scope := chromaTokenType2Scope(t)
+		//log.Printf("gvcode scope: %s, color: %s", scope, tokenFg)
+
+		scheme.AddStyle(scope, textStyle, tokenFg, tokenBg)
 	}
 
 	return &scheme

@@ -272,8 +272,8 @@ func (me *TextEditor) update(gtx layout.Context, th *theme.Theme, settings *sett
 		}
 	}
 
-	if tokens := me.highlighter.PendingTokens(); tokens != nil && len(*tokens) > 0 {
-		me.state.SetSyntaxTokens(*tokens...)
+	if tokens := me.highlighter.PendingTokens(); tokens != nil {
+		me.state.SetSyntaxTokens(tokens...)
 	}
 
 }
@@ -457,7 +457,7 @@ func (me *TextEditor) updateStatusBar(settings *settings.EditorSettings) {
 		}
 	}
 
-	me.status.Language = me.highlighter.LexerName()
+	me.status.Language = me.highlighter.Language()
 
 	if strings.EqualFold(me.status.Language, "Typst") {
 		me.status.CompilerVer = strings.TrimSpace(typst.CurrentVersion())

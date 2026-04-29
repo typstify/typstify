@@ -22,7 +22,7 @@ import (
 
 var (
 	defaultDiffDebounce    = time.Millisecond * 100
-	defaultMaxDiffInternal = time.Millisecond * 200
+	defaultMaxDiffInterval = time.Millisecond * 200
 )
 
 type DiffBuffer struct {
@@ -38,12 +38,7 @@ type GitDiff struct {
 	buf      DiffBuffer
 	mu       sync.Mutex
 
-	debounce     time.Duration
-	maxInterval  time.Duration
-	timer        *time.Timer
-	lastRun      time.Time
-	pending      atomic.Bool
-	triggerMu    sync.Mutex
+	debouncer    *utils.Debouncer
 	pendingHunks atomic.Pointer[[]*providers.DiffHunk]
 }
 
@@ -57,11 +52,13 @@ func NewGitDiff(filePath string) *GitDiff {
 	filename := filepath.Base(absPath)
 
 	return &GitDiff{
-		filePath:    absPath,
-		dir:         dir,
-		filename:    filename,
-		debounce:    defaultDiffDebounce,
-		maxInterval: defaultMaxDiffInternal,
+		filePath: absPath,
+		dir:      dir,
+		filename: filename,
+		debouncer: &utils.Debouncer{
+			Debounce:    defaultDiffDebounce,
+			MaxInterval: defaultMaxDiffInterval,
+		},
 	}
 }
 
@@ -110,36 +107,8 @@ func (d *GitDiff) loadStagedContent() {
 }
 
 func (d *GitDiff) Trigger(editor *gvcode.Editor) {
-	d.triggerMu.Lock()
-	defer d.triggerMu.Unlock()
-
-	now := time.Now()
-
-	// If too long since last run, run immediately
-	if now.Sub(d.lastRun) >= d.maxInterval {
-		d.lastRun = now
-		if d.timer != nil {
-			d.timer.Stop()
-		}
-		d.pending.Store(false)
-		go d.ParseDiff(editor)
-		return
-	}
-
-	// Otherwise debounce
-	d.pending.Store(true)
-
-	if d.timer != nil {
-		d.timer.Stop()
-	}
-
-	d.timer = time.AfterFunc(d.debounce, func() {
-		if d.pending.CompareAndSwap(true, false) {
-			d.lastRun = time.Now()
-
-			go d.ParseDiff(editor)
-		}
-
+	d.debouncer.Run(func() {
+		d.ParseDiff(editor)
 	})
 }
 
@@ -230,11 +199,7 @@ func (d *GitDiff) parseBufferDiff(content []byte) []*providers.DiffHunk {
 }
 
 func (d *GitDiff) Stop() {
-	d.triggerMu.Lock()
-	defer d.triggerMu.Unlock()
-	if d.timer != nil {
-		d.timer.Stop()
-	}
+	d.debouncer.Stop()
 }
 
 var (
