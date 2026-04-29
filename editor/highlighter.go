@@ -31,7 +31,7 @@ var (
 
 type Highlighter struct {
 	lexer         chroma.Lexer
-	pendingResult atomic.Pointer[[]syntax.Token]
+	pendingResult atomic.Pointer[pendingHighlight]
 	debouncer     *utils.Debouncer
 }
 
@@ -52,6 +52,11 @@ func NewHighlighter(filename string) *Highlighter {
 		},
 	}
 
+}
+
+type pendingHighlight struct {
+	tokens    []syntax.Token
+	sourceLen int
 }
 
 func chromaTokenType2Scope(t chroma.TokenType) syntax.StyleScope {
@@ -123,17 +128,22 @@ func (h *Highlighter) tokenize(reader io.Reader) {
 		offset = textStyle.End
 	}
 
-	// newTokens will never be nil, so we can dictinct no changes and not computed.
-	h.pendingResult.Store(&newTokens)
+	// newTokens will never be nil, so we can distinct no changes and not computed.
+	h.pendingResult.Store(&pendingHighlight{
+		tokens:    newTokens,
+		sourceLen: len(source),
+	})
 }
 
-func (h *Highlighter) PendingTokens() []syntax.Token {
+func (h *Highlighter) PendingTokens(textLen int) []syntax.Token {
 	lastResult := h.pendingResult.Swap(nil)
 	if lastResult == nil {
 		return nil
 	}
-
-	return *lastResult
+	if textLen != lastResult.sourceLen {
+		return nil // text changed since tokenization, discard stale tokens
+	}
+	return lastResult.tokens
 }
 
 func (h *Highlighter) Language() string {
@@ -234,7 +244,19 @@ func buildColorScheme(schemeName string) *syntax.ColorScheme {
 		// }
 
 		scope := chromaTokenType2Scope(t)
-		//log.Printf("gvcode scope: %s, color: %s", scope, tokenFg)
+
+		// Don't let chroma's TextWhitespace color override the default text.
+		//
+		// In rapid typing, before the new tokens are applied to editor, there
+		// will be a one character offset between the editor content and the tokens,
+		// and gvcode editor will shifts the exiting tokens by the amount of the newly
+		// inserted text. The previous token tries to absorb the new added text,
+		// so if are are typing after a white space token and the white space character happens
+		// to have a different color, the newly added text will have the same color as white space.
+		// Here we set the white space color to a default text color, so as to make the text looks stable.
+		if scope == "text.whitespace" {
+			tokenFg = gvcolor.Color{}
+		}
 
 		scheme.AddStyle(scope, textStyle, tokenFg, tokenBg)
 	}

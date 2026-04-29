@@ -272,7 +272,7 @@ func (me *TextEditor) update(gtx layout.Context, th *theme.Theme, settings *sett
 		}
 	}
 
-	if tokens := me.highlighter.PendingTokens(); tokens != nil {
+	if tokens := me.highlighter.PendingTokens(me.state.Len()); tokens != nil {
 		me.state.SetSyntaxTokens(tokens...)
 	}
 
