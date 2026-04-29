@@ -7,8 +7,7 @@ import (
 )
 
 var (
-	defaultDebounce    = time.Millisecond * 100
-	defaultMaxInterval = time.Millisecond * 200
+	defaultDebounce = time.Millisecond * 100
 )
 
 // Debouncer implemented the debounce pattern with a maximum execution delay.
@@ -22,7 +21,8 @@ type Debouncer struct {
 	pending atomic.Bool
 	mu      sync.Mutex
 
-	Debounce    time.Duration
+	Debounce time.Duration
+	// If MaxInterval is not set, Debouncer will not check max wait time.
 	MaxInterval time.Duration
 }
 
@@ -33,21 +33,19 @@ func (d *Debouncer) Run(runner func()) {
 	if d.Debounce == 0 {
 		d.Debounce = defaultDebounce
 	}
-	if d.MaxInterval == 0 {
-		d.MaxInterval = defaultMaxInterval
-	}
 
-	now := time.Now()
-
-	// If too long since last run, run immediately
-	if now.Sub(d.lastRun) >= d.MaxInterval {
-		d.lastRun = now
-		if d.timer != nil {
-			d.timer.Stop()
+	if d.MaxInterval > 0 {
+		now := time.Now()
+		// If too long since last run, run immediately
+		if now.Sub(d.lastRun) >= d.MaxInterval {
+			d.lastRun = now
+			if d.timer != nil {
+				d.timer.Stop()
+			}
+			d.pending.Store(false)
+			go runner()
+			return
 		}
-		d.pending.Store(false)
-		go runner()
-		return
 	}
 
 	// Otherwise debounce

@@ -51,12 +51,13 @@ type HoverTips struct {
 	list       widget.List
 	anim       *component.VisibilityAnimation
 
-	lastHoverPos  image.Point
-	lastContent   string
-	needRebuild   bool
-	cancelled     bool
-	hoverSeq      uint64
-	pendingResult atomic.Pointer[hoverResult]
+	lastHoverPos   image.Point
+	lastContent    string
+	needRebuild    bool
+	cancelled      bool
+	hoverSeq       uint64
+	pendingResult  atomic.Pointer[hoverResult]
+	hoverDebouncer *utils.Debouncer
 
 	// Mouse tracking for tip area
 	tipBounds      image.Rectangle
@@ -72,6 +73,9 @@ func newHoverTips(editor *gvcode.Editor) *HoverTips {
 			State:    component.Invisible,
 			Duration: 150 * time.Millisecond,
 		},
+		hoverDebouncer: &utils.Debouncer{
+			Debounce: 200 * time.Millisecond,
+		},
 	}
 }
 
@@ -85,16 +89,18 @@ func (h *HoverTips) OnHover(evt gvcode.HoverEvent, hoverCallbacks ...OnHoverAt) 
 		return
 	}
 
-	// Increment sequence so stale goroutine results are discarded.
+	// Increment sequence so stale results are discarded.
 	h.hoverSeq++
 	seq := h.hoverSeq
 	fallbackPos := evt.PixelOff
+	hoverPos := evt.Pos
 
-	go func() {
+	// Debounce: only query after the mouse has been stationary.
+	h.hoverDebouncer.Run(func() {
 		var content string
 		var pixelPos f32.Point
 		for _, cb := range hoverCallbacks {
-			content, pixelPos = cb(evt.Pos)
+			content, pixelPos = cb(hoverPos)
 			if content != "" {
 				break
 			}
@@ -106,7 +112,7 @@ func (h *HoverTips) OnHover(evt gvcode.HoverEvent, hoverCallbacks ...OnHoverAt) 
 			pixelPos:    pixelPos,
 			fallbackPos: fallbackPos,
 		})
-	}()
+	})
 }
 
 func (h *HoverTips) Clear(gtx layout.Context) {
