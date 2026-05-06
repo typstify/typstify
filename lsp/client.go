@@ -638,6 +638,30 @@ func (c *Client) NotifyWorkspaceConfigChanges(ctx context.Context, settings map[
 	return nil
 }
 
+func (c *Client) DocumentSymbols(ctx context.Context, filePath string) ([]protocol.DocumentSymbol, error) {
+	if !c.IsReady() {
+		return nil, errors.New("LSP is not ready")
+	}
+
+	ctx, cancel := context.WithTimeout(context.Background(), CommunicationTimeout)
+	defer cancel()
+
+	var symbols []protocol.DocumentSymbol
+
+	err := c.jsonConn.Call(ctx, protocol.RPCMethodDocumentSymbol,
+		protocol.DocumentSymbolParams{
+			TextDocument: protocol.TextDocumentIdentifier{
+				URI: protocol.URIFromPath(filePath),
+			},
+		}).Await(ctx, &symbols)
+
+	if err != nil {
+		return nil, errors.Wrapf(err, "failed to get document symbols")
+	}
+
+	return symbols, nil
+}
+
 func (c *Client) SetServreLogStreamer(dest io.Writer) {
 	go func() {
 		io.Copy(dest, c.server.LogReader())

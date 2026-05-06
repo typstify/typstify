@@ -574,6 +574,12 @@ func (me *TextEditor) reloadContent(content []byte, hash string) error {
 	return nil
 }
 
+// NavigateToLine moves the editor caret to the given line and column (0-indexed).
+func (me *TextEditor) NavigateToLine(line, col int) {
+	off, _ := me.state.ConvertPos(line, col)
+	me.state.SetCaret(off, off)
+}
+
 // Let the LSP server(tinymist) detect the focused file.
 func (me *TextEditor) FocusLsp() {
 	if me.lspClient != nil {

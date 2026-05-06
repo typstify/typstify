@@ -24,6 +24,7 @@ import (
 	"looz.ws/typstify/ui/viewer"
 	"looz.ws/typstify/utils"
 	"looz.ws/typstify/widgets/filetree"
+	"looz.ws/typstify/widgets/icons"
 	"looz.ws/typstify/widgets/menu"
 )
 
@@ -163,6 +164,10 @@ func (tn *FileTreeNav) OnClose() {
 
 func (tn *FileTreeNav) Title() string {
 	return tn.title
+}
+
+func (tn *FileTreeNav) Icon() *icons.SvgIcon {
+	return explorerIcon
 }
 
 func (tn *FileTreeNav) Update(gtx C) bool {
