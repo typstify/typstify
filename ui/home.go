@@ -94,7 +94,7 @@ func (hv *HomeView) update(gtx C) {
 			if event.State != key.Press {
 				continue
 			}
-			
+
 			if event.Name == "D" && event.Modifiers.Contain(key.ModShortcut) {
 				hv.menuPanel.IsDrawerHidden = !hv.menuPanel.IsDrawerHidden
 			}
@@ -309,7 +309,7 @@ func (hv *HomeView) layoutView(gtx C, th *theme.Theme) D {
 }
 
 func (hv *HomeView) OnClose() {
-	hv.sidebar.FileExplorer.OnClose()
+	hv.sidebar.Close()
 	if hv.previewer != nil {
 		hv.previewer.Destroy()
 	}

@@ -5,6 +5,7 @@ import (
 
 	"context"
 	"errors"
+	"fmt"
 	"log"
 	"path/filepath"
 	"regexp"
@@ -17,6 +18,7 @@ import (
 	"github.com/oligo/gvcode"
 	"looz.ws/typstify/editor"
 	"looz.ws/typstify/lsp"
+	lspProtocol "looz.ws/typstify/lsp/protocol"
 	"looz.ws/typstify/service"
 	"looz.ws/typstify/ui/dialog"
 	uipreview "looz.ws/typstify/ui/preview"
@@ -42,6 +44,7 @@ var (
 	previewIcon       = appIcons.NewSvgIcon(appIcons.ScanSearch)
 	exportIcon        = appIcons.NewSvgIcon(appIcons.ArrowRightFromLine)
 	presentationIcon  = appIcons.NewSvgIcon(appIcons.Presentation)
+	tocIcon           = appIcons.NewSvgIcon(appIcons.TableOfContents)
 )
 
 type TypstEditor struct {
@@ -56,6 +59,10 @@ type TypstEditor struct {
 	uiPreviewer    *uipreview.Previewer
 	previewVisible bool
 	toggleModeBtn  widget.Clickable
+
+	// Outline
+	cachedSymbols []lspProtocol.DocumentSymbol
+	symbolsDirty  bool
 }
 
 func (te *TypstEditor) ID() view.ViewID {
@@ -91,6 +98,7 @@ func (te *TypstEditor) OnNavTo(intent view.Intent) error {
 
 	te.header = newEditorHeader(rootDir, te.targetFile, te.headerActions())
 	te.lspReady = false
+	te.symbolsDirty = true
 
 	return nil
 }
@@ -185,6 +193,12 @@ func (te *TypstEditor) headerActions() []editorHeaderAction {
 				})
 			},
 		},
+		// {
+		// 	Name: "Outline",
+		// 	Icon: tocIcon,
+		// 	OnClicked: func(gtx C) {
+		// 	},
+		// },
 		{
 			Name: "Search & Replace",
 			Icon: searchIcon,
@@ -321,6 +335,33 @@ func (te *TypstEditor) LayoutStatus(gtx C, th *theme.Theme) D {
 			})
 		}),
 	)
+}
+
+// OutlineSymbols implements navpanel.OutlineProvider.
+func (te *TypstEditor) OutlineSymbols() []lspProtocol.DocumentSymbol {
+	if te.symbolsDirty {
+		te.symbolsDirty = false
+		client := lsp.GetLspClient(te.srv.CurrentProjectDir(), te.srv.Settings())
+		if client != nil && client.IsReady() {
+			symbols, err := client.DocumentSymbols(context.Background(), te.targetFile)
+			if err == nil {
+				te.cachedSymbols = symbols
+				for _, symbol := range symbols {
+					fmt.Printf("Name: %s, detail: %s, Tags: %v, kind: %s\n", symbol.Name, symbol.Detail, symbol.Tags, symbol.Kind)
+				}
+			} else {
+				log.Println("fetch symbol error: ", err)
+			}
+		}
+	}
+	return te.cachedSymbols
+}
+
+// OnOutlineSymbolSelected implements navpanel.OutlineProvider.
+func (te *TypstEditor) OnOutlineSymbolSelected(symbol lspProtocol.DocumentSymbol) {
+	line := int(symbol.SelectionRange.Start.Line)
+	col := int(symbol.SelectionRange.Start.Character)
+	te.srcEditor.NavigateToLine(line, col)
 }
 
 func (te *TypstEditor) OnFinish() {

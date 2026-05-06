@@ -91,6 +91,9 @@ var FilePlus []byte
 //go:embed lucide/list.svg
 var List []byte
 
+//go:embed lucide/folder-tree.svg
+var FolderTree []byte
+
 //go:embed lucide/settings.svg
 var Settings []byte
 
@@ -156,6 +159,15 @@ var Tag []byte
 
 //go:embed lucide/terminal.svg
 var Terminal []byte
+
+//go:embed lucide/table-of-contents.svg
+var TableOfContents []byte
+
+//go:embed lucide/square-function.svg
+var SquareFunction []byte
+
+//go:embed lucide/variable.svg
+var Variable []byte
 
 func newIcon(iconData []byte) *giosvg.Icon {
 	vector, err := giosvg.NewVector(iconData)
