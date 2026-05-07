@@ -390,7 +390,7 @@ func (te *TypstEditor) OnFinish() {
 }
 
 func (te *TypstEditor) openLink(link string, external bool) {
-	isHttpLink := strings.HasPrefix(link, "https://") && strings.HasPrefix(link, "http://")
+	isHttpLink := strings.HasPrefix(link, "https://") || strings.HasPrefix(link, "http://")
 	if isHttpLink {
 		if err := giohyperlink.Open(link); err != nil {
 			log.Printf("error: opening hyperlink: %v, url: %s", err, link)
