@@ -10,6 +10,8 @@ import (
 	"regexp"
 	"runtime"
 	"strings"
+	"sync/atomic"
+	"time"
 
 	"github.com/inkeliz/giohyperlink"
 	"github.com/oligo/gioview/theme"
@@ -60,8 +62,9 @@ type TypstEditor struct {
 	toggleModeBtn  widget.Clickable
 
 	// Outline
-	cachedSymbols []lspProtocol.DocumentSymbol
-	symbolsDirty  bool
+	cachedSymbols   atomic.Pointer[[]lspProtocol.DocumentSymbol]
+	symbolsDirty    atomic.Bool
+	symbolDebouncer *utils.Debouncer
 }
 
 func (te *TypstEditor) ID() view.ViewID {
@@ -97,7 +100,7 @@ func (te *TypstEditor) OnNavTo(intent view.Intent) error {
 
 	te.header = newEditorHeader(rootDir, te.targetFile, te.headerActions())
 	te.lspReady = false
-	te.symbolsDirty = true
+	te.symbolsDirty.Store(true)
 
 	return nil
 }
@@ -150,7 +153,7 @@ func (te *TypstEditor) setupEditor(path string) error {
 	}
 	te.srcEditor.OnOpenLink = te.openLink
 	te.srcEditor.OnTextChange = func() {
-		te.symbolsDirty = true
+		te.symbolsDirty.Store(true)
 	}
 
 	return nil
@@ -342,19 +345,27 @@ func (te *TypstEditor) LayoutStatus(gtx C, th *theme.Theme) D {
 
 // OutlineSymbols implements navpanel.OutlineProvider.
 func (te *TypstEditor) OutlineSymbols() []lspProtocol.DocumentSymbol {
-	if te.symbolsDirty {
-		te.symbolsDirty = false
-		client := lsp.GetLspClient(te.srv.CurrentProjectDir(), te.srv.Settings())
-		if client != nil && client.IsReady() {
-			symbols, err := client.DocumentSymbols(context.Background(), te.targetFile)
-			if err == nil {
-				te.cachedSymbols = symbols
-			} else {
-				log.Println("fetch symbol error: ", err)
+	if te.symbolsDirty.Load() {
+		te.symbolDebouncer.Run(func() {
+			client := lsp.GetLspClient(te.srv.CurrentProjectDir(), te.srv.Settings())
+			if client != nil && client.IsReady() {
+				symbols, err := client.DocumentSymbols(context.Background(), te.targetFile)
+				if err == nil {
+					te.cachedSymbols.Store(&symbols)
+					te.symbolsDirty.Store(false)
+				} else {
+					log.Println("fetch symbol error: ", err)
+				}
 			}
-		}
+		})
+
 	}
-	return te.cachedSymbols
+	cachedSymbols := te.cachedSymbols.Load()
+	if cachedSymbols == nil {
+		return nil
+	}
+
+	return *cachedSymbols
 }
 
 // OnOutlineSymbolSelected implements navpanel.OutlineProvider.
@@ -429,5 +440,8 @@ func NewTypstEditor(srv *service.ServiceFacade) view.View {
 	return &TypstEditor{
 		BaseView: &view.BaseView{},
 		srv:      srv,
+		symbolDebouncer: &utils.Debouncer{
+			Debounce: time.Millisecond * 300,
+		},
 	}
 }
