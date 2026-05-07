@@ -5,6 +5,8 @@ import (
 	"image/color"
 
 	"gioui.org/f32"
+	"gioui.org/io/event"
+	"gioui.org/io/key"
 	"gioui.org/layout"
 	"gioui.org/op"
 	"gioui.org/op/clip"
@@ -40,6 +42,35 @@ func (p *Popup) Dismiss() {
 }
 
 func (p *Popup) Layout(gtx C, th *theme.Theme, w layout.Widget, popItems ...PopupWidget) D {
+	for {
+		evt, ok := gtx.Event(
+			key.FocusFilter{Target: p},
+			key.Filter{Focus: p, Name: key.NameEscape},
+		)
+		if !ok {
+			break
+		}
+
+		switch e := evt.(type) {
+		case key.Event:
+			if e.Name == key.NameEscape {
+				p.Dismiss()
+			}
+		}
+	}
+
+	macro := op.Record(gtx.Ops)
+	dims := p.layout(gtx, th, w, popItems...)
+	callOp := macro.Stop()
+
+	defer clip.Rect(image.Rectangle{Max: dims.Size}).Push(gtx.Ops).Pop()
+	event.Op(gtx.Ops, p)
+	callOp.Add(gtx.Ops)
+
+	return dims
+}
+
+func (p *Popup) layout(gtx C, th *theme.Theme, w layout.Widget, popItems ...PopupWidget) D {
 
 	return layout.Stack{}.Layout(gtx,
 		layout.Stacked(func(gtx C) D {
@@ -83,6 +114,7 @@ func (p *Popup) Layout(gtx C, th *theme.Theme, w layout.Widget, popItems ...Popu
 				}
 
 				p.pendingOpen = false
+				gtx.Execute(key.FocusCmd{Tag: p})
 			}
 
 			p.popupArea.Layout(gtx, func(gtx C) D {
