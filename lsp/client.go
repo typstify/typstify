@@ -646,6 +646,8 @@ func (c *Client) DocumentSymbols(ctx context.Context, filePath string) ([]protoc
 	ctx, cancel := context.WithTimeout(context.Background(), CommunicationTimeout)
 	defer cancel()
 
+	c.notifyDidOpenOrChange(ctx, filePath)
+
 	var symbols []protocol.DocumentSymbol
 
 	err := c.jsonConn.Call(ctx, protocol.RPCMethodDocumentSymbol,
