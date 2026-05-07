@@ -5,7 +5,6 @@ import (
 
 	"context"
 	"errors"
-	"fmt"
 	"log"
 	"path/filepath"
 	"regexp"
@@ -346,9 +345,6 @@ func (te *TypstEditor) OutlineSymbols() []lspProtocol.DocumentSymbol {
 			symbols, err := client.DocumentSymbols(context.Background(), te.targetFile)
 			if err == nil {
 				te.cachedSymbols = symbols
-				for _, symbol := range symbols {
-					fmt.Printf("Name: %s, detail: %s, Tags: %v, kind: %s\n", symbol.Name, symbol.Detail, symbol.Tags, symbol.Kind)
-				}
 			} else {
 				log.Println("fetch symbol error: ", err)
 			}

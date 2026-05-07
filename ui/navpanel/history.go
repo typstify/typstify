@@ -71,7 +71,7 @@ func NewRecentProjects(srv *service.ServiceFacade) *RecentProjects {
 	historyPopup := &widgets.Popup{
 		MaxHeight: unit.Dp(400),
 		Width:     unit.Dp(350),
-		Direction: layout.N,
+		Direction: layout.S,
 	}
 	return &RecentProjects{srv: srv, historyPopup: historyPopup}
 }

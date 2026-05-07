@@ -1,6 +1,8 @@
 package navpanel
 
 import (
+	"strings"
+
 	"gioui.org/layout"
 	"gioui.org/unit"
 	"gioui.org/widget"
@@ -34,6 +36,17 @@ func NewOutlineNav() *OutlineNav {
 
 func (o *OutlineNav) Title() string {
 	return i18n.Translate("Outline")
+}
+
+func (o *OutlineNav) LayoutHeader(gtx C, th *theme.Theme) D {
+	return layout.Inset{
+		Top:    unit.Dp(2),
+		Bottom: unit.Dp(2),
+		Left:   unit.Dp(4),
+		Right:  unit.Dp(4),
+	}.Layout(gtx, func(gtx C) D {
+		return material.Subtitle2(th.Theme, strings.ToUpper(o.Title())).Layout(gtx)
+	})
 }
 
 func (o *OutlineNav) OnClose() {}

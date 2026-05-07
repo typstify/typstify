@@ -43,10 +43,6 @@ type MenuPanel struct {
 	hideDrawerBtn     widget.Clickable
 	hideDrawerTip     wg.TipArea
 
-	historyBtn      widget.Clickable
-	historyTip      wg.TipArea
-	historyProjects *RecentProjects
-
 	IsDrawerHidden bool
 	vm             view.ViewManager
 	srv            *service.ServiceFacade
@@ -93,19 +89,6 @@ func (cp *MenuPanel) Layout(gtx C, th *theme.Theme) D {
 			}),
 
 			layout.Rigid(func(gtx C) D {
-				btn := wg.TipIconButton(th, &cp.historyTip, i18n.Translate("Recent Projects"))
-
-				return cp.historyProjects.Layout(gtx, th,
-					func(gtx C) D {
-						return btn.Layout(gtx, func(gtx C) D {
-							return cp.layoutBtn(gtx, th, &cp.historyBtn, historyIcon)
-						})
-					},
-				)
-
-			}),
-
-			layout.Rigid(func(gtx C) D {
 				btn := wg.TipIconButton(th, &cp.openPkgManagerTip, i18n.Translate("Typst Package Center"))
 				return btn.Layout(gtx, func(gtx C) D {
 					return cp.layoutBtn(gtx, th, &cp.openPkgManagerBtn, pkgManagerIcon)
@@ -136,7 +119,6 @@ func (cp *MenuPanel) update(gtx C) {
 	cp.openPkgManagerTip.Direction = layout.E
 	cp.openSettingTip.Direction = layout.E
 	cp.hideDrawerTip.Direction = layout.E
-	cp.historyTip.Direction = layout.E
 
 	if cp.openSettingBtn.Clicked(gtx) {
 		cp.vm.RequestSwitch(view.Intent{
@@ -178,16 +160,11 @@ func (cp *MenuPanel) update(gtx C) {
 	if cp.hideDrawerBtn.Clicked(gtx) {
 		cp.IsDrawerHidden = !cp.IsDrawerHidden
 	}
-
-	if cp.historyBtn.Clicked(gtx) {
-		cp.historyProjects.Show()
-	}
 }
 
 func NewMenuPanel(vm view.ViewManager, srv *service.ServiceFacade) *MenuPanel {
 	return &MenuPanel{
-		vm:              vm,
-		srv:             srv,
-		historyProjects: NewRecentProjects(srv),
+		vm:  vm,
+		srv: srv,
 	}
 }
