@@ -149,6 +149,10 @@ func (te *TypstEditor) setupEditor(path string) error {
 		}
 	}
 	te.srcEditor.OnOpenLink = te.openLink
+	te.srcEditor.OnTextChange = func() {
+		te.symbolsDirty = true
+	}
+
 	return nil
 }
 

@@ -84,6 +84,7 @@ type TextEditor struct {
 	srv                   *service.ServiceFacade
 
 	OnSelectChange func(gvcode.Position)
+	OnTextChange   func()
 	OnOpenLink     func(link string, external bool)
 }
 
@@ -102,7 +103,7 @@ func (me *TextEditor) Layout(gtx layout.Context, th *theme.Theme, settings *sett
 		me.searchbar = &TextSearchBar{editor: me.state}
 	}
 
-	me.update(gtx, th, settings)
+	me.update(gtx, th)
 	dims := me.layoutEditor(gtx, th, settings)
 	me.contextMenu.Layout(gtx, th)
 	return dims
@@ -222,7 +223,7 @@ func (me *TextEditor) LayoutStatus(gtx C, th *theme.Theme, srv *service.ServiceF
 	return me.status.Layout(gtx, th, me, srv)
 }
 
-func (me *TextEditor) update(gtx layout.Context, th *theme.Theme, settings *settings.EditorSettings) {
+func (me *TextEditor) update(gtx layout.Context, th *theme.Theme) {
 	if me.pendingExternalChange.Swap(false) {
 		me.checkExternalChanges()
 	}
@@ -257,7 +258,7 @@ func (me *TextEditor) update(gtx layout.Context, th *theme.Theme, settings *sett
 
 	me.overviewRuler.SetLines(me.state.Lines())
 	me.updateDiagnostics()
-	me.updateStatusBar(settings)
+	me.updateStatusBar()
 
 	// process events from hover tip window
 	link, external := me.hoverTips.Update(gtx, th)
@@ -431,7 +432,7 @@ func (me *TextEditor) updateDiagnostics() {
 	}
 }
 
-func (me *TextEditor) updateStatusBar(settings *settings.EditorSettings) {
+func (me *TextEditor) updateStatusBar() {
 	me.ensureStatus()
 
 	me.status.Pos.Y, me.status.Pos.X = me.state.CaretPos()
@@ -469,6 +470,10 @@ func (me *TextEditor) onTextChanged() {
 	}
 
 	me.autoSaver.Update()
+
+	if me.OnTextChange != nil {
+		me.OnTextChange()
+	}
 }
 
 func (me *TextEditor) hasPendingChanges() bool {
