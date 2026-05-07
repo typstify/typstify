@@ -101,6 +101,10 @@ func NewTreeView(rootNode *FileNode) *TreeView {
 		fsWatcher:      fsWatcher,
 	}
 
+	// Root should start expanded so children are visible initially.
+	rootState := t.GetState(rootNode.Path)
+	rootState.Expanded = true
+
 	t.watchFSEvents(t.handleFsEvent)
 
 	return t
@@ -151,7 +155,7 @@ func (t *TreeView) Rebuild() {
 func (t *TreeView) flatten(node *FileNode, depth int) {
 	state := t.GetState(node.Path)
 
-	if node != t.root {
+	if node != nil {
 		flatNode := FlatNode{
 			Node:            node,
 			Depth:           depth,
@@ -165,7 +169,7 @@ func (t *TreeView) flatten(node *FileNode, depth int) {
 		t.visibleNodes = append(t.visibleNodes, flatNode)
 	}
 
-	if node == t.root || (state.Expanded && node.IsDir()) {
+	if state.Expanded && node.IsDir() {
 		if t.fsWatcher != nil {
 			t.fsWatcher.Add(node.Path)
 		}
@@ -687,6 +691,9 @@ func (t *TreeView) OnDropped(destNode *FileNode, sourcePath string) {
 	}
 
 	srcNode := t.findVisibleNode(sourcePath)
+	if srcNode == nil {
+		return
+	}
 	if sourcePath == destNode.Path || srcNode.Node.Parent.Path == destNode.Path {
 		return
 	}

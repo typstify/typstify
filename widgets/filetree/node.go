@@ -59,18 +59,12 @@ func isAncestor(ancestor, childNode *FileNode) bool {
 		return false
 	}
 
-	parent := childNode.Parent
-	for {
+	for parent := childNode.Parent; parent != nil; parent = parent.Parent {
 		if parent == ancestor {
 			return true
 		}
-
-		parent = parent.Parent
-		if parent == nil { // root node in explorer.EntryNode set parent to nil
-			return false
-		}
 	}
-
+	return false
 }
 
 // shouldHighlight checks if currentNode should be highlighted given the DnD

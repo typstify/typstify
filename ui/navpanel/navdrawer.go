@@ -3,7 +3,6 @@ package navpanel
 import (
 	"image"
 	"image/color"
-	"time"
 
 	"github.com/oligo/gioview/misc"
 	"github.com/oligo/gioview/theme"
@@ -13,15 +12,12 @@ import (
 	"looz.ws/typstify/widgets"
 	"looz.ws/typstify/widgets/icons"
 
-	"gioui.org/gesture"
 	"gioui.org/layout"
-	"gioui.org/op"
 	"gioui.org/op/clip"
 	"gioui.org/op/paint"
 	"gioui.org/unit"
 	"gioui.org/widget"
 	"gioui.org/widget/material"
-	cmp "gioui.org/x/component"
 )
 
 type NaviDrawerStyle struct {
@@ -33,21 +29,15 @@ type NavSection interface {
 	Title() string
 	Icon() *icons.SvgIcon
 	Layout(gtx C, th *theme.Theme) D
+	LayoutHeader(gtx C, th *theme.Theme) D
 	OnClose()
-}
-
-type sectionState struct {
-	anim     *cmp.VisibilityAnimation
-	expanded bool
 }
 
 type NavDrawer struct {
 	srv                *service.ServiceFacade
 	vm                 view.ViewManager
-	sectionStates      []*sectionState
 	sections           []NavSection
 	currentSectionIdx  int
-	headerClick        gesture.Click
 	switchSectionBtn   widget.Clickable
 	sectionSwitchPopup *widgets.Popup
 	updateTips         *UpdateTips
@@ -89,34 +79,10 @@ func NewNavDrawer(vm view.ViewManager, srv *service.ServiceFacade) *NavDrawer {
 
 func (nv *NavDrawer) AddSection(section NavSection) {
 	nv.sections = append(nv.sections, section)
-	nv.sectionStates = append(nv.sectionStates, &sectionState{
-		expanded: true,
-		anim: &cmp.VisibilityAnimation{
-			State:    cmp.Visible,
-			Duration: time.Millisecond * 150,
-		},
-	})
 }
 
 func (nv *NavDrawer) Layout(gtx C, th *theme.Theme) D {
 	section := nv.sections[nv.currentSectionIdx]
-	state := nv.sectionStates[nv.currentSectionIdx]
-
-	for {
-		e, ok := nv.headerClick.Update(gtx.Source)
-		if !ok {
-			break
-		}
-		if e.Kind == gesture.KindClick {
-			if state.expanded {
-				state.anim.Disappear(gtx.Now)
-			} else {
-				state.anim.Appear(gtx.Now)
-			}
-			state.expanded = !state.expanded
-
-		}
-	}
 
 	if nv.switchSectionBtn.Clicked(gtx) {
 		nv.sectionSwitchPopup.SetOpen()
@@ -126,14 +92,19 @@ func (nv *NavDrawer) Layout(gtx C, th *theme.Theme) D {
 		Axis: layout.Vertical,
 	}.Layout(gtx,
 		layout.Rigid(func(gtx C) D {
-			return nv.layoutHeader(gtx, th, section, state)
+			return nv.layoutHeader(gtx, th, section)
 		}),
 		layout.Flexed(1, func(gtx C) D {
 			if section == nil {
 				return D{}
 			}
 
-			return nv.layoutSection(gtx, th, section, state)
+			return layout.Inset{
+				Top:    unit.Dp(2),
+				Bottom: unit.Dp(2),
+			}.Layout(gtx, func(gtx C) D {
+				return section.Layout(gtx, th)
+			})
 		}),
 
 		layout.Rigid(layout.Spacer{Height: unit.Dp(1)}.Layout),
@@ -145,33 +116,26 @@ func (nv *NavDrawer) Layout(gtx C, th *theme.Theme) D {
 
 }
 
-func (nv *NavDrawer) layoutHeader(gtx C, th *theme.Theme, section NavSection, state *sectionState) D {
+func (nv *NavDrawer) layoutHeader(gtx C, th *theme.Theme, section NavSection) D {
 
 	return layout.Background{}.Layout(gtx,
 		func(gtx C) D {
 			defer clip.Rect{Max: image.Point{X: gtx.Constraints.Max.X, Y: gtx.Constraints.Min.Y}}.Push(gtx.Ops).Pop()
 			paint.Fill(gtx.Ops, th.Bg2)
-			nv.headerClick.Add(gtx.Ops)
 
 			return D{Size: gtx.Constraints.Min}
 		},
 		func(gtx C) D {
 			return widget.Border{Width: unit.Dp(0.5), Color: misc.WithAlpha(th.Fg, 0x30)}.Layout(gtx, func(gtx C) D {
 				return layout.Inset{
-					Left:   unit.Dp(8),
-					Right:  unit.Dp(8),
+					Left:   unit.Dp(6),
+					Right:  unit.Dp(6),
 					Top:    unit.Dp(6),
-					Bottom: unit.Dp(7),
+					Bottom: unit.Dp(6),
 				}.Layout(gtx, func(gtx C) D {
 					return layout.Flex{Alignment: layout.Middle}.Layout(gtx,
 						layout.Rigid(func(gtx C) D {
-
-							arrow := arrowRightIcon
-							if state.expanded {
-								arrow = arrowDownIcon
-							}
-
-							return arrow.Layout(gtx, th.Fg, th.TextSize)
+							return section.Icon().Layout(gtx, th.Fg, th.TextSize)
 
 						}),
 
@@ -180,8 +144,8 @@ func (nv *NavDrawer) layoutHeader(gtx C, th *theme.Theme, section NavSection, st
 							if section == nil {
 								return D{}
 							}
-							label := material.Subtitle2(th.Theme, section.Title())
-							return label.Layout(gtx)
+
+							return section.LayoutHeader(gtx, th)
 						}),
 
 						layout.Rigid(func(gtx C) D {
@@ -201,7 +165,6 @@ func (nv *NavDrawer) layoutButton(gtx C, th *theme.Theme) D {
 	for idx, s := range nv.sections {
 		sectionItems = append(sectionItems, sectionItem{
 			section:   s,
-			state:     nv.sectionStates[idx],
 			isCurrent: nv.currentSectionIdx == idx,
 			onClick: func() {
 				nv.currentSectionIdx = idx
@@ -223,33 +186,6 @@ func (nv *NavDrawer) layoutButton(gtx C, th *theme.Theme) D {
 
 }
 
-func (nv *NavDrawer) layoutSection(gtx C, th *theme.Theme, section NavSection, state *sectionState) D {
-	if !state.anim.Visible() {
-		return D{}
-	}
-
-	dims := D{}
-	callOp := func() op.CallOp {
-		macro := op.Record(gtx.Ops)
-		dims = layout.Inset{
-			Top:    unit.Dp(2),
-			Bottom: unit.Dp(2),
-		}.Layout(gtx, func(gtx C) D {
-			return section.Layout(gtx, th)
-		})
-		return macro.Stop()
-	}()
-
-	if state.anim.Animating() {
-		dims.Size.Y = int(float32(dims.Size.Y) * state.anim.Revealed(gtx))
-	}
-
-	defer clip.Rect{Max: dims.Size}.Push(gtx.Ops).Pop()
-	callOp.Add(gtx.Ops)
-
-	return dims
-}
-
 func (nv *NavDrawer) Close() {
 	for _, s := range nv.sections {
 		s.OnClose()
@@ -269,7 +205,6 @@ func (ns NaviDrawerStyle) Layout(gtx C, th *theme.Theme) D {
 
 type sectionItem struct {
 	section   NavSection
-	state     *sectionState
 	isCurrent bool
 	onClick   func()
 }

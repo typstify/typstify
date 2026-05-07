@@ -1,15 +1,22 @@
 package navpanel
 
 import (
+	"image"
 	"image/color"
 	"log"
 	"os"
 	"path/filepath"
 	"slices"
+	"strings"
 
 	"gioui.org/font"
+	"gioui.org/io/pointer"
 	"gioui.org/layout"
+	"gioui.org/op"
+	"gioui.org/op/clip"
+	"gioui.org/op/paint"
 	"gioui.org/unit"
+	"gioui.org/widget"
 	"gioui.org/widget/material"
 	"github.com/oligo/gioview/explorer"
 	"github.com/oligo/gioview/misc"
@@ -41,15 +48,19 @@ type FileTreeNav struct {
 
 	rootSwitched bool
 	newRoot      string
+
+	historyBtn      widget.Clickable
+	historyProjects *RecentProjects
 }
 
 // Construct a FileTreeNav object that loads files and folders from rootDir. The skipFolders
 // parameter allows you to specify folder name prefixes to exclude from the navigation.
 func NewFileTreeNav(title string, srv *service.ServiceFacade, vm view.ViewManager) *FileTreeNav {
 	ftn := &FileTreeNav{
-		title: title,
-		srv:   srv,
-		vm:    vm,
+		title:           title,
+		srv:             srv,
+		vm:              vm,
+		historyProjects: NewRecentProjects(srv),
 	}
 
 	srv.EventBus().Subscribe(ftn, "filetree", `project\.(switched|create)$`, func(topic string, data interface{}) {
@@ -81,7 +92,6 @@ func (tn *FileTreeNav) switchRoot() {
 	}
 
 	tn.srv.SetProjectDir(newRoot)
-	tn.title = filepath.Base(newRoot)
 
 	// Restore the workplace.
 	states := tn.srv.Workspace().Current().TreeState
@@ -168,6 +178,58 @@ func (tn *FileTreeNav) Title() string {
 
 func (tn *FileTreeNav) Icon() *icons.SvgIcon {
 	return explorerIcon
+}
+
+func (tn *FileTreeNav) LayoutHeader(gtx C, th *theme.Theme) D {
+	if tn.historyBtn.Clicked(gtx) {
+		tn.historyProjects.Show()
+	}
+
+	title := i18n.Translate("No project")
+	if tn.tree != nil {
+		root := filepath.Base(tn.tree.Root())
+		if root != "" {
+			title = root
+		}
+	}
+
+	title = strings.ToUpper(title)
+
+	return tn.historyProjects.Layout(gtx, th,
+		func(gtx C) D {
+			return tn.historyBtn.Layout(gtx, func(gtx C) D {
+				macro := op.Record(gtx.Ops)
+				dims := layout.Inset{
+					Top:    unit.Dp(2),
+					Bottom: unit.Dp(2),
+					Left:   unit.Dp(4),
+					Right:  unit.Dp(4),
+				}.Layout(gtx, func(gtx C) D {
+					return material.Subtitle2(th.Theme, title).Layout(gtx)
+				})
+				callOp := macro.Stop()
+
+				defer clip.UniformRRect(
+					image.Rectangle{
+						Max: dims.Size,
+					},
+					gtx.Dp(unit.Dp(4)),
+				).Push(gtx.Ops).Pop()
+
+				if tn.historyBtn.Hovered() {
+					pointer.CursorPointer.Add(gtx.Ops)
+					paint.ColorOp{Color: misc.WithAlpha(th.ContrastBg, th.HoverAlpha)}.Add(gtx.Ops)
+					paint.PaintOp{}.Add(gtx.Ops)
+
+				}
+
+				callOp.Add(gtx.Ops)
+
+				return dims
+			})
+		},
+	)
+
 }
 
 func (tn *FileTreeNav) Update(gtx C) bool {
