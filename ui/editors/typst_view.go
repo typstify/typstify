@@ -65,6 +65,7 @@ type TypstEditor struct {
 	cachedSymbols   atomic.Pointer[[]lspProtocol.DocumentSymbol]
 	symbolsDirty    atomic.Bool
 	symbolDebouncer *utils.Debouncer
+	lastCaretPos    gvcode.Position
 }
 
 func (te *TypstEditor) ID() view.ViewID {
@@ -146,6 +147,7 @@ func (te *TypstEditor) setupEditor(path string) error {
 	te.srcEditor = srcEditor
 
 	te.srcEditor.OnSelectChange = func(p gvcode.Position) {
+		te.lastCaretPos = p
 		previewSrv := te.srv.PreviewService()
 		if previewSrv != nil {
 			previewSrv.ScrollOnSelectionChange(context.Background())
@@ -373,6 +375,11 @@ func (te *TypstEditor) OnOutlineSymbolSelected(symbol lspProtocol.DocumentSymbol
 	line := int(symbol.SelectionRange.Start.Line)
 	col := int(symbol.SelectionRange.Start.Character)
 	te.srcEditor.NavigateToLine(line, col)
+}
+
+// CaretLine returns the current caret line (0-indexed) for outline bi-directional sync.
+func (te *TypstEditor) CaretLine() int {
+	return te.lastCaretPos.Line
 }
 
 func (te *TypstEditor) OnFinish() {
