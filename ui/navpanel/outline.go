@@ -23,6 +23,7 @@ import (
 type OutlineProvider interface {
 	OutlineSymbols() []protocol.DocumentSymbol
 	OnOutlineSymbolSelected(symbol protocol.DocumentSymbol)
+	CaretLine() int
 }
 
 type OutlineNav struct {
@@ -30,6 +31,7 @@ type OutlineNav struct {
 	list         widget.List
 	clickables   []*widgets.InteractiveLabel
 	selectedIdx  int
+	activeIdx    int
 	expanded     map[string]bool
 	toggleBtns   map[string]*widget.Clickable
 }
@@ -91,6 +93,9 @@ func (o *OutlineNav) Layout(gtx C, th *theme.Theme) D {
 	var items []flatSymbol
 	flattenSymbols(&items, o.expanded, symbols, 0)
 
+	// Bi-directional sync: scroll the outline to the symbol under the caret.
+	o.syncActiveIndex(o.findActiveIndex(items, provider.CaretLine()))
+
 	list := material.List(th.Theme, &o.list)
 	list.AnchorStrategy = material.Overlay
 	list.ScrollbarStyle = utils.MakeScrollbar(th.Theme, list.Scrollbar, misc.WithAlpha(th.Fg, 0x30))
@@ -117,6 +122,13 @@ func (o *OutlineNav) Layout(gtx C, th *theme.Theme) D {
 			}
 		}
 
+		// Set visual state before layout so background renders correctly.
+		if index == o.selectedIdx {
+			label.Select()
+		} else {
+			label.Unselect()
+		}
+
 		// Always call Update to consume pointer events (enter/leave/click).
 		// Only navigate when the click did not land on the toggle chevron.
 		if label.Update(gtx) && !toggleClicked {
@@ -128,8 +140,55 @@ func (o *OutlineNav) Layout(gtx C, th *theme.Theme) D {
 			o.selectedIdx = index
 		}
 
-		return o.layoutItem(gtx, th, item, label)
+		dims := o.layoutItem(gtx, th, item, label)
+
+		// Re-apply selection after Layout (which calls Update internally)
+		// so click-driven changes don't override caret-driven selection.
+		if index == o.selectedIdx {
+			label.Select()
+		} else {
+			label.Unselect()
+		}
+
+		return dims
 	})
+}
+
+// findActiveIndex returns the index of the symbol that contains the caret line.
+// Each symbol's effective range is [start, start of next sibling), where "next
+// sibling" means the first subsequent item at the same or higher depth level.
+// This partitions the document without gaps or overlaps, and the deepest match
+// wins because children follow their parent in the flattened list.
+func (o *OutlineNav) findActiveIndex(items []flatSymbol, caretLine int) int {
+	idx := -1
+	for i, item := range items {
+		symStart := int(item.symbol.Range.Start.Line)
+		symEnd := int(^uint(0) >> 1) // max int
+		for j := i + 1; j < len(items); j++ {
+			if items[j].depth <= item.depth {
+				symEnd = int(items[j].symbol.Range.Start.Line)
+				break
+			}
+		}
+		if caretLine >= symStart && caretLine < symEnd {
+			idx = i
+		}
+	}
+	return idx
+}
+
+// syncActiveIndex updates the active symbol, scrolls to it, and syncs the
+// click-driven selection so that caret movement in the editor is reflected
+// in the outline panel.
+func (o *OutlineNav) syncActiveIndex(newActive int) {
+	if newActive == o.activeIdx {
+		return
+	}
+	o.activeIdx = newActive
+	if newActive >= 0 {
+		o.list.ScrollTo(newActive)
+		o.selectedIdx = newActive
+	}
 }
 
 type flatSymbol struct {
