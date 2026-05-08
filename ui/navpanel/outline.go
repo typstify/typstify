@@ -101,7 +101,9 @@ func (o *OutlineNav) Layout(gtx C, th *theme.Theme) D {
 	list.ScrollbarStyle = utils.MakeScrollbar(th.Theme, list.Scrollbar, misc.WithAlpha(th.Fg, 0x30))
 
 	return list.Layout(gtx, len(items), func(gtx C, index int) D {
-		if len(o.clickables) <= index {
+		// When ScrollTo jumped the list to index 6, the slice is too short, as List start painting at index 6.
+		// Using for loop to keep appending until it catches up.
+		for len(o.clickables) <= index {
 			o.clickables = append(o.clickables, &widgets.InteractiveLabel{})
 		}
 
