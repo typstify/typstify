@@ -136,7 +136,7 @@ func (vw *WelcomeView) layoutMain(gtx C, th *theme.Theme) D {
 			layout.Rigid(layout.Spacer{Height: unit.Dp(8)}.Layout),
 
 			layout.Rigid(func(gtx C) D {
-				return layoutOp(gtx, th, &vw.openBtn, i18n.Translate("Open exiting project..."), openFolderIcon)
+				return layoutOp(gtx, th, &vw.openBtn, i18n.Translate("Open existing project..."), openFolderIcon)
 			}),
 			layout.Rigid(layout.Spacer{Height: unit.Dp(8)}.Layout),
 
