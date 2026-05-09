@@ -67,15 +67,47 @@ func (a *ACPClient) SessionUpdate(ctx context.Context, params acp.SessionNotific
 	}
 
 	if update.UserMessageChunk != nil {
-		log.Println("user message: ", update.UserMessageChunk.Content.Text)
+		session.PublishUpdate(update.UserMessageChunk)
 	}
 
 	if update.AgentMessageChunk != nil {
-		log.Println("agent message: ", update.AgentMessageChunk.Content.Text)
+		session.PublishUpdate(update.AgentMessageChunk)
+	}
+
+	if update.AgentThoughtChunk != nil {
+		session.PublishUpdate(update.AgentThoughtChunk)
+	}
+
+	if update.Plan != nil {
+		session.PublishUpdate(update.Plan)
+	}
+
+	if update.ToolCall != nil {
+		session.PublishUpdate(update.ToolCall)
+	}
+
+	if update.ToolCallUpdate != nil {
+		session.PublishUpdate(update.ToolCallUpdate)
+	}
+
+	if update.CurrentModeUpdate != nil {
+		session.PublishUpdate(update.CurrentModeUpdate)
+	}
+
+	if update.ConfigOptionUpdate != nil {
+		session.PublishUpdate(update.ConfigOptionUpdate)
+	}
+
+	if update.SessionInfoUpdate != nil {
+		session.PublishUpdate(update.SessionInfoUpdate)
 	}
 
 	if update.AvailableCommandsUpdate != nil {
-		session.SetCommands(update.AvailableCommandsUpdate.AvailableCommands)
+		session.PublishUpdate(update.AvailableCommandsUpdate)
+	}
+
+	if update.UsageUpdate != nil {
+		session.PublishUpdate(update.UsageUpdate)
 	}
 
 	return nil
