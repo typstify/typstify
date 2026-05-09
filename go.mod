@@ -31,6 +31,8 @@ require (
 	golang.org/x/sys v0.40.0
 	golang.org/x/telemetry v0.0.0-20260109210033-bd525da824e2
 	golang.org/x/text v0.33.0
+	github.com/coder/acp-go-sdk v0.12.2 
+
 )
 
 // use a local patch to fix the focus switching issue between the native webview and GioView
