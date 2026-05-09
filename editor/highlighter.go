@@ -250,7 +250,7 @@ func buildColorScheme(schemeName string) *syntax.ColorScheme {
 		//
 		// In rapid typing, before the new tokens are applied to editor, there
 		// will be a one character offset between the editor content and the tokens,
-		// and gvcode editor will shifts the exiting tokens by the amount of the newly
+		// and gvcode editor will shifts the existing tokens by the amount of the newly
 		// inserted text. The previous token tries to absorb the new added text,
 		// so if are are typing after a white space token and the white space character happens
 		// to have a different color, the newly added text will have the same color as white space.

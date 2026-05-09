@@ -192,6 +192,9 @@ func (te *TypstEditor) headerActions() []editorHeaderAction {
 			Name: "Export",
 			Icon: exportIcon,
 			OnClicked: func(gtx C) {
+				if te.previewVisible {
+					te.togglePreview(gtx)
+				}
 				te.srv.RequestSwitch(view.Intent{
 					Target:      dialog.ExportDialogViewID,
 					ShowAsModal: true,
