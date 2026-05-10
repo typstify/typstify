@@ -10,6 +10,7 @@ import (
 	"github.com/oligo/gioview/image"
 	"github.com/oligo/gioview/view"
 	"github.com/typstify/tpix-cli/api"
+	"looz.ws/typstify/agent"
 	"looz.ws/typstify/lsp"
 	"looz.ws/typstify/service/bus"
 	"looz.ws/typstify/service/net"
@@ -31,6 +32,7 @@ type ServiceFacade struct {
 	previewSrv         *lsp.PreviewService
 	fileChooserBuilder func() *explorer.FileChooser
 	consoleState       *console.ConsoleState
+	acpSessionManager  *agent.SessionManager
 
 	currentProjectDir string
 
@@ -118,6 +120,11 @@ func (s *ServiceFacade) Close(ctx context.Context) {
 	if s.previewSrv != nil {
 		s.previewSrv.Destroy(ctx)
 	}
+
+	if s.acpSessionManager != nil {
+		s.acpSessionManager.Close(ctx)
+	}
+
 	log.Println("service down")
 }
 
@@ -242,4 +249,34 @@ func (s *ServiceFacade) CurrentProjectDir() string {
 
 func (s *ServiceFacade) Console() *console.ConsoleState {
 	return s.consoleState
+}
+
+func (s *ServiceFacade) StartACPSession(ctx context.Context, projectDir string) (*agent.ACPSession, error) {
+
+	if s.acpSessionManager == nil {
+		// make a session manager for test
+		s.acpSessionManager = &agent.SessionManager{}
+
+		s.acpSessionManager.Start(ctx,
+			agent.AgentConfig{
+				Name: "Claude Code",
+				Cmd:  "npx",
+				Args: []string{"-y", "@zed-industries/claude-code-acp@latest"},
+			},
+			agent.NewACPClient(s.acpSessionManager),
+		)
+	}
+
+	return s.acpSessionManager.NewSession(ctx, projectDir)
+}
+
+func (s *ServiceFacade) CloseACPSession(ctx context.Context, sessionID string) error {
+	if sessionID == "" {
+		return nil
+	}
+	if s.acpSessionManager == nil {
+		return nil
+	}
+
+	return s.acpSessionManager.CloseSession(ctx, sessionID)
 }

@@ -295,6 +295,7 @@ func (sm *SessionManager) CloseSession(ctx context.Context, sessionID string) er
 		return err
 	}
 
+	session.Close()
 	sm.activeSessions = slices.DeleteFunc(sm.activeSessions, func(sn *ACPSession) bool {
 		return sn.SessionID == sessionID
 	})

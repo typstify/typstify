@@ -44,7 +44,53 @@ func (a *ACPClient) ReleaseTerminal(ctx context.Context, params acp.ReleaseTermi
 
 // RequestPermission implements [acp.Client].
 func (a *ACPClient) RequestPermission(ctx context.Context, params acp.RequestPermissionRequest) (acp.RequestPermissionResponse, error) {
-	panic("unimplemented")
+	emptyResp := acp.RequestPermissionResponse{}
+
+	if err := params.Validate(); err != nil {
+		log.Println("RequestPermission error: ", err)
+		return emptyResp, err
+	}
+
+	log.Printf("Agent request permission: session[%s], options: %v, toolcall: %v", params.SessionId, params.Options, params.ToolCall)
+
+	session := a.sm.GetActiveSession(string(params.SessionId))
+	if session == nil {
+		log.Printf("No active ACP session found: %s", params.SessionId)
+		return emptyResp, fmt.Errorf("No active ACP session found: %s", params.SessionId)
+	}
+
+	// send and wait for user grants
+	permissionGrantChan := make(chan acp.PermissionOptionId)
+	session.RequestPermission(params, permissionGrantChan)
+
+	// respond with the result. If prompt turn is canceled, the ongoing tool call grants
+	// should also be canceled.
+	if session.CurrentTurn == nil {
+		optionID := <-permissionGrantChan
+		return acp.RequestPermissionResponse{
+			Outcome: acp.NewRequestPermissionOutcomeSelected(optionID),
+		}, nil
+
+	} else {
+		select {
+		case optionID := <-permissionGrantChan:
+			return acp.RequestPermissionResponse{
+				Outcome: acp.NewRequestPermissionOutcomeSelected(optionID),
+			}, nil
+		case toolCallID := <-session.CurrentTurn.CancelChan():
+			if toolCallID != params.ToolCall.ToolCallId {
+				break
+			}
+			// do not check session.hasOngoingTurn here, as this should be called AFTER the turn is canceled.
+			return acp.RequestPermissionResponse{
+				Outcome: acp.NewRequestPermissionOutcomeCancelled(),
+			}, nil
+
+		}
+	}
+
+	return emptyResp, nil
+
 }
 
 // SessionUpdate implements [acp.Client].
@@ -67,47 +113,47 @@ func (a *ACPClient) SessionUpdate(ctx context.Context, params acp.SessionNotific
 	}
 
 	if update.UserMessageChunk != nil {
-		session.PublishUpdate(update.UserMessageChunk)
+		session.PublishUpdate(*update.UserMessageChunk)
 	}
 
 	if update.AgentMessageChunk != nil {
-		session.PublishUpdate(update.AgentMessageChunk)
+		session.PublishUpdate(*update.AgentMessageChunk)
 	}
 
 	if update.AgentThoughtChunk != nil {
-		session.PublishUpdate(update.AgentThoughtChunk)
+		session.PublishUpdate(*update.AgentThoughtChunk)
 	}
 
 	if update.Plan != nil {
-		session.PublishUpdate(update.Plan)
+		session.PublishUpdate(*update.Plan)
 	}
 
 	if update.ToolCall != nil {
-		session.PublishUpdate(update.ToolCall)
+		session.PublishUpdate(*update.ToolCall)
 	}
 
 	if update.ToolCallUpdate != nil {
-		session.PublishUpdate(update.ToolCallUpdate)
+		session.PublishUpdate(*update.ToolCallUpdate)
 	}
 
 	if update.CurrentModeUpdate != nil {
-		session.PublishUpdate(update.CurrentModeUpdate)
+		session.PublishUpdate(*update.CurrentModeUpdate)
 	}
 
 	if update.ConfigOptionUpdate != nil {
-		session.PublishUpdate(update.ConfigOptionUpdate)
+		session.PublishUpdate(*update.ConfigOptionUpdate)
 	}
 
 	if update.SessionInfoUpdate != nil {
-		session.PublishUpdate(update.SessionInfoUpdate)
+		session.PublishUpdate(*update.SessionInfoUpdate)
 	}
 
 	if update.AvailableCommandsUpdate != nil {
-		session.PublishUpdate(update.AvailableCommandsUpdate)
+		session.PublishUpdate(*update.AvailableCommandsUpdate)
 	}
 
 	if update.UsageUpdate != nil {
-		session.PublishUpdate(update.UsageUpdate)
+		session.PublishUpdate(*update.UsageUpdate)
 	}
 
 	return nil
