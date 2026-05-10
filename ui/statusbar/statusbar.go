@@ -36,6 +36,7 @@ type (
 var defaultActiveDuration = time.Second * 5
 var (
 	consoleIcon   = icons.NewSvgIcon(icons.Terminal)
+	chatIcon      = icons.NewSvgIcon(icons.SquareFunction)
 	infoIcon      = icons.NewSvgIcon(icons.Info)
 	warnIcon      = icons.NewSvgIcon(icons.CircleAlert)
 	errorIcon     = icons.NewSvgIcon(icons.CircleX)
@@ -67,6 +68,7 @@ type StatusBar struct {
 	gitStatusIndicator *GitStatusIndicator
 	consoleState       *console.ConsoleState
 	showConsoleBtn     widget.Clickable
+	showChatBtn        widget.Clickable
 }
 
 func (n *NotificationBar) Layout(gtx C, th *theme.Theme) D {
@@ -113,12 +115,14 @@ func (n *NotificationBar) Layout(gtx C, th *theme.Theme) D {
 	)
 }
 
-func (s *StatusBar) Update(gtx C) bool {
+func (s *StatusBar) Update(gtx C) (consoleClicked, chatClicked bool) {
 	if s.showConsoleBtn.Clicked(gtx) {
-		return true
+		consoleClicked = true
 	}
-
-	return false
+	if s.showChatBtn.Clicked(gtx) {
+		chatClicked = true
+	}
+	return
 }
 
 func (s *StatusBar) Layout(gtx C, th *theme.Theme) D {
@@ -167,7 +171,19 @@ func (s *StatusBar) Layout(gtx C, th *theme.Theme) D {
 
 						return status.LayoutStatus(gtx, th)
 					}),
-					layout.Rigid(layout.Spacer{Width: unit.Dp(16)}.Layout),
+					layout.Rigid(layout.Spacer{Width: unit.Dp(12)}.Layout),
+					layout.Rigid(func(gtx C) D {
+						return material.Clickable(gtx, &s.showChatBtn, func(gtx C) D {
+							fillColor := th.Fg
+							if s.showChatBtn.Hovered() {
+								fillColor = th.ContrastBg
+							}
+							return layout.UniformInset(unit.Dp(2)).Layout(gtx, func(gtx C) D {
+								return chatIcon.Layout(gtx, fillColor, th.TextSize)
+							})
+						})
+					}),
+					layout.Rigid(layout.Spacer{Width: unit.Dp(12)}.Layout),
 					layout.Rigid(func(gtx C) D {
 						return material.Clickable(gtx, &s.showConsoleBtn, func(gtx C) D {
 							fillColor := th.Fg

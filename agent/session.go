@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"log"
 	"sync"
+	"sync/atomic"
 
 	"github.com/coder/acp-go-sdk"
 )
@@ -26,6 +27,11 @@ type (
 	UsageUpdate             = acp.SessionUsageUpdate
 )
 
+type PermissionGrantRequest struct {
+	Req          acp.RequestPermissionRequest
+	ResponseChan chan acp.PermissionOptionId
+}
+
 type SessionUpdateSubsciber interface {
 	OnUserMessage(chunk UserMessageChunk)
 
@@ -39,15 +45,7 @@ type SessionUpdateSubsciber interface {
 
 	OnPlan(plan Plan)
 
-	// OnAvailableCommandsUpdate(commands AvailableCommandsUpdate)
-
-	// OnModeUpdate(modeUpdate CurrentModeUpdate)
-
-	// OnConfigOptionUpdate(update ConfigOptionUpdate)
-
-	// OnSessionInfoUpdate(sessionInfo SessionInfoUpdate)
-
-	// OnUsageUpdate(usage UsageUpdate)
+	OnRequestPermission(params PermissionGrantRequest)
 }
 
 type ACPSession struct {
@@ -65,7 +63,16 @@ type ACPSession struct {
 	usage         UsageUpdate
 	mu            sync.Mutex
 
+	// ongoing prompt turn info
+	hasOngoingTurn atomic.Bool
+	CurrentTurn    *PromptTurn
+
+	// channel used to exchange session/update data.
 	updateChan chan any
+	grantChan  chan PermissionGrantRequest
+	// bound to a view or not. A session has to be bound to
+	// a view implementing a SessionUpdateSubsciber to work.
+	bound bool
 }
 
 func NewACPSession(sessionID string, cwd string) *ACPSession {
@@ -73,6 +80,7 @@ func NewACPSession(sessionID string, cwd string) *ACPSession {
 		SessionID:  sessionID,
 		Cwd:        cwd,
 		updateChan: make(chan any, 1),
+		grantChan:  make(chan PermissionGrantRequest),
 	}
 }
 
@@ -185,14 +193,9 @@ func (sn *ACPSession) UpdateUsage(usage UsageUpdate) {
 // Prompt sends content blocks to Agent. If there are no pending tool calls,
 // the turn ends and the Agent respond with a StopReason and optional Usage.
 func (sn *ACPSession) Prompt(ctx context.Context, contents ...acp.ContentBlock) (PromptResponse, error) {
-	if !sn.Active() {
-		return PromptResponse{}, errors.New("invalid session")
-	}
-
 	// Validate the content structure and kind.
 	//
-	// ACP: As a baseline, all Agents MUST support ContentBlock::Text and
-	// ContentBlock::ResourceLink in session/prompt requests.
+	// ACP: As a baseline, all Agents MUST support ContentBlock::Text and ContentBlock::ResourceLink in session/prompt requests.
 	for _, content := range contents {
 		if err := content.Validate(); err != nil {
 			return PromptResponse{}, err
@@ -215,6 +218,24 @@ func (sn *ACPSession) Prompt(ctx context.Context, contents ...acp.ContentBlock) 
 		}
 	}
 
+	if !sn.Active() {
+		return PromptResponse{}, errors.New("invalid session")
+	}
+
+	if !sn.hasOngoingTurn.CompareAndSwap(false, true) {
+		return PromptResponse{}, errors.New("A prompt turn is ongoing, please wait for it to finish, or cancel it")
+	}
+
+	defer func() {
+		sn.hasOngoingTurn.Store(false)
+		sn.CurrentTurn = nil
+	}()
+
+	// start a new turn.
+	sn.CurrentTurn = NewPromptTurn()
+
+	// Prompt will not get a response until there is no pending tool calls, and the agent sends
+	// the final response.
 	resp, err := sn.conn.Conn.Prompt(ctx, acp.PromptRequest{
 		SessionId: acp.SessionId(sn.SessionID),
 		Prompt:    contents,
@@ -226,6 +247,52 @@ func (sn *ACPSession) Prompt(ctx context.Context, contents ...acp.ContentBlock) 
 	}
 
 	return resp, nil
+}
+
+func (sn *ACPSession) HasOngoingTurn() bool {
+	return sn.hasOngoingTurn.Load()
+}
+
+// Cancel cancels the ongoing prompt turn if there is one.
+//
+// According to ACP protocol:
+//
+//  1. The Client should mark all non-finished tool calls pertaining
+//     to the current turn as cancelled as soon as it sends the session/cancel notification.
+//
+//  2. The client must respond to all pending session/request_permission requests
+//     with the cancelled outcome.
+func (sn *ACPSession) Cancel(ctx context.Context) error {
+	if sn.hasOngoingTurn.CompareAndSwap(true, false) {
+		defer func() {
+			// the pending session/request_permission requests should check this to cancel
+			// themselves. This should be called BEFORE session/request_permission responds.
+			// so we should not set sn.CurrentTurn = nil.
+			if sn.CurrentTurn != nil {
+				sn.CurrentTurn.Cancel()
+			}
+		}()
+
+		return sn.conn.Conn.Cancel(ctx, acp.CancelNotification{
+			SessionId: acp.SessionId(sn.SessionID),
+		})
+
+	}
+
+	return nil
+}
+
+func (sn *ACPSession) RequestPermission(req acp.RequestPermissionRequest, grantResponseChan chan acp.PermissionOptionId) {
+	sn.mu.Lock()
+	if sn.grantChan == nil {
+		sn.grantChan = make(chan PermissionGrantRequest)
+	}
+	sn.mu.Unlock()
+
+	sn.grantChan <- PermissionGrantRequest{
+		Req:          req,
+		ResponseChan: grantResponseChan,
+	}
 }
 
 func (sn *ACPSession) PublishUpdate(update any) {
@@ -243,10 +310,20 @@ func (sn *ACPSession) SubscribeUpdates(ctx context.Context, sub SessionUpdateSub
 		return
 	}
 
+	sn.mu.Lock()
+	if sn.bound {
+		return
+	}
+	sn.bound = true
+	sn.mu.Unlock()
+
 	go func() {
 		for {
 			select {
-			case update := <-sn.updateChan:
+			case update, ok := <-sn.updateChan:
+				if !ok {
+					return
+				}
 				switch update := update.(type) {
 				case UserMessageChunk:
 					sub.OnUserMessage(update)
@@ -255,8 +332,10 @@ func (sn *ACPSession) SubscribeUpdates(ctx context.Context, sub SessionUpdateSub
 				case AgentThoughtChunk:
 					sub.OnAgentThought(update)
 				case ToolCall:
+					sn.CurrentTurn.UpdateToolCall(update)
 					sub.OnToolCallInit(update)
 				case ToolCallUpdate:
+					sn.CurrentTurn.UpdateToolCall(update)
 					sub.OnToolCallUpdate(update)
 				case Plan:
 					sub.OnPlan(update)
@@ -273,10 +352,29 @@ func (sn *ACPSession) SubscribeUpdates(ctx context.Context, sub SessionUpdateSub
 				default:
 					log.Panicf("unknown update object: %v", update)
 				}
+			case permissionReq, ok := <-sn.grantChan:
+				if !ok {
+					return
+				}
+				sub.OnRequestPermission(permissionReq)
 			case <-ctx.Done():
 				log.Println("session subscriber closed")
 				return
 			}
 		}
 	}()
+}
+
+func (sn *ACPSession) Close() {
+	if sn.CurrentTurn != nil {
+		sn.CurrentTurn.Close()
+	}
+
+	if sn.updateChan != nil {
+		close(sn.updateChan)
+	}
+
+	if sn.grantChan != nil {
+		close(sn.grantChan)
+	}
 }
