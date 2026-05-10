@@ -8,6 +8,7 @@ import (
 	"sync"
 
 	"gioui.org/layout"
+	"gioui.org/op"
 	"gioui.org/op/clip"
 	"gioui.org/op/paint"
 	"gioui.org/unit"
@@ -392,23 +393,24 @@ func (v *AgentChatView) layoutUserBubble(gtx C, th *theme.Theme, content string)
 		Top: unit.Dp(4), Bottom: unit.Dp(4),
 		Left: unit.Dp(40),
 	}.Layout(gtx, func(gtx C) D {
-		return layout.Stack{Alignment: layout.E}.Layout(gtx,
-			layout.Expanded(func(gtx C) D {
-				defer clip.Rect{Max: gtx.Constraints.Max}.Push(gtx.Ops).Pop()
-				paint.FillShape(gtx.Ops, misc.WithAlpha(th.ContrastBg, 0x12), clip.Rect{Max: gtx.Constraints.Max}.Op())
-				return D{Size: gtx.Constraints.Max}
-			}),
-			layout.Stacked(func(gtx C) D {
-				return layout.Inset{
-					Top: unit.Dp(6), Bottom: unit.Dp(6),
-					Left: unit.Dp(8), Right: unit.Dp(8),
-				}.Layout(gtx, func(gtx C) D {
-					label := material.Label(th.Theme, th.TextSize*0.9, content)
-					label.Color = th.Fg
-					return label.Layout(gtx)
-				})
-			}),
-		)
+		// Measure the label first so we know the background size.
+		macro := op.Record(gtx.Ops)
+		dims := layout.Inset{
+			Top: unit.Dp(6), Bottom: unit.Dp(6),
+			Left: unit.Dp(8), Right: unit.Dp(8),
+		}.Layout(gtx, func(gtx C) D {
+			label := material.Label(th.Theme, th.TextSize*0.9, content)
+			label.Color = th.Fg
+			return label.Layout(gtx)
+		})
+		call := macro.Stop()
+
+		// Draw background behind the label.
+		defer clip.Rect{Max: dims.Size}.Push(gtx.Ops).Pop()
+		paint.FillShape(gtx.Ops, misc.WithAlpha(th.ContrastBg, 0x12), clip.Rect{Max: dims.Size}.Op())
+
+		call.Add(gtx.Ops)
+		return dims
 	})
 }
 
