@@ -149,24 +149,26 @@ func (a *ACPClient) RequestPermission(ctx context.Context, params acp.RequestPer
 		}, nil
 
 	} else {
+		cancelChan := session.CurrentTurn.CancelChan(params.ToolCall.ToolCallId)
+		if cancelChan == nil {
+			// Tool call not yet registered; no cancellation channel available.
+			optionID := <-permissionGrantChan
+			return acp.RequestPermissionResponse{
+				Outcome: acp.NewRequestPermissionOutcomeSelected(optionID),
+			}, nil
+		}
 		select {
 		case optionID := <-permissionGrantChan:
 			return acp.RequestPermissionResponse{
 				Outcome: acp.NewRequestPermissionOutcomeSelected(optionID),
 			}, nil
-		case toolCallID := <-session.CurrentTurn.CancelChan():
-			if toolCallID != params.ToolCall.ToolCallId {
-				break
-			}
+		case <-cancelChan:
 			// do not check session.hasOngoingTurn here, as this should be called AFTER the turn is canceled.
 			return acp.RequestPermissionResponse{
 				Outcome: acp.NewRequestPermissionOutcomeCancelled(),
 			}, nil
-
 		}
 	}
-
-	return emptyResp, nil
 
 }
 
