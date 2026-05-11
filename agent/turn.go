@@ -1,7 +1,6 @@
 package agent
 
 import (
-	"slices"
 	"sync"
 	"sync/atomic"
 
@@ -9,16 +8,19 @@ import (
 )
 
 type PromptTurn struct {
-	// ongoing tool calls.
-	ongoingToolCalls []acp.ToolCallId
+	// ongoing tool calls. Map toolcall id to a session cancel notify channel.
+	ongoingToolCalls map[acp.ToolCallId]chan acp.ToolCallId
 	canceled         atomic.Bool
 	mu               sync.Mutex
-	cancelChan       chan acp.ToolCallId
+	broker           *Broker[acp.ToolCallId]
 }
 
 func NewPromptTurn() *PromptTurn {
+	broker := NewBroker[acp.ToolCallId]()
+	go broker.Start()
 	return &PromptTurn{
-		cancelChan: make(chan acp.ToolCallId),
+		ongoingToolCalls: make(map[acp.ToolCallId]chan acp.ToolCallId),
+		broker:           broker,
 	}
 }
 
@@ -27,16 +29,20 @@ func (t *PromptTurn) UpdateToolCall(update any) {
 	defer t.mu.Unlock()
 
 	removeFunc := func(toolcallID acp.ToolCallId) {
-		t.ongoingToolCalls = slices.DeleteFunc(t.ongoingToolCalls, func(id acp.ToolCallId) bool {
-			return id == toolcallID
-		})
+		cancelNotifyChan := t.ongoingToolCalls[toolcallID]
+		if cancelNotifyChan != nil {
+			t.broker.Unsubscribe(cancelNotifyChan)
+		}
+		delete(t.ongoingToolCalls, toolcallID)
+
 	}
 
 	switch update := update.(type) {
 	case ToolCall:
 		if update.Status == acp.ToolCallStatusPending || update.Status == acp.ToolCallStatusInProgress {
-			t.ongoingToolCalls = append(t.ongoingToolCalls, update.ToolCallId)
-
+			if _, exists := t.ongoingToolCalls[update.ToolCallId]; !exists {
+				t.ongoingToolCalls[update.ToolCallId] = t.broker.Subscribe()
+			}
 		} else {
 			removeFunc(update.ToolCallId)
 		}
@@ -46,7 +52,9 @@ func (t *PromptTurn) UpdateToolCall(update any) {
 		}
 
 		if *update.Status == acp.ToolCallStatusPending || *update.Status == acp.ToolCallStatusInProgress {
-			t.ongoingToolCalls = append(t.ongoingToolCalls, update.ToolCallId)
+			if _, exists := t.ongoingToolCalls[update.ToolCallId]; !exists {
+				t.ongoingToolCalls[update.ToolCallId] = t.broker.Subscribe()
+			}
 		} else {
 			removeFunc(update.ToolCallId)
 		}
@@ -55,21 +63,26 @@ func (t *PromptTurn) UpdateToolCall(update any) {
 
 func (t *PromptTurn) Cancel() {
 	if t.canceled.CompareAndSwap(false, true) {
-		for _, tc := range t.ongoingToolCalls {
-			t.cancelChan <- tc
+		t.mu.Lock()
+		for tc := range t.ongoingToolCalls {
+			t.broker.Publish(tc)
 		}
+		t.mu.Unlock()
 	}
-
 }
 
 func (t *PromptTurn) IsCanceled() bool {
 	return t.canceled.Load()
 }
 
-func (t *PromptTurn) CancelChan() <-chan acp.ToolCallId {
-	return t.cancelChan
+func (t *PromptTurn) CancelChan(toolCallID acp.ToolCallId) <-chan acp.ToolCallId {
+	t.mu.Lock()
+	defer t.mu.Unlock()
+	return t.ongoingToolCalls[toolCallID]
 }
 
 func (t *PromptTurn) Close() {
-	close(t.cancelChan)
+	if t.broker != nil {
+		t.broker.Stop()
+	}
 }
