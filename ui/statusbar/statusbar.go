@@ -36,7 +36,7 @@ type (
 var defaultActiveDuration = time.Second * 5
 var (
 	consoleIcon   = icons.NewSvgIcon(icons.Terminal)
-	chatIcon      = icons.NewSvgIcon(icons.SquareFunction)
+	chatIcon      = icons.NewSvgIcon(icons.Sparkles)
 	infoIcon      = icons.NewSvgIcon(icons.Info)
 	warnIcon      = icons.NewSvgIcon(icons.CircleAlert)
 	errorIcon     = icons.NewSvgIcon(icons.CircleX)
