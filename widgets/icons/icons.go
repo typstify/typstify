@@ -169,6 +169,9 @@ var SquareFunction []byte
 //go:embed lucide/variable.svg
 var Variable []byte
 
+//go:embed lucide/sparkles.svg
+var Sparkles []byte
+
 func newIcon(iconData []byte) *giosvg.Icon {
 	vector, err := giosvg.NewVector(iconData)
 	if err != nil {
