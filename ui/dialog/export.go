@@ -1,10 +1,7 @@
 package dialog
 
 import (
-	"context"
 	"fmt"
-	"log"
-	"path/filepath"
 	"strings"
 
 	"gioui.org/layout"
@@ -20,6 +17,7 @@ import (
 	"looz.ws/typstify/service"
 	"looz.ws/typstify/service/bus"
 	"looz.ws/typstify/typst"
+	"looz.ws/typstify/typst/export"
 	"looz.ws/typstify/ui/settings/form"
 	"looz.ws/typstify/ui/statusbar"
 )
@@ -82,73 +80,34 @@ func (d *ExportDialog) OnInit(intent view.Intent) error {
 }
 
 func (d *ExportDialog) OnConfirm() error {
-	params := &typst.CompileParams{
-		OutFilename: d.nameInput.Text(),
-		Options: typst.CompileCmdOptions{
-			Format: typst.OutFormat(d.formatEnum.Value),
-			Pages:  d.pagesInput.Text(),
-			PPI:    int(d.ppiInput.Value()),
-		},
+	compiler := export.NewCompileHelper(d.srv.CurrentProjectDir(), d.srv.Settings().Typst())
+
+	compiler.Pages = d.pagesInput.Text()
+	compiler.PPI = int(d.ppiInput.Value())
+	compiler.Format = typst.OutFormat(d.formatEnum.Value)
+	compiler.PdfVersion = typst.PdfVersion(d.pdfVersion.Value)
+	compiler.PdfStandard = typst.PdfStandard(d.pdfStandard.Value)
+	compiler.NoPdfTags = d.noPdfTags.Value
+	compiler.CmdOutput = d.srv.Console()
+
+	params, err := compiler.BuildParams(d.targetFile, d.nameInput.Text())
+	if err != nil {
+		d.srv.Console().Write([]byte(err.Error()))
+		return nil
 	}
 
-	if params.Options.Format == typst.PDF {
-		params.Options.PdfStandards = []typst.PdfSpec{
-			typst.PdfVersion(d.pdfVersion.Value),
-		}
-		if d.pdfStandard.Value != "" {
-			std := typst.PdfStandard(d.pdfStandard.Value)
-			if std.Compatible(typst.PdfVersion(d.pdfVersion.Value)) {
-				params.Options.PdfStandards = append(params.Options.PdfStandards, std)
-			}
-		}
-
-		params.Options.NoPdfTags = d.noPdfTags.Value
-	}
-
-	// Other options
-	settings := d.srv.Settings().Typst()
-
-	if settings.UseSysInputs != 0 {
-		inputs, err := typst.LoadInputs(d.srv.CurrentProjectDir(), true)
+	go func() {
+		d.srv.EventBus().Emit(bus.TopicStatusbarNotifyEvent, statusbar.Notification{Content: i18n.Translate("Exporting file...")})
+		err := compiler.Compile(params)
 		if err != nil {
-			d.srv.Console().Write([]byte(err.Error()))
-		} else if len(inputs) > 0 {
-			params.Options.Input = inputs
+			d.srv.EventBus().Emit(bus.TopicStatusbarNotifyEvent, statusbar.Notification{Content: "File export error: " + err.Error()})
+			return
 		}
-	}
 
-	params.Options.PackagePath = settings.PackageDir
-	params.Options.PackageCachePath = settings.PackageCacheDir
-	params.Options.FontPaths = d.fontPaths()
-	params.Options.IgnoreSystemFonts = settings.IgnoreSystemFonts == 1
-	params.Options.IgnoreEmbeddedFonts = settings.IgnoreEmbeddedFonts == 1
+		msg := fmt.Sprintf("Files exported to %s", params.OutDir)
+		d.srv.EventBus().Emit(bus.TopicStatusbarNotifyEvent, statusbar.Notification{Content: msg})
 
-	params.InputFile = d.targetFile
-	params.OutDir = filepath.Join(filepath.Dir(d.targetFile), "output")
-	if settings.OutputDir != "" {
-		params.OutDir = settings.OutputDir
-	}
-
-	if settings.BuildDeps == 1 {
-		params.Options.Deps = filepath.Join(params.OutDir, "deps.json")
-		params.Options.DepsFormat = "json"
-	}
-
-	params.CmdOut = d.srv.Console()
-	params.Options.Features = "html" // enable HTML export
-
-	if params.OutFilename == "" {
-		params.OutFilename = strings.TrimSuffix(filepath.Base(d.targetFile), filepath.Ext(d.targetFile))
-	} else {
-		name := params.OutFilename
-		params.OutFilename = strings.TrimSuffix(filepath.Base(name), filepath.Ext(name))
-	}
-
-	if d.targetFile != "" {
-		go func() {
-			d.onExportFile(params)
-		}()
-	}
+	}()
 
 	return nil
 }
@@ -293,35 +252,4 @@ func (d *ExportDialog) LayoutBody(gtx C, th *theme.Theme) D {
 				})
 		}),
 	)
-}
-
-func (d *ExportDialog) fontPaths() []string {
-	fontPaths := []string{d.srv.CurrentProjectDir()}
-	if d.srv.Settings().Typst().ExtraFontPath != "" {
-		fontPaths = append(fontPaths, d.srv.Settings().Typst().ExtraFontPath)
-	}
-
-	return fontPaths
-}
-
-func (d *ExportDialog) onExportFile(params *typst.CompileParams) {
-	d.srv.EventBus().Emit(bus.TopicStatusbarNotifyEvent, statusbar.Notification{Content: i18n.Translate("Exporting file...")})
-
-	// use project dir as work dir for Typst to properly resolve imported resources.
-	compiler, err := typst.NewCompiler(d.srv.CurrentProjectDir())
-	if err != nil {
-		d.srv.EventBus().Emit(bus.TopicStatusbarNotifyEvent, statusbar.Notification{Content: err.Error()})
-		return
-	}
-	defer compiler.Close()
-
-	err = compiler.Compile(context.Background(), params, func(files []string) {
-		msg := fmt.Sprintf("Files exported to %s", params.OutDir)
-		d.srv.EventBus().Emit(bus.TopicStatusbarNotifyEvent, statusbar.Notification{Content: msg})
-	})
-	if err != nil {
-		log.Println("export PDF error: ", err)
-		d.srv.EventBus().Emit(bus.TopicStatusbarNotifyEvent, statusbar.Notification{Content: "File export error: " + err.Error()})
-	}
-
 }
