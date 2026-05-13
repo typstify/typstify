@@ -36,7 +36,7 @@ type permissionState struct {
 }
 
 type messageStyle interface {
-	Layout(gtx C, th *theme.Theme) D
+	Layout(gtx C, th *theme.Theme, msg chatMessage) D
 }
 
 // AgentChatView renders a chat conversation with an ACP agent.
@@ -211,32 +211,32 @@ func (v *AgentChatView) layoutMessages(gtx C, th *theme.Theme, padding unit.Dp) 
 			Left:  padding,
 			Right: padding,
 		}.Layout(gtx, func(gtx C) D {
-			return v.layoutMessage(gtx, th, index, msgs[index])
+			return v.layoutMessage(gtx, th, msgs, index)
 		})
 
 	})
 }
 
-func (v *AgentChatView) layoutMessage(gtx C, th *theme.Theme, index int, msg chatMessage) D {
+func (v *AgentChatView) layoutMessage(gtx C, th *theme.Theme, msgs []chatMessage, index int) D {
+	msg := msgs[index]
 	if len(v.messageStyles) <= index {
 		switch msg.Kind {
 		case msgUser:
-			v.messageStyles = append(v.messageStyles, &UserMsgStyle{msg: &msg})
+			v.messageStyles = append(v.messageStyles, &UserMsgStyle{})
 		case msgAgent:
-			v.messageStyles = append(v.messageStyles, &AgentMsgStyle{msg: &msg})
+			v.messageStyles = append(v.messageStyles, &AgentMsgStyle{})
 		case msgThought:
-			v.messageStyles = append(v.messageStyles, &ThoughtMsgStyle{msg: &msg})
+			v.messageStyles = append(v.messageStyles, &ThoughtMsgStyle{})
 		case msgToolCall:
-			v.messageStyles = append(v.messageStyles, &ToolCallStyle{msg: &msg})
+			v.messageStyles = append(v.messageStyles, &ToolCallStyle{})
 		case msgPlan:
-			v.messageStyles = append(v.messageStyles, &PlanMsgStyle{msg: &msg})
+			v.messageStyles = append(v.messageStyles, &PlanMsgStyle{})
 		default:
 			log.Panicf("unknown message: %v", msg.Kind)
 		}
 	}
 
-	return v.messageStyles[index].Layout(gtx, th)
-
+	return v.messageStyles[index].Layout(gtx, th, msg)
 }
 
 func (v *AgentChatView) layoutInput(gtx C, th *theme.Theme) D {
@@ -330,9 +330,11 @@ func (v *AgentChatView) doSend() {
 
 	go func() {
 		block := acp.TextBlock(text)
-		_, err := v.session.Prompt(context.Background(), block)
+		resp, err := v.session.Prompt(context.Background(), block)
 		if err != nil {
 			log.Printf("chat: prompt error: %v", err)
+		} else {
+			log.Printf("prompt turn finished, reason: %s", resp.StopReason)
 		}
 	}()
 }
