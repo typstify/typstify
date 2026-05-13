@@ -20,20 +20,22 @@ type ToolCallStyle struct {
 	msg       *chatMessage
 	selection widget.Selectable
 	mdBock    markdownBlock
+	card      CardStyle
 }
 
-func (t ToolCallStyle) Layout(gtx C, th *theme.Theme) D {
-	if t.msg.Kind != msgToolCall {
+func (t *ToolCallStyle) Layout(gtx C, th *theme.Theme, msg chatMessage) D {
+	if msg.Kind != msgToolCall {
 		return D{}
 	}
 
-	return CardStyle{Icon: toolcallIcon}.Layout(gtx, th,
+	t.msg = &msg
+	t.card.Icon = toolcallIcon
+	return t.card.Layout(gtx, th,
 		func(gtx C) D {
 			return t.layoutHeader(gtx, th)
 		},
 		func(gtx C) D {
 			return t.layoutExtraContent(gtx, th)
-
 		},
 	)
 }
