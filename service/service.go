@@ -11,6 +11,7 @@ import (
 	"github.com/oligo/gioview/view"
 	"github.com/typstify/tpix-cli/api"
 	"looz.ws/typstify/agent"
+	"looz.ws/typstify/agent/extensions"
 	"looz.ws/typstify/lsp"
 	"looz.ws/typstify/service/bus"
 	"looz.ws/typstify/service/net"
@@ -257,13 +258,18 @@ func (s *ServiceFacade) StartACPSession(ctx context.Context, projectDir string) 
 		// make a session manager for test
 		s.acpSessionManager = &agent.SessionManager{}
 
+		client := agent.NewACPClient(s.acpSessionManager)
+
+		compilerExt := extensions.TypstCompilerExt(s.CurrentProjectDir(), s.Settings().Typst())
+		client.RegisterExtension("typstify/compileTypst", compilerExt)
+
 		s.acpSessionManager.Start(ctx,
 			agent.AgentConfig{
 				Name: "Claude Code",
 				Cmd:  "npx",
 				Args: []string{"-y", "@zed-industries/claude-code-acp@latest"},
 			},
-			agent.NewACPClient(s.acpSessionManager),
+			client,
 		)
 	}
 

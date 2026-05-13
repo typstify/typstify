@@ -28,6 +28,7 @@ func SetupCmdBuilder(externalExe string) {
 	}
 
 	cmdBuilder.DefaultArgs = []string{"--color=never"}
+	cmdBuilder.Check()
 }
 
 func InitCmd(template string, dir string, opts *InitCmdOptions) error {

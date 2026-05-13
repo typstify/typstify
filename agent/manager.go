@@ -46,7 +46,7 @@ type SessionManager struct {
 
 // Start runs a agent through ACP client. The config is used to specify
 // which agent to be started.
-func (sm *SessionManager) Start(ctx context.Context, agentConfig AgentConfig, client acp.Client) error {
+func (sm *SessionManager) Start(ctx context.Context, agentConfig AgentConfig, client *ACPClient) error {
 	sm.mu.Lock()
 	defer sm.mu.Unlock()
 
@@ -78,6 +78,7 @@ func (sm *SessionManager) Start(ctx context.Context, agentConfig AgentConfig, cl
 	initResp, err := conn.Initialize(ctx, acp.InitializeRequest{
 		ProtocolVersion: acp.ProtocolVersionNumber,
 		ClientCapabilities: acp.ClientCapabilities{
+			Meta: client.ExtensionCapabilities(),
 			Fs: acp.FileSystemCapabilities{
 				ReadTextFile:  true,
 				WriteTextFile: true,
