@@ -5,6 +5,8 @@ import (
 	"context"
 	"fmt"
 	"os/exec"
+	"regexp"
+	"runtime"
 	"sync"
 	"sync/atomic"
 	"syscall"
@@ -33,7 +35,7 @@ type acpTernimal struct {
 	cmd             *exec.Cmd
 	outputBuf       bytes.Buffer
 	bufMu           sync.Mutex
-	killed          atomic.Bool
+	exited          atomic.Bool
 }
 
 func newTerminal(req acp.CreateTerminalRequest) *acpTernimal {
@@ -47,13 +49,18 @@ func newTerminal(req acp.CreateTerminalRequest) *acpTernimal {
 	}
 
 	ctx := context.Background()
-	cmd := utils.BuildCmd(ctx, req.Command, req.Args...)
+	var cmd *exec.Cmd
+	if isScript(req.Command) {
+		cmd = t.buildScriptCmd(ctx, req.Command, req.Args)
+	} else {
+		cmd = utils.BuildCmd(ctx, req.Command, req.Args...)
+	}
 
 	envs := make([]string, 0, len(req.Env))
 	for _, env := range req.Env {
 		envs = append(envs, fmt.Sprintf("%s=%s", env.Name, env.Value))
 	}
-	cmd.Env = append(envs, cmd.Env...)
+	cmd.Env = append(envs, cmd.Environ()...)
 
 	if req.Cwd != nil && *req.Cwd != "" {
 		cmd.Dir = *req.Cwd
@@ -74,11 +81,11 @@ func (t *acpTernimal) Start() error {
 }
 
 func (t *acpTernimal) IsKilled() bool {
-	return t.killed.Load()
+	return t.exited.Load()
 }
 
 func (t *acpTernimal) Kill() error {
-	if t.killed.CompareAndSwap(false, true) {
+	if t.exited.CompareAndSwap(false, true) {
 		return t.cmd.Cancel()
 	}
 
@@ -134,5 +141,32 @@ func (t *acpTernimal) ExitStatus() (exitCode int, signal syscall.Signal) {
 }
 
 func (t *acpTernimal) Wait() error {
-	return t.cmd.Wait()
+	if t.exited.CompareAndSwap(false, true) {
+		return t.cmd.Wait()
+	}
+	return nil
+}
+
+var (
+	cmdNamePattern = regexp.MustCompile(`^[\w_][\w\d_.]$`)
+)
+
+func isScript(cmd string) bool {
+	return !cmdNamePattern.Match([]byte(cmd))
+}
+
+func getShell() (string, []string) {
+	if runtime.GOOS == "windows" {
+		return "powershell.exe", []string{"-Command"}
+	}
+	// Unix-like
+	return "bash", []string{"-c"}
+}
+
+func (t *acpTernimal) buildScriptCmd(ctx context.Context, script string, args []string) *exec.Cmd {
+	shell, args := getShell()
+	fullArgs := append(args, script)
+	cmd := utils.BuildCmd(ctx, shell, fullArgs...)
+
+	return cmd
 }

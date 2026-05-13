@@ -2,6 +2,7 @@ package utils
 
 import (
 	"context"
+	"fmt"
 	"log"
 	"os"
 	"os/exec"
@@ -10,7 +11,8 @@ import (
 )
 
 // lookupExecutable looks up the executable path from the executable dir
-// and the process root dir, and existing PATH.
+// and the process root dir, and existing PATH, and update PATH env after
+// it finds the executable.
 func lookupExecutable(exeName string) string {
 	binDir := ""
 
@@ -57,15 +59,24 @@ type CmdBuilder struct {
 	Path        string
 }
 
-func (b *CmdBuilder) Build(ctx context.Context, args ...string) *exec.Cmd {
+func (b *CmdBuilder) Check() (string, error) {
 	path := b.Path
 	if filepath.Base(path) == path {
 		path = lookupExecutable(path)
 	} else {
 		exists, isDir := CheckFileExists(path)
 		if !exists || isDir {
-			return nil
+			return "", fmt.Errorf("executable not exists: %s", path)
 		}
+	}
+
+	return path, nil
+}
+
+func (b *CmdBuilder) Build(ctx context.Context, args ...string) *exec.Cmd {
+	path, err := b.Check()
+	if err != nil {
+		return nil
 	}
 
 	args = append(b.DefaultArgs, args...)

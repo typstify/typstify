@@ -3,6 +3,7 @@ package agent
 import (
 	"bufio"
 	"context"
+	"encoding/json"
 	"errors"
 	"fmt"
 	"log"
@@ -16,6 +17,9 @@ import (
 )
 
 var _ acp.Client = (*ACPClient)(nil)
+var _ acp.ExtensionMethodHandler = (*ACPClient)(nil)
+
+type ExtentionHandler func(params json.RawMessage) (any, error)
 
 // ACPClient implements a ACP client.
 type ACPClient struct {
@@ -23,11 +27,15 @@ type ACPClient struct {
 	// ongoing terminals
 	terminals []*acpTernimal
 	tmMu      sync.Mutex
+
+	extMethods map[string]ExtentionHandler
+	extMu      sync.Mutex
 }
 
 func NewACPClient(sm *SessionManager) *ACPClient {
 	return &ACPClient{
-		sm: sm,
+		sm:         sm,
+		extMethods: make(map[string]ExtentionHandler),
 	}
 }
 
@@ -278,6 +286,7 @@ func (a *ACPClient) CreateTerminal(ctx context.Context, params acp.CreateTermina
 
 	terminal := newTerminal(params)
 	if err := terminal.Start(); err != nil {
+		log.Println("CreateTerminal error: ", err)
 		return emptyResp, err
 	}
 
@@ -300,6 +309,8 @@ func (a *ACPClient) CreateTerminal(ctx context.Context, params acp.CreateTermina
 //
 // The Agent MUST still call terminal/release when it’s done using it.
 func (a *ACPClient) KillTerminal(ctx context.Context, params acp.KillTerminalRequest) (acp.KillTerminalResponse, error) {
+	log.Println("KillTerminal request: ", params)
+
 	emptyResp := acp.KillTerminalResponse{}
 
 	if err := params.Validate(); err != nil {
@@ -370,6 +381,7 @@ func (a *ACPClient) TerminalOutput(ctx context.Context, params acp.TerminalOutpu
 		sigStr := signal.String()
 		sig = &sigStr
 	}
+
 	resp.Output = output
 	resp.Truncated = truncated
 	resp.ExitStatus = &acp.TerminalExitStatus{
@@ -430,4 +442,58 @@ func resolvePath(cwd, path string) (string, error) {
 	}
 
 	return clean, nil
+}
+
+func (a *ACPClient) RegisterExtension(method string, handler ExtentionHandler) error {
+	if method == "" || !strings.HasPrefix(method, "_") {
+		return fmt.Errorf("invlaid extension method name: %s", method)
+	}
+
+	if handler == nil {
+		return errors.New("nil extension handler")
+	}
+
+	a.extMu.Lock()
+	defer a.extMu.Unlock()
+	a.extMethods[method] = handler
+	return nil
+}
+
+// HandleExtensionMethod implements [acp.ExtensionMethodHandler].
+// Name of ACP extension methods must start with "_".
+func (a *ACPClient) HandleExtensionMethod(ctx context.Context, method string, params json.RawMessage) (any, error) {
+	if a.extMethods == nil {
+		return nil, acp.NewMethodNotFound(method)
+	}
+
+	extFunc := a.extMethods[method]
+	if extFunc == nil {
+		return nil, acp.NewMethodNotFound(method)
+	}
+
+	return extFunc(params)
+}
+
+// Experimental
+func (a *ACPClient) ExtensionCapabilities() map[string]any {
+	extCap := make(map[string]any)
+
+	for method := range a.extMethods {
+		fragments := strings.SplitN(method, "/", 1)
+		if len(fragments) > 1 {
+			// namespace to
+			if _, exists := extCap[fragments[0]]; exists {
+				c := extCap[fragments[0]].(map[string]bool)
+				c[fragments[1]] = true
+				extCap[fragments[0]] = c
+			} else {
+				extCap[fragments[0]] = map[string]bool{fragments[1]: true}
+			}
+		} else {
+			extCap[method] = map[string]bool{method: true}
+		}
+	}
+
+	return extCap
+
 }

@@ -172,6 +172,15 @@ var Variable []byte
 //go:embed lucide/sparkles.svg
 var Sparkles []byte
 
+//go:embed lucide/hammer.svg
+var Hammer []byte
+
+//go:embed lucide/lightbulb.svg
+var LightBulb []byte
+
+//go:embed lucide/square-check.svg
+var SquareCheck []byte
+
 func newIcon(iconData []byte) *giosvg.Icon {
 	vector, err := giosvg.NewVector(iconData)
 	if err != nil {

@@ -271,6 +271,7 @@ func (sn *ACPSession) Cancel(ctx context.Context) error {
 			if sn.CurrentTurn != nil {
 				sn.CurrentTurn.Cancel()
 			}
+			log.Println("prompt turn canceled")
 		}()
 
 		return sn.conn.Conn.Cancel(ctx, acp.CancelNotification{
@@ -332,10 +333,14 @@ func (sn *ACPSession) SubscribeUpdates(ctx context.Context, sub SessionUpdateSub
 				case AgentThoughtChunk:
 					sub.OnAgentThought(update)
 				case ToolCall:
-					sn.CurrentTurn.UpdateToolCall(update)
+					if sn.CurrentTurn != nil {
+						sn.CurrentTurn.UpdateToolCall(update)
+					}
 					sub.OnToolCallInit(update)
 				case ToolCallUpdate:
-					sn.CurrentTurn.UpdateToolCall(update)
+					if sn.CurrentTurn != nil {
+						sn.CurrentTurn.UpdateToolCall(update)
+					}
 					sub.OnToolCallUpdate(update)
 				case Plan:
 					sub.OnPlan(update)

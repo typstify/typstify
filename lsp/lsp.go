@@ -31,6 +31,7 @@ func SetupCmdBuilder(externalExe string) {
 	}
 
 	cmdBuilder.DefaultArgs = []string{}
+	cmdBuilder.Check()
 }
 
 func GetLspClient(workspace string, setting *settings.Settings) *Client {
