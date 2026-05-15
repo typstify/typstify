@@ -3,7 +3,9 @@ package view
 import (
 	"context"
 	"fmt"
+	"image"
 	"log"
+	"strings"
 	"sync"
 
 	"gioui.org/font"
@@ -16,7 +18,6 @@ import (
 	"github.com/coder/acp-go-sdk"
 	"github.com/oligo/gioview/misc"
 	"github.com/oligo/gioview/theme"
-	gvwidget "github.com/oligo/gioview/widget"
 	"looz.ws/typstify/agent"
 	"looz.ws/typstify/i18n"
 )
@@ -50,10 +51,11 @@ type AgentChatView struct {
 	messageStyles []messageStyle
 
 	list        widget.List
-	inputEditor gvwidget.TextField
+	inputEditor *InputBox
 	sendBtn     widget.Clickable
 
 	pendingPerm *permissionState
+	configStyle SessionConfigStyle
 
 	MaxWidth unit.Dp
 }
@@ -64,7 +66,7 @@ func (v *AgentChatView) SetInvalidator(fn func()) {
 
 func (v *AgentChatView) Layout(gtx C, th *theme.Theme) D {
 	// Handle submit events from the input editor.
-	if ok := v.inputEditor.Submitted(); ok {
+	if ok := v.inputEditor.Update(gtx); ok {
 		v.doSend()
 	}
 
@@ -95,27 +97,24 @@ func (v *AgentChatView) Layout(gtx C, th *theme.Theme) D {
 		}),
 		layout.Rigid(layout.Spacer{Height: unit.Dp(4)}.Layout),
 		layout.Flexed(1, func(gtx C) D {
-			return layout.Flex{
-				Axis: layout.Vertical,
-			}.Layout(gtx,
-				layout.Flexed(1, func(gtx C) D {
-					return v.layoutMessages(gtx, th, padding)
-				}),
-				layout.Rigid(func(gtx C) D {
-					return layout.Inset{
-						Left:  padding,
-						Right: padding,
-					}.Layout(gtx, func(gtx C) D {
+			return v.layoutMessages(gtx, th, padding)
+		}),
+		layout.Rigid(func(gtx C) D {
+			return layout.Inset{
+				Left:  padding,
+				Right: padding,
+			}.Layout(gtx, func(gtx C) D {
+				return layout.Flex{
+					Axis: layout.Vertical,
+				}.Layout(gtx,
+					layout.Rigid(func(gtx C) D {
 						return v.layoutPermission(gtx, th)
-					})
-				}),
-			)
-		}),
-		layout.Rigid(func(gtx C) D {
-			return layout.Spacer{Height: unit.Dp(4)}.Layout(gtx)
-		}),
-		layout.Rigid(func(gtx C) D {
-			return v.layoutInput(gtx, th)
+					}),
+					layout.Rigid(func(gtx C) D {
+						return v.layoutInput(gtx, th)
+					}),
+				)
+			})
 		}),
 	)
 
@@ -240,38 +239,62 @@ func (v *AgentChatView) layoutMessage(gtx C, th *theme.Theme, msgs []chatMessage
 }
 
 func (v *AgentChatView) layoutInput(gtx C, th *theme.Theme) D {
-	return layout.Inset{
-		Left:   unit.Dp(4),
-		Right:  unit.Dp(4),
-		Top:    unit.Dp(4),
-		Bottom: unit.Dp(4),
-	}.Layout(gtx, func(gtx C) D {
-		return layout.Flex{
-			Axis:      layout.Horizontal,
-			Alignment: layout.Middle,
-		}.Layout(gtx,
-			layout.Flexed(1, func(gtx C) D {
-				v.inputEditor.SingleLine = false
-				return v.inputEditor.Layout(gtx, th, i18n.Translate("Type a message..."))
-			}),
-			layout.Rigid(layout.Spacer{Width: unit.Dp(6)}.Layout),
-			layout.Rigid(func(gtx C) D {
-				if !v.canSend() || !v.isPromptRunning() {
-					gtx = gtx.Disabled()
-				}
+	return layout.Stack{}.Layout(gtx,
+		layout.Expanded(func(gtx C) D {
+			rr := gtx.Dp(unit.Dp(6))
+			borderRect := image.Rectangle{Max: gtx.Constraints.Min}
+			defer clip.UniformRRect(borderRect, rr).Push(gtx.Ops).Pop()
+			paint.Fill(gtx.Ops, th.Bg)
+			// Border stroke.
+			defer clip.Stroke{
+				Path:  clip.UniformRRect(borderRect, rr).Path(gtx.Ops),
+				Width: float32(gtx.Dp(unit.Dp(1))),
+			}.Op().Push(gtx.Ops).Pop()
+			paint.Fill(gtx.Ops, misc.WithAlpha(th.Fg, 0x12))
+			return D{Size: borderRect.Max}
+		}),
+		layout.Stacked(func(gtx C) D {
+			return layout.Flex{
+				Axis: layout.Vertical,
+			}.Layout(gtx,
+				layout.Flexed(1, func(gtx C) D {
+					return layout.UniformInset(unit.Dp(6)).Layout(gtx, func(gtx C) D {
+						return v.inputEditor.Layout(gtx, th)
+					})
+				}),
+				layout.Rigid(func(gtx C) D {
+					return layout.UniformInset(unit.Dp(4)).Layout(gtx, func(gtx C) D {
+						return layout.Flex{
+							Axis:    layout.Horizontal,
+							Spacing: layout.SpaceBetween,
+						}.Layout(gtx,
+							layout.Flexed(1, func(gtx C) D {
+								return v.configStyle.Layout(gtx, th)
+							}),
 
-				label := i18n.Translate("Send")
-				bgColor := th.ContrastBg
-				if v.isPromptRunning() {
-					bgColor = misc.WithAlpha(bgColor, 0x40)
-					label = i18n.Translate("Stop")
-				}
-				btn := material.Button(th.Theme, &v.sendBtn, label)
-				btn.Background = bgColor
-				return btn.Layout(gtx)
-			}),
-		)
-	})
+							layout.Rigid(func(gtx C) D {
+								if !v.canSend() || !v.isPromptRunning() {
+									gtx = gtx.Disabled()
+								}
+
+								label := i18n.Translate("Send")
+								var bgColor = misc.WithAlpha(th.ContrastBg, 0x60)
+								if v.isPromptRunning() {
+									bgColor = th.ContrastBg
+									label = i18n.Translate("Stop")
+								}
+								btn := material.Button(th.Theme, &v.sendBtn, label)
+								btn.Background = bgColor
+								btn.Inset = layout.UniformInset(unit.Dp(2))
+								return btn.Layout(gtx)
+							}),
+						)
+					})
+				}),
+			)
+
+		}),
+	)
 }
 
 func (v *AgentChatView) layoutPermission(gtx C, th *theme.Theme) D {
@@ -312,7 +335,7 @@ func (v *AgentChatView) canSend() bool {
 }
 
 func (v *AgentChatView) doSend() {
-	text := v.inputEditor.Text()
+	text := strings.TrimSpace(v.inputEditor.Text())
 	if text == "" {
 		return
 	}
@@ -360,7 +383,9 @@ func NewAgentChat(session *agent.ACPSession) *AgentChatView {
 				Axis: layout.Vertical,
 			},
 		},
-		MaxWidth: unit.Dp(760),
+		MaxWidth:    unit.Dp(760),
+		configStyle: SessionConfigStyle{Session: session},
+		inputEditor: newInputBox(),
 	}
 
 	// Start with a no-op invalidator; callers should set a real one.

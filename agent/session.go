@@ -162,7 +162,10 @@ func (sn *ACPSession) SetMode(modeState acp.SessionModeState) {
 	sn.modeState = modeState
 }
 
-func (sn *ACPSession) UpdateMode(modeID string) {
+// Callback for Agent 'current_mode_update' session/update notification.
+// According to https://agentclientprotocol.com/protocol/session-config-options#relationship-to-session-modes,
+// this is not the prefered way to update mode.
+func (sn *ACPSession) OnAgentUpdateMode(modeID string) {
 	sn.mu.Lock()
 	defer sn.mu.Unlock()
 
@@ -181,6 +184,42 @@ func (sn *ACPSession) SetConfigOptions(options []acp.SessionConfigOption) {
 	defer sn.mu.Unlock()
 
 	sn.configOptions = options
+}
+
+// UpdateConfig update session configs.
+func (sn *ACPSession) UpdateConfig(ctx context.Context, configID acp.SessionConfigId, value any) error {
+	var req acp.SetSessionConfigOptionRequest
+
+	switch v := value.(type) {
+	case bool:
+		req = acp.SetSessionConfigOptionRequest{
+			Boolean: &acp.SetSessionConfigOptionBoolean{
+				SessionId: acp.SessionId(sn.SessionID),
+				ConfigId:  acp.SessionConfigId(configID),
+				Type:      "boolean",
+				Value:     v,
+			},
+		}
+	case acp.SessionConfigValueId:
+		req = acp.SetSessionConfigOptionRequest{
+			ValueId: &acp.SetSessionConfigOptionValueId{
+				SessionId: acp.SessionId(sn.SessionID),
+				ConfigId:  acp.SessionConfigId(configID),
+				Value:     acp.SessionConfigValueId(v),
+			},
+		}
+	}
+
+	newOpts, err := sn.Conn().Conn.SetSessionConfigOption(ctx, req)
+	if err != nil {
+		return err
+	}
+
+	sn.mu.Lock()
+	defer sn.mu.Unlock()
+
+	sn.configOptions = newOpts.ConfigOptions
+	return nil
 }
 
 func (sn *ACPSession) UpdateUsage(usage UsageUpdate) {
@@ -347,7 +386,7 @@ func (sn *ACPSession) SubscribeUpdates(ctx context.Context, sub SessionUpdateSub
 				case AvailableCommandsUpdate:
 					sn.SetCommands(update.AvailableCommands)
 				case CurrentModeUpdate:
-					sn.UpdateMode(string(update.CurrentModeId))
+					sn.OnAgentUpdateMode(string(update.CurrentModeId))
 				case ConfigOptionUpdate:
 					sn.SetConfigOptions(update.ConfigOptions)
 				case SessionInfoUpdate:
