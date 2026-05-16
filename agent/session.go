@@ -229,6 +229,13 @@ func (sn *ACPSession) UpdateUsage(usage UsageUpdate) {
 	sn.usage = usage
 }
 
+func (sn *ACPSession) Usage() UsageUpdate {
+	sn.mu.Lock()
+	defer sn.mu.Unlock()
+
+	return sn.usage
+}
+
 // Prompt sends content blocks to Agent. If there are no pending tool calls,
 // the turn ends and the Agent respond with a StopReason and optional Usage.
 func (sn *ACPSession) Prompt(ctx context.Context, contents ...acp.ContentBlock) (PromptResponse, error) {

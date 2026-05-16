@@ -43,11 +43,7 @@ func (u *UserMsgStyle) Layout(gtx C, th *theme.Theme, msg chatMessage) D {
 		call := macro.Stop()
 
 		// Draw background behind the label.
-		rect := clip.RRect{
-			Rect: image.Rectangle{Max: dims.Size},
-			SE:   0, SW: gtx.Dp(unit.Dp(6)),
-			NE: 0, NW: gtx.Dp(unit.Dp(6)),
-		}
+		rect := clip.UniformRRect(image.Rectangle{Max: dims.Size}, gtx.Dp(unit.Dp(6)))
 		defer rect.Push(gtx.Ops).Pop()
 		paint.FillShape(gtx.Ops, misc.WithAlpha(th.ContrastBg, 0x20), rect.Op(gtx.Ops))
 

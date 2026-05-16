@@ -53,7 +53,10 @@ func (t ToolCallStyle) layoutHeader(gtx C, th *theme.Theme) D {
 		Alignment: layout.Middle,
 	}.Layout(gtx,
 		layout.Rigid(func(gtx C) D {
-			return material.Label(th.Theme, th.TextSize, t.msg.Content).Layout(gtx)
+			title := material.Label(th.Theme, th.TextSize, t.msg.Content)
+			title.MaxLines = 1
+			title.State = &t.selection
+			return title.Layout(gtx)
 		}),
 		layout.Rigid(layout.Spacer{Width: unit.Dp(4)}.Layout),
 		layout.Rigid(func(gtx C) D {

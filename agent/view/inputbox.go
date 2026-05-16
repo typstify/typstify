@@ -2,6 +2,8 @@ package view
 
 import (
 	"image"
+	"os"
+	"strings"
 
 	"gioui.org/font"
 	"gioui.org/io/key"
@@ -19,12 +21,13 @@ import (
 
 type InputBox struct {
 	*gvcode.Editor
-	colorScheme     *syntax.ColorScheme
-	completionPopup *completion.CompletionPopup
-	submit          bool
+	colorScheme *syntax.ColorScheme
+	cmdPopup    *completion.CompletionPopup
+	rsPopup     *completion.CompletionPopup
+	submit      bool
 }
 
-func newInputBox() *InputBox {
+func newInputBox(session *agent.ACPSession) *InputBox {
 	ed := &gvcode.Editor{}
 
 	ed.WithOptions(
@@ -35,17 +38,20 @@ func newInputBox() *InputBox {
 	)
 
 	cm := &completion.DefaultCompletion{Editor: ed}
-	cmdCompletor := &commandCompletor{}
-	rsCompletor := &resourceCompletor{}
+	cmdCompletor := &commandCompletor{session: session}
+	rsCompletor := &resourceCompletor{session: session}
 
-	popup := completion.NewCompletionPopup(ed, cm)
-	cm.AddCompletor(cmdCompletor, popup)
-	cm.AddCompletor(rsCompletor, popup)
-	// ed.WithOptions(gvcode.WithAutoCompletion(cm))
+	cmdPopup := completion.NewCompletionPopup(ed, cm)
+	rsPopup := completion.NewCompletionPopup(ed, cm)
+	cm.AddCompletor(rsCompletor, rsPopup)
+	cm.AddCompletor(cmdCompletor, cmdPopup)
+
+	ed.WithOptions(gvcode.WithAutoCompletion(cm))
 
 	b := &InputBox{
-		Editor:          ed,
-		completionPopup: popup,
+		Editor:   ed,
+		cmdPopup: cmdPopup,
+		rsPopup:  rsPopup,
 	}
 
 	ed.RegisterCommand("input-box",
@@ -91,13 +97,19 @@ func (b *InputBox) Layout(gtx C, th *theme.Theme) D {
 		gvcode.WithColorScheme(cs),
 	)
 
-	gtx.Constraints.Max.Y = min(gtx.Dp(unit.Dp(100)), gtx.Constraints.Max.Y)
+	gtx.Constraints.Max.Y = min(gtx.Dp(unit.Dp(120)), gtx.Constraints.Max.Y)
+	popupSize := image.Point{
+		X: int(float32(gtx.Constraints.Max.X) * 0.8),
+		Y: int(float32(gtx.Constraints.Max.Y) * 0.9),
+	}
+	b.cmdPopup.Theme = th.Theme
+	b.cmdPopup.Size = popupSize
+	b.cmdPopup.TextSize = th.TextSize
+	b.rsPopup.Theme = th.Theme
+	b.rsPopup.Size = popupSize
+	b.rsPopup.TextSize = th.TextSize
 
 	return layout.UniformInset(unit.Dp(6)).Layout(gtx, func(gtx C) D {
-		b.completionPopup.Size = image.Point{
-			X: min(gtx.Dp(unit.Dp(350)), gtx.Constraints.Max.X),
-			Y: min(gtx.Dp(unit.Dp(250)), gtx.Constraints.Max.Y),
-		}
 		return b.Editor.Layout(gtx, th.Shaper)
 	})
 
@@ -110,43 +122,84 @@ type commandCompletor struct {
 	session *agent.ACPSession
 }
 
-// FilterAndRank implements [gvcode.Completor].
-func (c *commandCompletor) FilterAndRank(pattern string, candidates []gvcode.CompletionCandidate) []gvcode.CompletionCandidate {
-	return []gvcode.CompletionCandidate{}
-}
-
-// Suggest implements [gvcode.Completor].
-func (c *commandCompletor) Suggest(ctx gvcode.CompletionContext) []gvcode.CompletionCandidate {
-	return []gvcode.CompletionCandidate{}
-
-}
-
-// Trigger implements [gvcode.Completor].
 func (c *commandCompletor) Trigger() gvcode.Trigger {
-	return gvcode.Trigger{
-		Characters: []string{"/"},
-	}
+	return gvcode.Trigger{Characters: []string{"/"}}
 }
 
-// suggest project resources, such as files and folders.
+func (c *commandCompletor) Suggest(ctx gvcode.CompletionContext) []gvcode.CompletionCandidate {
+	if c.session == nil {
+		return nil
+	}
+	commands := c.session.AvailableCommands()
+	candidates := make([]gvcode.CompletionCandidate, 0, len(commands))
+	for _, cmd := range commands {
+		candidates = append(candidates, gvcode.CompletionCandidate{
+			Label:       "/" + cmd.Name,
+			TextEdit:    gvcode.TextEdit{NewText: cmd.Name},
+			Description: cmd.Description,
+			Kind:        "snippet",
+		})
+	}
+	return candidates
+}
+
+func (c *commandCompletor) FilterAndRank(pattern string, candidates []gvcode.CompletionCandidate) []gvcode.CompletionCandidate {
+	if pattern == "" {
+		return candidates
+	}
+	filtered := candidates[:0]
+	lower := strings.ToLower(pattern)
+	for _, cand := range candidates {
+		if strings.Contains(strings.ToLower(cand.Label), lower) {
+			filtered = append(filtered, cand)
+		}
+	}
+	return filtered
+}
+
 type resourceCompletor struct {
+	session *agent.ACPSession
 }
 
-// FilterAndRank implements [gvcode.Completor].
-func (r *resourceCompletor) FilterAndRank(pattern string, candidates []gvcode.CompletionCandidate) []gvcode.CompletionCandidate {
-	return []gvcode.CompletionCandidate{}
-
-}
-
-// Suggest implements [gvcode.Completor].
-func (r *resourceCompletor) Suggest(ctx gvcode.CompletionContext) []gvcode.CompletionCandidate {
-	return []gvcode.CompletionCandidate{}
-
-}
-
-// Trigger implements [gvcode.Completor].
 func (r *resourceCompletor) Trigger() gvcode.Trigger {
-	return gvcode.Trigger{
-		Characters: []string{"@"},
+	return gvcode.Trigger{Characters: []string{"@"}}
+}
+
+func (r *resourceCompletor) Suggest(ctx gvcode.CompletionContext) []gvcode.CompletionCandidate {
+	if r.session == nil {
+		return nil
 	}
+	entries, err := os.ReadDir(r.session.Cwd)
+	if err != nil {
+		return nil
+	}
+	candidates := make([]gvcode.CompletionCandidate, 0, len(entries))
+	for _, e := range entries {
+		name := e.Name()
+		kind := "file"
+		if e.IsDir() {
+			kind = "folder"
+			name += "/"
+		}
+		candidates = append(candidates, gvcode.CompletionCandidate{
+			Label:    name,
+			TextEdit: gvcode.TextEdit{NewText: name},
+			Kind:     kind,
+		})
+	}
+	return candidates
+}
+
+func (r *resourceCompletor) FilterAndRank(pattern string, candidates []gvcode.CompletionCandidate) []gvcode.CompletionCandidate {
+	if pattern == "" {
+		return candidates
+	}
+	filtered := candidates[:0]
+	lower := strings.ToLower(pattern)
+	for _, cand := range candidates {
+		if strings.Contains(strings.ToLower(cand.Label), lower) {
+			filtered = append(filtered, cand)
+		}
+	}
+	return filtered
 }
