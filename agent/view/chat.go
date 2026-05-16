@@ -10,6 +10,7 @@ import (
 
 	"gioui.org/font"
 	"gioui.org/layout"
+	"gioui.org/op"
 	"gioui.org/op/clip"
 	"gioui.org/op/paint"
 	"gioui.org/unit"
@@ -51,6 +52,7 @@ type AgentChatView struct {
 	messageStyles []messageStyle
 
 	list        widget.List
+	scroll      bool
 	inputEditor *InputBox
 	sendBtn     widget.Clickable
 
@@ -99,6 +101,7 @@ func (v *AgentChatView) Layout(gtx C, th *theme.Theme) D {
 		layout.Flexed(1, func(gtx C) D {
 			return v.layoutMessages(gtx, th, padding)
 		}),
+		layout.Rigid(layout.Spacer{Height: unit.Dp(16)}.Layout),
 		layout.Rigid(func(gtx C) D {
 			return layout.Inset{
 				Left:  padding,
@@ -195,6 +198,8 @@ func (v *AgentChatView) agentDisplayName() string {
 func (v *AgentChatView) layoutMessages(gtx C, th *theme.Theme, padding unit.Dp) D {
 	v.mu.Lock()
 	msgs := v.messages
+	scroll := v.scroll
+	v.scroll = false
 	v.mu.Unlock()
 
 	if len(msgs) == 0 {
@@ -205,6 +210,51 @@ func (v *AgentChatView) layoutMessages(gtx C, th *theme.Theme, padding unit.Dp) 
 		})
 	}
 
+	// recorded normal layout first, checks Position.OffsetLast, and only enables
+	// ScrollToEnd when the content actually overflows the viewport. If the content 
+	// fits, it keeps the list top-aligned.
+	if scroll {
+		return v.layoutMessagesWithScroll(gtx, th, padding, msgs)
+	}
+	if v.list.ScrollToEnd {
+		return v.layoutMessagesResetShortList(gtx, th, padding, msgs)
+	}
+
+	return v.layoutMessageList(gtx, th, padding, msgs)
+}
+
+func (v *AgentChatView) layoutMessagesWithScroll(gtx C, th *theme.Theme, padding unit.Dp, msgs []chatMessage) D {
+	v.list.ScrollToEnd = false
+
+	macro := op.Record(gtx.Ops)
+	dims := v.layoutMessageList(gtx, th, padding, msgs)
+	call := macro.Stop()
+
+	if v.list.Position.OffsetLast >= 0 {
+		call.Add(gtx.Ops)
+		return dims
+	}
+
+	v.list.ScrollToEnd = true
+	v.list.Position.BeforeEnd = false
+	return v.layoutMessageList(gtx, th, padding, msgs)
+}
+
+func (v *AgentChatView) layoutMessagesResetShortList(gtx C, th *theme.Theme, padding unit.Dp, msgs []chatMessage) D {
+	macro := op.Record(gtx.Ops)
+	dims := v.layoutMessageList(gtx, th, padding, msgs)
+	call := macro.Stop()
+
+	if v.list.Position.OffsetLast <= 0 {
+		call.Add(gtx.Ops)
+		return dims
+	}
+
+	v.list.ScrollToEnd = false
+	return v.layoutMessageList(gtx, th, padding, msgs)
+}
+
+func (v *AgentChatView) layoutMessageList(gtx C, th *theme.Theme, padding unit.Dp, msgs []chatMessage) D {
 	return v.list.Layout(gtx, len(msgs), func(gtx C, index int) D {
 		return layout.Inset{
 			Left:  padding,
@@ -264,29 +314,50 @@ func (v *AgentChatView) layoutInput(gtx C, th *theme.Theme) D {
 				}),
 				layout.Rigid(func(gtx C) D {
 					return layout.UniformInset(unit.Dp(4)).Layout(gtx, func(gtx C) D {
+						// if no options, the status bar still occupies the entire width.
+						gtx.Constraints.Min.X = gtx.Constraints.Max.X
 						return layout.Flex{
-							Axis:    layout.Horizontal,
-							Spacing: layout.SpaceBetween,
+							Axis:      layout.Horizontal,
+							Spacing:   layout.SpaceBetween,
+							Alignment: layout.Middle,
 						}.Layout(gtx,
 							layout.Flexed(1, func(gtx C) D {
 								return v.configStyle.Layout(gtx, th)
 							}),
 
 							layout.Rigid(func(gtx C) D {
-								if !v.canSend() || !v.isPromptRunning() {
-									gtx = gtx.Disabled()
-								}
+								return layout.Flex{
+									Axis:      layout.Horizontal,
+									Alignment: layout.Middle,
+								}.Layout(gtx,
+									layout.Rigid(func(gtx C) D {
+										usage := v.session.Usage()
+										if usage.Size == 0 {
+											return D{}
+										}
+										label := material.Label(th.Theme, th.TextSize*0.8, fmt.Sprintf("Tokens: %d/%d", usage.Used, usage.Size))
+										label.Color = misc.WithAlpha(th.Fg, 0x60)
+										return label.Layout(gtx)
+									}),
+									layout.Rigid(layout.Spacer{Width: unit.Dp(8)}.Layout),
+									layout.Rigid(func(gtx C) D {
+										if !v.canSend() || !v.isPromptRunning() {
+											gtx = gtx.Disabled()
+										}
 
-								label := i18n.Translate("Send")
-								var bgColor = misc.WithAlpha(th.ContrastBg, 0x60)
-								if v.isPromptRunning() {
-									bgColor = th.ContrastBg
-									label = i18n.Translate("Stop")
-								}
-								btn := material.Button(th.Theme, &v.sendBtn, label)
-								btn.Background = bgColor
-								btn.Inset = layout.UniformInset(unit.Dp(2))
-								return btn.Layout(gtx)
+										label := i18n.Translate("Send")
+										var bgColor = misc.WithAlpha(th.ContrastBg, 0xb6)
+										if v.isPromptRunning() {
+											bgColor = th.ContrastBg
+											label = i18n.Translate("Stop")
+										}
+										btn := material.Button(th.Theme, &v.sendBtn, label)
+										btn.Background = bgColor
+										btn.Color = th.Fg
+										btn.Inset = layout.UniformInset(unit.Dp(2))
+										return btn.Layout(gtx)
+									}),
+								)
 							}),
 						)
 					})
@@ -324,6 +395,12 @@ func (v *AgentChatView) layoutPermission(gtx C, th *theme.Theme) D {
 	}
 
 	return PermissionGrantPopup{Perm: perm}.Layout(gtx, th)
+}
+
+func (v *AgentChatView) scrollToEnd() {
+	v.mu.Lock()
+	defer v.mu.Unlock()
+	v.scroll = true
 }
 
 func (v *AgentChatView) isPromptRunning() bool {
@@ -385,7 +462,7 @@ func NewAgentChat(session *agent.ACPSession) *AgentChatView {
 		},
 		MaxWidth:    unit.Dp(760),
 		configStyle: SessionConfigStyle{Session: session},
-		inputEditor: newInputBox(),
+		inputEditor: newInputBox(session),
 	}
 
 	// Start with a no-op invalidator; callers should set a real one.

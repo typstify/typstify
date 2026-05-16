@@ -95,6 +95,7 @@ func (v *AgentChatView) OnUserMessage(chunk agent.UserMessageChunk) {
 				})
 			}
 			v.mu.Unlock()
+			v.scrollToEnd()
 			v.invalidate()
 			return
 		}
@@ -105,6 +106,7 @@ func (v *AgentChatView) OnUserMessage(chunk agent.UserMessageChunk) {
 		MessageID: derefStr(chunk.MessageId),
 	})
 	v.mu.Unlock()
+	v.scrollToEnd()
 	v.invalidate()
 }
 
@@ -116,6 +118,7 @@ func (v *AgentChatView) OnAgentMessage(chunk agent.AgentMessageChunk) {
 		if last.Kind == msgAgent && sameID(last.MessageID, chunk.MessageId) {
 			last.Content += text
 			v.mu.Unlock()
+			v.scrollToEnd()
 			v.invalidate()
 			return
 		}
@@ -126,6 +129,7 @@ func (v *AgentChatView) OnAgentMessage(chunk agent.AgentMessageChunk) {
 		MessageID: derefStr(chunk.MessageId),
 	})
 	v.mu.Unlock()
+	v.scrollToEnd()
 	v.invalidate()
 }
 
@@ -137,6 +141,7 @@ func (v *AgentChatView) OnAgentThought(chunk agent.AgentThoughtChunk) {
 		if last.Kind == msgThought && sameID(last.MessageID, chunk.MessageId) {
 			last.Content += text
 			v.mu.Unlock()
+			v.scrollToEnd()
 			v.invalidate()
 			return
 		}
@@ -147,6 +152,7 @@ func (v *AgentChatView) OnAgentThought(chunk agent.AgentThoughtChunk) {
 		MessageID: derefStr(chunk.MessageId),
 	})
 	v.mu.Unlock()
+	v.scrollToEnd()
 	v.invalidate()
 }
 
@@ -168,6 +174,7 @@ func (v *AgentChatView) OnToolCallInit(toolCall agent.ToolCall) {
 		ToolCall:  &tc,
 	})
 	v.mu.Unlock()
+	v.scrollToEnd()
 	v.invalidate()
 }
 
@@ -197,6 +204,7 @@ func (v *AgentChatView) OnToolCallUpdate(update agent.ToolCallUpdate) {
 				tc.RawOutput = update.RawOutput
 			}
 			v.mu.Unlock()
+			v.scrollToEnd()
 			v.invalidate()
 			return
 		}
@@ -213,6 +221,7 @@ func (v *AgentChatView) OnPlan(plan agent.Plan) {
 			v.messages[i].Plan = &p
 			v.messages[i].Content = formatPlan(&p)
 			v.mu.Unlock()
+			v.scrollToEnd()
 			v.invalidate()
 			return
 		}
@@ -224,6 +233,7 @@ func (v *AgentChatView) OnPlan(plan agent.Plan) {
 		Plan:    &p,
 	})
 	v.mu.Unlock()
+	v.scrollToEnd()
 	v.invalidate()
 }
 
