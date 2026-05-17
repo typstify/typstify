@@ -3,6 +3,7 @@ package view
 import (
 	"image"
 	"os"
+	"path/filepath"
 	"strings"
 
 	"gioui.org/font"
@@ -15,6 +16,7 @@ import (
 	"github.com/oligo/gvcode/addons/completion"
 	gvcolor "github.com/oligo/gvcode/color"
 	"github.com/oligo/gvcode/textstyle/syntax"
+	"github.com/sahilm/fuzzy"
 
 	"looz.ws/typstify/agent"
 )
@@ -123,7 +125,10 @@ type commandCompletor struct {
 }
 
 func (c *commandCompletor) Trigger() gvcode.Trigger {
-	return gvcode.Trigger{Characters: []string{"/"}}
+	return gvcode.Trigger{
+		Characters: []string{"/"},
+		Policy:     completion.ExplicitTriggerPolicy{},
+	}
 }
 
 func (c *commandCompletor) Suggest(ctx gvcode.CompletionContext) []gvcode.CompletionCandidate {
@@ -162,44 +167,75 @@ type resourceCompletor struct {
 }
 
 func (r *resourceCompletor) Trigger() gvcode.Trigger {
-	return gvcode.Trigger{Characters: []string{"@"}}
+	return gvcode.Trigger{
+		Characters: []string{"@"},
+		Policy:     completion.ExplicitTriggerPolicy{},
+	}
 }
 
 func (r *resourceCompletor) Suggest(ctx gvcode.CompletionContext) []gvcode.CompletionCandidate {
 	if r.session == nil {
 		return nil
 	}
-	entries, err := os.ReadDir(r.session.Cwd)
-	if err != nil {
-		return nil
-	}
-	candidates := make([]gvcode.CompletionCandidate, 0, len(entries))
-	for _, e := range entries {
-		name := e.Name()
+
+	root := r.session.Cwd
+	candidates := []gvcode.CompletionCandidate{}
+
+	err := filepath.WalkDir(root, func(path string, e os.DirEntry, err error) error {
+		if err != nil || path == root {
+			return nil
+		}
+
+		rel, err := filepath.Rel(root, path)
+		if err != nil || strings.HasPrefix(rel, ".."+string(filepath.Separator)) || rel == ".." {
+			return nil
+		}
+
+		resourcePath := filepath.ToSlash(rel)
 		kind := "file"
 		if e.IsDir() {
 			kind = "folder"
-			name += "/"
+			resourcePath += "/"
 		}
 		candidates = append(candidates, gvcode.CompletionCandidate{
-			Label:    name,
-			TextEdit: gvcode.TextEdit{NewText: name},
+			Label:    resourcePath,
+			TextEdit: gvcode.TextEdit{NewText: resourcePath},
 			Kind:     kind,
 		})
+		return nil
+	})
+	if err != nil {
+		return nil
 	}
 	return candidates
+}
+
+type resourceCandidateSource struct {
+	candidates []gvcode.CompletionCandidate
+}
+
+func (src *resourceCandidateSource) String(i int) string {
+	return src.candidates[i].Label
+}
+
+func (src *resourceCandidateSource) Len() int {
+	return len(src.candidates)
 }
 
 func (r *resourceCompletor) FilterAndRank(pattern string, candidates []gvcode.CompletionCandidate) []gvcode.CompletionCandidate {
 	if pattern == "" {
 		return candidates
 	}
-	filtered := candidates[:0]
-	lower := strings.ToLower(pattern)
-	for _, cand := range candidates {
-		if strings.Contains(strings.ToLower(cand.Label), lower) {
-			filtered = append(filtered, cand)
-		}
+
+	pattern = strings.ToLower(strings.TrimLeft(strings.ReplaceAll(pattern, "\\", "/"), "/"))
+	if pattern == "" || strings.Contains(pattern, "..") {
+		return nil
+	}
+
+	matches := fuzzy.FindFrom(pattern, &resourceCandidateSource{candidates: candidates})
+	filtered := make([]gvcode.CompletionCandidate, 0, len(matches))
+	for _, match := range matches {
+		filtered = append(filtered, candidates[match.Index])
 	}
 	return filtered
 }
