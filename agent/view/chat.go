@@ -28,7 +28,7 @@ type (
 	D = layout.Dimensions
 )
 
-var _ agent.SessionUpdateSubsciber = (*AgentChatView)(nil)
+var _ agent.SessionUpdateSubsciber = (*AgentChat)(nil)
 
 // permissionState tracks a pending permission request with clickable option buttons.
 type permissionState struct {
@@ -41,8 +41,8 @@ type messageStyle interface {
 	Layout(gtx C, th *theme.Theme, msg chatMessage) D
 }
 
-// AgentChatView renders a chat conversation with an ACP agent.
-type AgentChatView struct {
+// AgentChat renders a chat conversation with an ACP agent.
+type AgentChat struct {
 	session   *agent.ACPSession
 	ctxCancel context.CancelFunc
 
@@ -62,11 +62,11 @@ type AgentChatView struct {
 	MaxWidth unit.Dp
 }
 
-func (v *AgentChatView) SetInvalidator(fn func()) {
+func (v *AgentChat) SetInvalidator(fn func()) {
 	v.invalidate = fn
 }
 
-func (v *AgentChatView) Layout(gtx C, th *theme.Theme) D {
+func (v *AgentChat) Layout(gtx C, th *theme.Theme) D {
 	// Handle submit events from the input editor.
 	if ok := v.inputEditor.Update(gtx); ok {
 		v.doSend()
@@ -123,7 +123,7 @@ func (v *AgentChatView) Layout(gtx C, th *theme.Theme) D {
 
 }
 
-func (v *AgentChatView) layoutHeader(gtx C, th *theme.Theme) D {
+func (v *AgentChat) layoutHeader(gtx C, th *theme.Theme) D {
 	agentName := v.agentDisplayName()
 	sessionTitle := v.session.Title()
 	mode := v.session.CurrentModeID()
@@ -179,7 +179,7 @@ func (v *AgentChatView) layoutHeader(gtx C, th *theme.Theme) D {
 	})
 }
 
-func (v *AgentChatView) agentDisplayName() string {
+func (v *AgentChat) agentDisplayName() string {
 	if !v.session.Active() {
 		return "Agent"
 	}
@@ -195,7 +195,7 @@ func (v *AgentChatView) agentDisplayName() string {
 	return "Agent"
 }
 
-func (v *AgentChatView) layoutMessages(gtx C, th *theme.Theme, padding unit.Dp) D {
+func (v *AgentChat) layoutMessages(gtx C, th *theme.Theme, padding unit.Dp) D {
 	v.mu.Lock()
 	msgs := v.messages
 	scroll := v.scroll
@@ -211,7 +211,7 @@ func (v *AgentChatView) layoutMessages(gtx C, th *theme.Theme, padding unit.Dp) 
 	}
 
 	// recorded normal layout first, checks Position.OffsetLast, and only enables
-	// ScrollToEnd when the content actually overflows the viewport. If the content 
+	// ScrollToEnd when the content actually overflows the viewport. If the content
 	// fits, it keeps the list top-aligned.
 	if scroll {
 		return v.layoutMessagesWithScroll(gtx, th, padding, msgs)
@@ -223,7 +223,7 @@ func (v *AgentChatView) layoutMessages(gtx C, th *theme.Theme, padding unit.Dp) 
 	return v.layoutMessageList(gtx, th, padding, msgs)
 }
 
-func (v *AgentChatView) layoutMessagesWithScroll(gtx C, th *theme.Theme, padding unit.Dp, msgs []chatMessage) D {
+func (v *AgentChat) layoutMessagesWithScroll(gtx C, th *theme.Theme, padding unit.Dp, msgs []chatMessage) D {
 	v.list.ScrollToEnd = false
 
 	macro := op.Record(gtx.Ops)
@@ -240,7 +240,7 @@ func (v *AgentChatView) layoutMessagesWithScroll(gtx C, th *theme.Theme, padding
 	return v.layoutMessageList(gtx, th, padding, msgs)
 }
 
-func (v *AgentChatView) layoutMessagesResetShortList(gtx C, th *theme.Theme, padding unit.Dp, msgs []chatMessage) D {
+func (v *AgentChat) layoutMessagesResetShortList(gtx C, th *theme.Theme, padding unit.Dp, msgs []chatMessage) D {
 	macro := op.Record(gtx.Ops)
 	dims := v.layoutMessageList(gtx, th, padding, msgs)
 	call := macro.Stop()
@@ -254,7 +254,7 @@ func (v *AgentChatView) layoutMessagesResetShortList(gtx C, th *theme.Theme, pad
 	return v.layoutMessageList(gtx, th, padding, msgs)
 }
 
-func (v *AgentChatView) layoutMessageList(gtx C, th *theme.Theme, padding unit.Dp, msgs []chatMessage) D {
+func (v *AgentChat) layoutMessageList(gtx C, th *theme.Theme, padding unit.Dp, msgs []chatMessage) D {
 	return v.list.Layout(gtx, len(msgs), func(gtx C, index int) D {
 		return layout.Inset{
 			Left:  padding,
@@ -266,7 +266,7 @@ func (v *AgentChatView) layoutMessageList(gtx C, th *theme.Theme, padding unit.D
 	})
 }
 
-func (v *AgentChatView) layoutMessage(gtx C, th *theme.Theme, msgs []chatMessage, index int) D {
+func (v *AgentChat) layoutMessage(gtx C, th *theme.Theme, msgs []chatMessage, index int) D {
 	msg := msgs[index]
 	if len(v.messageStyles) <= index {
 		switch msg.Kind {
@@ -288,7 +288,7 @@ func (v *AgentChatView) layoutMessage(gtx C, th *theme.Theme, msgs []chatMessage
 	return v.messageStyles[index].Layout(gtx, th, msg)
 }
 
-func (v *AgentChatView) layoutInput(gtx C, th *theme.Theme) D {
+func (v *AgentChat) layoutInput(gtx C, th *theme.Theme) D {
 	return layout.Stack{}.Layout(gtx,
 		layout.Expanded(func(gtx C) D {
 			rr := gtx.Dp(unit.Dp(6))
@@ -368,7 +368,7 @@ func (v *AgentChatView) layoutInput(gtx C, th *theme.Theme) D {
 	)
 }
 
-func (v *AgentChatView) layoutPermission(gtx C, th *theme.Theme) D {
+func (v *AgentChat) layoutPermission(gtx C, th *theme.Theme) D {
 	v.mu.Lock()
 	perm := v.pendingPerm
 	v.mu.Unlock()
@@ -397,21 +397,21 @@ func (v *AgentChatView) layoutPermission(gtx C, th *theme.Theme) D {
 	return PermissionGrantPopup{Perm: perm}.Layout(gtx, th)
 }
 
-func (v *AgentChatView) scrollToEnd() {
+func (v *AgentChat) scrollToEnd() {
 	v.mu.Lock()
 	defer v.mu.Unlock()
 	v.scroll = true
 }
 
-func (v *AgentChatView) isPromptRunning() bool {
+func (v *AgentChat) isPromptRunning() bool {
 	return v.session.HasOngoingTurn()
 }
 
-func (v *AgentChatView) canSend() bool {
+func (v *AgentChat) canSend() bool {
 	return len(v.inputEditor.Text()) > 0
 }
 
-func (v *AgentChatView) doSend() {
+func (v *AgentChat) doSend() {
 	text := strings.TrimSpace(v.inputEditor.Text())
 	if text == "" {
 		return
@@ -439,20 +439,22 @@ func (v *AgentChatView) doSend() {
 	}()
 }
 
-func (v *AgentChatView) Session() *agent.ACPSession {
+func (v *AgentChat) Session() *agent.ACPSession {
 	return v.session
 }
 
 // Close cancels the subscription context.
-func (v *AgentChatView) Close() {
-	v.ctxCancel()
+func (v *AgentChat) Close() {
+	if v.ctxCancel != nil {
+		v.ctxCancel()
+	}
 }
 
 // NewAgentChat creates a chat view and subscribes to session updates.
-func NewAgentChat(session *agent.ACPSession) *AgentChatView {
+func NewAgentChat(session *agent.ACPSession) *AgentChat {
 	ctx, cancel := context.WithCancel(context.Background())
 
-	chat := &AgentChatView{
+	chat := &AgentChat{
 		session:   session,
 		ctxCancel: cancel,
 		list: widget.List{

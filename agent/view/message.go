@@ -71,7 +71,7 @@ func formatPlan(plan *agent.Plan) string {
 
 // --- SessionUpdateSubsciber ---
 
-func (v *AgentChatView) OnUserMessage(chunk agent.UserMessageChunk) {
+func (v *AgentChat) OnUserMessage(chunk agent.UserMessageChunk) {
 	text := extractText(chunk.Content)
 	v.mu.Lock()
 	if len(v.messages) > 0 {
@@ -110,7 +110,7 @@ func (v *AgentChatView) OnUserMessage(chunk agent.UserMessageChunk) {
 	v.invalidate()
 }
 
-func (v *AgentChatView) OnAgentMessage(chunk agent.AgentMessageChunk) {
+func (v *AgentChat) OnAgentMessage(chunk agent.AgentMessageChunk) {
 	text := extractText(chunk.Content)
 	v.mu.Lock()
 	if len(v.messages) > 0 {
@@ -133,7 +133,7 @@ func (v *AgentChatView) OnAgentMessage(chunk agent.AgentMessageChunk) {
 	v.invalidate()
 }
 
-func (v *AgentChatView) OnAgentThought(chunk agent.AgentThoughtChunk) {
+func (v *AgentChat) OnAgentThought(chunk agent.AgentThoughtChunk) {
 	text := extractText(chunk.Content)
 	v.mu.Lock()
 	if len(v.messages) > 0 {
@@ -156,7 +156,7 @@ func (v *AgentChatView) OnAgentThought(chunk agent.AgentThoughtChunk) {
 	v.invalidate()
 }
 
-func (v *AgentChatView) OnToolCallInit(toolCall agent.ToolCall) {
+func (v *AgentChat) OnToolCallInit(toolCall agent.ToolCall) {
 	v.mu.Lock()
 	// Deduplicate by ToolCallId.
 	for i := len(v.messages) - 1; i >= 0; i-- {
@@ -178,7 +178,7 @@ func (v *AgentChatView) OnToolCallInit(toolCall agent.ToolCall) {
 	v.invalidate()
 }
 
-func (v *AgentChatView) OnToolCallUpdate(update agent.ToolCallUpdate) {
+func (v *AgentChat) OnToolCallUpdate(update agent.ToolCallUpdate) {
 	v.mu.Lock()
 	for i := len(v.messages) - 1; i >= 0; i-- {
 		if v.messages[i].Kind == msgToolCall && v.messages[i].ToolCall != nil &&
@@ -212,7 +212,7 @@ func (v *AgentChatView) OnToolCallUpdate(update agent.ToolCallUpdate) {
 	v.mu.Unlock()
 }
 
-func (v *AgentChatView) OnPlan(plan agent.Plan) {
+func (v *AgentChat) OnPlan(plan agent.Plan) {
 	v.mu.Lock()
 	// Replace latest plan message or insert new one.
 	for i := len(v.messages) - 1; i >= 0; i-- {
@@ -237,7 +237,7 @@ func (v *AgentChatView) OnPlan(plan agent.Plan) {
 	v.invalidate()
 }
 
-func (v *AgentChatView) OnRequestPermission(params agent.PermissionGrantRequest) {
+func (v *AgentChat) OnRequestPermission(params agent.PermissionGrantRequest) {
 	v.mu.Lock()
 	buttons := make([]widget.Clickable, len(params.Req.Options))
 	v.pendingPerm = &permissionState{
