@@ -1,13 +1,10 @@
 package ui
 
 import (
-	"context"
-	"log"
-
 	"github.com/oligo/gioview/theme"
 	"github.com/oligo/gioview/view"
-	agentview "looz.ws/typstify/agent/view"
 	"looz.ws/typstify/service"
+	"looz.ws/typstify/ui/assistant"
 	"looz.ws/typstify/ui/console"
 	"looz.ws/typstify/ui/navpanel"
 	"looz.ws/typstify/ui/preview"
@@ -56,14 +53,6 @@ type HomeView struct {
 	previewBar     *widgets.ResizeBar
 	previewer      *preview.Previewer
 
-	// chat resizer (editor | chat split)
-	chatResizer *widgets.Resize
-	chatBar     *widgets.ResizeBar
-
-	// chat panel (global, toggled from status bar)
-	showChat bool
-	chatView *agentview.AgentChatView
-
 	welcome WelcomeView
 }
 
@@ -82,42 +71,14 @@ func (hv *HomeView) toggleConsole() {
 
 	}
 }
+
 func (hv *HomeView) toggleChat() {
-	hv.showChat = !hv.showChat
-
-	if !hv.showChat {
-		return
+	intent := view.Intent{
+		Target:      assistant.AgentChatViewID,
+		ShowAsModal: false,
+		RequireNew:  false,
 	}
-
-	projectDir := hv.srv.CurrentProjectDir()
-	if projectDir == "" {
-		hv.showChat = false
-		return
-	}
-
-	// If we already have a chat view for this project, just show it.
-	if hv.chatView != nil && hv.chatView.Session() != nil && hv.chatView.Session().Cwd == projectDir {
-		return
-	}
-
-	// Close old chat view if switching projects.
-	if hv.chatView != nil {
-		hv.chatView.Close()
-		hv.srv.CloseACPSession(context.Background(), hv.chatView.Session().SessionID)
-		hv.chatView = nil
-	}
-
-	session, err := hv.srv.StartACPSession(context.Background(), projectDir)
-	if err != nil {
-		log.Printf("chat: failed to start ACP session: %v", err)
-		hv.showChat = false
-		return
-	}
-
-	hv.chatView = agentview.NewAgentChat(session)
-	hv.chatView.SetInvalidator(func() {
-		hv.srv.RefreshWindow()
-	})
+	hv.srv.RequestSwitch(intent)
 }
 
 func (hv *HomeView) update(gtx C) {
@@ -340,53 +301,19 @@ func (hv *HomeView) layoutView(gtx C, th *theme.Theme) D {
 	}
 
 	showPreview := ok && pv.IsVisible()
-	showChat := hv.showChat && hv.chatView != nil
 
-	// Case 1: Neither preview nor chat.
-	if !showPreview && !showChat {
-		return cv.Layout(gtx, th)
-	}
-
-	// Build the editor area, possibly with chat.
-	editorArea := func(gtx C) D {
-		return cv.Layout(gtx, th)
-	}
-
-	if showChat {
-		if hv.chatResizer == nil {
-			hv.chatResizer = &widgets.Resize{Axis: layout.Horizontal, Ratio: 0.6}
-		}
-
-		originalEditor := editorArea
-		editorArea = func(gtx C) D {
-			return hv.chatResizer.Layout(gtx,
-				originalEditor,
-				func(gtx C) D {
-					return hv.chatView.Layout(gtx, th)
-				},
-				func(gtx C) D {
-					if hv.chatBar == nil {
-						hv.chatBar = widgets.NewResizeBar(layout.Vertical)
-					}
-					return hv.chatBar.Layout(gtx, th)
-				},
-			)
-		}
-	}
-
-	// Case 2: Only chat (no preview).
 	if !showPreview {
-		return editorArea(gtx)
+		return cv.Layout(gtx, th)
 	}
 
-	// Cases 3 & 4: Preview is visible.
+	// Preview is visible.
 	if hv.previewResizer == nil {
 		hv.previewResizer = &widgets.Resize{Axis: layout.Horizontal, Ratio: 0.7}
 	}
 
 	return hv.previewResizer.Layout(gtx,
 		func(gtx C) D {
-			return editorArea(gtx)
+			return cv.Layout(gtx, th)
 		},
 		func(gtx C) D {
 			return pv.LayoutPreview(gtx, th)
@@ -404,12 +331,6 @@ func (hv *HomeView) OnClose() {
 	hv.sidebar.Close()
 	if hv.previewer != nil {
 		hv.previewer.Destroy()
-	}
-	if hv.chatView != nil {
-		hv.chatView.Close()
-		if hv.chatView.Session() != nil {
-			hv.srv.CloseACPSession(context.Background(), hv.chatView.Session().SessionID)
-		}
 	}
 }
 

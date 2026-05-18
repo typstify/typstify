@@ -17,7 +17,9 @@ import (
 	"github.com/oligo/gioview/theme"
 	"github.com/oligo/gioview/view"
 	"github.com/oligo/gvcode"
+	agentview "looz.ws/typstify/agent/view"
 	"looz.ws/typstify/editor"
+	"looz.ws/typstify/i18n"
 	"looz.ws/typstify/lsp"
 	lspProtocol "looz.ws/typstify/lsp/protocol"
 	"looz.ws/typstify/service"
@@ -25,6 +27,7 @@ import (
 	uipreview "looz.ws/typstify/ui/preview"
 	"looz.ws/typstify/ui/viewer"
 	"looz.ws/typstify/utils"
+	"looz.ws/typstify/widgets"
 	appIcons "looz.ws/typstify/widgets/icons"
 
 	"gioui.org/io/key"
@@ -32,6 +35,7 @@ import (
 	"gioui.org/op"
 	"gioui.org/unit"
 	"gioui.org/widget"
+	"gioui.org/widget/material"
 )
 
 type (
@@ -46,6 +50,7 @@ var (
 	exportIcon        = appIcons.NewSvgIcon(appIcons.ArrowRightFromLine)
 	presentationIcon  = appIcons.NewSvgIcon(appIcons.Presentation)
 	tocIcon           = appIcons.NewSvgIcon(appIcons.TableOfContents)
+	chatIcon          = appIcons.NewSvgIcon(appIcons.Sparkles)
 )
 
 type TypstEditor struct {
@@ -66,6 +71,15 @@ type TypstEditor struct {
 	symbolsDirty    atomic.Bool
 	symbolDebouncer *utils.Debouncer
 	lastCaretPos    gvcode.Position
+
+	// chat resizer (editor | chat split)
+	chatResizer *widgets.Resize
+	chatBar     *widgets.ResizeBar
+
+	// chat panel (toggled from editor header)
+	showChat  bool
+	chatView  *agentview.AgentChat
+	chatReady atomic.Bool
 }
 
 func (te *TypstEditor) ID() view.ViewID {
@@ -201,12 +215,13 @@ func (te *TypstEditor) headerActions() []editorHeaderAction {
 				})
 			},
 		},
-		// {
-		// 	Name: "Outline",
-		// 	Icon: tocIcon,
-		// 	OnClicked: func(gtx C) {
-		// 	},
-		// },
+		{
+			Name: "AI Assistant",
+			Icon: chatIcon,
+			OnClicked: func(gtx C) {
+				te.toggleChat()
+			},
+		},
 		{
 			Name: "Search & Replace",
 			Icon: searchIcon,
@@ -259,6 +274,34 @@ func (te *TypstEditor) Layout(gtx layout.Context, th *theme.Theme) layout.Dimens
 			}),
 			layout.Rigid(layout.Spacer{Height: unit.Dp(4)}.Layout),
 			layout.Flexed(1, func(gtx C) D {
+				if te.showChat {
+					if te.chatResizer == nil {
+						te.chatResizer = &widgets.Resize{Axis: layout.Horizontal, Ratio: 0.6}
+					}
+
+					return te.chatResizer.Layout(gtx,
+						func(gtx C) D {
+							return te.srcEditor.Layout(gtx, th, te.srv.Settings().Editor())
+						},
+						func(gtx C) D {
+							if te.chatReady.Load() && te.chatView != nil {
+								return te.chatView.Layout(gtx, th)
+							} else {
+								return layout.Center.Layout(gtx, func(gtx C) D {
+									return material.Label(th.Theme, th.TextSize, i18n.Translate("Starting AI Assistant...")).Layout(gtx)
+								})
+							}
+						},
+						func(gtx C) D {
+							if te.chatBar == nil {
+								te.chatBar = widgets.NewResizeBar(layout.Vertical)
+							}
+							return te.chatBar.Layout(gtx, th)
+						},
+					)
+
+				}
+
 				return te.srcEditor.Layout(gtx, th, te.srv.Settings().Editor())
 			}),
 		)
@@ -311,6 +354,48 @@ func (te *TypstEditor) togglePreview(gtx C) {
 
 	if serverAddr != "" && te.uiPreviewer != nil {
 		te.uiPreviewer.Navigate(serverAddr)
+	}
+}
+
+func (te *TypstEditor) toggleChat() {
+	te.showChat = !te.showChat
+
+	if !te.showChat {
+		return
+	}
+
+	projectDir := te.srv.CurrentProjectDir()
+	if projectDir == "" {
+		te.showChat = false
+		return
+	}
+
+	// If we already have a chat view for this project, just show it.
+	if te.chatView != nil && te.chatView.Session() != nil && te.chatView.Session().Cwd == projectDir {
+		return
+	}
+
+	// Close old chat view if switching projects.
+	if te.chatView != nil {
+		te.closeChat()
+	}
+
+	if te.chatReady.CompareAndSwap(false, true) {
+		go func() {
+			session, err := te.srv.StartACPSession(context.Background(), projectDir)
+			if err != nil {
+				log.Printf("chat: failed to start ACP session: %v", err)
+				te.showChat = false
+				te.chatReady.Store(false)
+				return
+			}
+
+			te.chatView = agentview.NewAgentChat(session)
+			te.chatView.SetInvalidator(func() {
+				te.srv.RefreshWindow()
+			})
+			te.chatReady.Store(true)
+		}()
 	}
 }
 
@@ -382,11 +467,23 @@ func (te *TypstEditor) CaretLine() int {
 	return te.lastCaretPos.Line
 }
 
+func (te *TypstEditor) closeChat() {
+	// Close chat view.
+	if te.chatView != nil {
+		te.chatView.Close()
+		te.srv.CloseACPSession(context.Background(), te.chatView.Session().SessionID)
+		te.chatView = nil
+	}
+}
+
 func (te *TypstEditor) OnFinish() {
 	te.BaseView.OnFinish()
 	if te.srcEditor != nil {
 		te.srcEditor.Close()
 	}
+
+	// Close chat view.
+	te.closeChat()
 }
 
 func (te *TypstEditor) openLink(link string, external bool) {
