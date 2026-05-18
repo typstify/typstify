@@ -9,6 +9,7 @@ import (
 	"github.com/oligo/gioview/view"
 	"looz.ws/typstify/i18n"
 	"looz.ws/typstify/service"
+	"looz.ws/typstify/ui/assistant"
 	"looz.ws/typstify/widgets"
 	"looz.ws/typstify/widgets/icons"
 
@@ -66,7 +67,10 @@ func NewNavDrawer(vm view.ViewManager, srv *service.ServiceFacade) *NavDrawer {
 		}
 	})
 
+	sessionsPanel := assistant.NewSessionHistory(srv)
+
 	drawer.AddSection(outlineNav)
+	drawer.AddSection(sessionsPanel)
 
 	drawer.sectionSwitchPopup = &widgets.Popup{
 		MaxHeight: unit.Dp(400),

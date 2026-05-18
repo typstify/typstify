@@ -73,6 +73,11 @@ func (hv *HomeView) toggleConsole() {
 }
 
 func (hv *HomeView) toggleChat() {
+	projectDir := hv.srv.CurrentProjectDir()
+	if projectDir == "" {
+		return
+	}
+
 	intent := view.Intent{
 		Target:      assistant.AgentChatViewID,
 		ShowAsModal: false,
