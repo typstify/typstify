@@ -267,9 +267,13 @@ func (v *AgentChat) layoutMessageList(gtx C, th *theme.Theme, padding unit.Dp, m
 }
 
 func (v *AgentChat) layoutMessage(gtx C, th *theme.Theme, msgs []chatMessage, index int) D {
-	msg := msgs[index]
-	if len(v.messageStyles) <= index {
-		switch msg.Kind {
+	// Because of auto-scrolling to the end when list overflows, the index may not start from 0,
+	// so we need to use a loop to append to messageStyles to catch up with the index.
+	for len(v.messageStyles) <= index {
+		idx := len(v.messageStyles)
+		msgKind := msgs[idx].Kind
+
+		switch msgKind {
 		case msgUser:
 			v.messageStyles = append(v.messageStyles, &UserMsgStyle{})
 		case msgAgent:
@@ -281,10 +285,11 @@ func (v *AgentChat) layoutMessage(gtx C, th *theme.Theme, msgs []chatMessage, in
 		case msgPlan:
 			v.messageStyles = append(v.messageStyles, &PlanMsgStyle{})
 		default:
-			log.Panicf("unknown message: %v", msg.Kind)
+			log.Panicf("unknown message: %v", msgKind)
 		}
 	}
 
+	msg := msgs[index]
 	return v.messageStyles[index].Layout(gtx, th, msg)
 }
 
