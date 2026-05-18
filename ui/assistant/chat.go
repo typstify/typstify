@@ -11,6 +11,7 @@ import (
 	"gioui.org/widget/material"
 	"github.com/oligo/gioview/theme"
 	"github.com/oligo/gioview/view"
+	"looz.ws/typstify/agent"
 	agentview "looz.ws/typstify/agent/view"
 	"looz.ws/typstify/i18n"
 	"looz.ws/typstify/service"
@@ -50,7 +51,13 @@ func (cv *AgentChatView) Title() string {
 
 func (cv *AgentChatView) OnNavTo(intent view.Intent) error {
 	cv.BaseView.OnNavTo(intent)
-	cv.init()
+	sn, ok := intent.Params["session"].(*agent.ACPSession)
+	if !ok {
+		cv.init()
+	} else {
+		cv.loadExisting(sn)
+	}
+
 	return nil
 }
 
@@ -112,6 +119,37 @@ func (cv *AgentChatView) init() {
 				cv.srv.RefreshWindow()
 			})
 			cv.chatReady.Store(true)
+			cv.srv.RefreshWindow()
+		}()
+	}
+}
+
+func (cv *AgentChatView) loadExisting(sn *agent.ACPSession) {
+	if sn == nil {
+		log.Println("Invalid session")
+		return
+	}
+
+	// Close old chat view.
+	if cv.chat != nil {
+		cv.closeChat()
+	}
+
+	if cv.chatReady.CompareAndSwap(false, true) {
+		go func() {
+			session, err := cv.srv.AcpSessionManager().LoadSession(context.Background(), sn)
+			if err != nil {
+				log.Printf("chat: failed to load ACP session: %v", err)
+				cv.chatReady.Store(false)
+				return
+			}
+
+			cv.chat = agentview.NewAgentChat(session)
+			cv.chat.SetInvalidator(func() {
+				cv.srv.RefreshWindow()
+			})
+			cv.chatReady.Store(true)
+			cv.srv.RefreshWindow()
 		}()
 	}
 }

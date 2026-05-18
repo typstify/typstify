@@ -107,9 +107,10 @@ func (sm *SessionManager) Start(ctx context.Context, agentConfig AgentConfig, cl
 
 func (sm *SessionManager) NewSession(ctx context.Context, cwd string) (*ACPSession, error) {
 	sm.mu.Lock()
-	defer sm.mu.Unlock()
+	conn := sm.conn
+	sm.mu.Unlock()
 
-	if sm.conn == nil {
+	if conn == nil {
 		return nil, fmt.Errorf("not connected to agent")
 	}
 
@@ -118,7 +119,7 @@ func (sm *SessionManager) NewSession(ctx context.Context, cwd string) (*ACPSessi
 		return nil, err
 	}
 
-	resp, err := sm.conn.Conn.NewSession(ctx, acp.NewSessionRequest{
+	resp, err := conn.Conn.NewSession(ctx, acp.NewSessionRequest{
 		Cwd:        cwd,
 		McpServers: []acp.McpServer{},
 	})
@@ -129,27 +130,26 @@ func (sm *SessionManager) NewSession(ctx context.Context, cwd string) (*ACPSessi
 	}
 	session := NewACPSession(string(resp.SessionId), cwd)
 	session.SetMode(*resp.Modes)
-	session.SetConn(sm.conn)
+	session.SetConn(conn)
 	session.SetConfigOptions(resp.ConfigOptions)
 
+	sm.mu.Lock()
 	sm.activeSessions = append(sm.activeSessions, session)
-
+	sm.mu.Unlock()
+	log.Println("created new session: ", session.SessionID)
 	return session, nil
 }
 
 // ListSessions from Agent. Sessions returned are not *active*, callers need to call LoadSession to get an active one.
 func (sm *SessionManager) ListSessions(ctx context.Context, filterCwd string) ([]*ACPSession, error) {
-	sm.mu.Lock()
-	defer sm.mu.Unlock()
-
 	if sm.conn == nil {
 		return nil, fmt.Errorf("not connected to agent")
 	}
 
 	// If the agent does not support loading sessions, return without error.
 	listCap := sm.conn.AgentCapabilities.SessionCapabilities.List
-	if listCap != nil {
-		return nil, nil
+	if listCap == nil {
+		return nil, fmt.Errorf("Agent does not support listing sessions")
 	}
 
 	cwd, err := filepath.Abs(filterCwd)
@@ -162,6 +162,7 @@ func (sm *SessionManager) ListSessions(ctx context.Context, filterCwd string) ([
 	cursor := ""
 	first := true
 	for cursor != "" || first {
+		first = false
 		resp, err := sm.conn.Conn.ListSessions(ctx, acp.ListSessionsRequest{
 			Cwd:    &cwd,
 			Cursor: &cursor,
@@ -194,9 +195,6 @@ func (sm *SessionManager) ListSessions(ctx context.Context, filterCwd string) ([
 // LoadSession loads a session from the Agent. The Agent will replay the entire
 // conversation to the Client in the form of session/update notifications.
 func (sm *SessionManager) LoadSession(ctx context.Context, session *ACPSession) (*ACPSession, error) {
-	sm.mu.Lock()
-	defer sm.mu.Unlock()
-
 	if session.Active() {
 		return session, nil
 	}
@@ -210,6 +208,13 @@ func (sm *SessionManager) LoadSession(ctx context.Context, session *ACPSession) 
 		return nil, nil
 	}
 
+	// Agents will call 'session/update' before returing from LoadSession, so we have to make
+	// it an active session before the rpc return.
+	sm.mu.Lock()
+	session.SetConn(sm.conn)
+	sm.activeSessions = append(sm.activeSessions, session)
+	sm.mu.Unlock()
+
 	resp, err := sm.conn.Conn.LoadSession(ctx, acp.LoadSessionRequest{
 		Cwd:        session.Cwd,
 		McpServers: []acp.McpServer{},
@@ -221,11 +226,8 @@ func (sm *SessionManager) LoadSession(ctx context.Context, session *ACPSession) 
 		return nil, err
 	}
 
-	session.SetConn(sm.conn)
 	session.SetMode(*resp.Modes)
 	session.SetConfigOptions(resp.ConfigOptions)
-
-	sm.activeSessions = append(sm.activeSessions, session)
 
 	return session, nil
 }
@@ -233,9 +235,6 @@ func (sm *SessionManager) LoadSession(ctx context.Context, session *ACPSession) 
 // ResumeSession loads a session from the Agent. Unlike LoadSession, the Agent will NOT replay prior
 // conversation to the client.
 func (sm *SessionManager) ResumeSession(ctx context.Context, session *ACPSession) (*ACPSession, error) {
-	sm.mu.Lock()
-	defer sm.mu.Unlock()
-
 	if session.Active() {
 		return session, nil
 	}
@@ -246,9 +245,16 @@ func (sm *SessionManager) ResumeSession(ctx context.Context, session *ACPSession
 
 	// If the agent does not support resume sessions, return without error.
 	resumeCap := sm.conn.AgentCapabilities.SessionCapabilities.Resume
-	if resumeCap != nil {
-		return nil, nil
+	if resumeCap == nil {
+		return nil, fmt.Errorf("Agent does not support resuming session")
 	}
+
+	// Agents will call 'session/update' before returing from ResumeSession, so we have to make
+	// it an active session before the rpc return.
+	sm.mu.Lock()
+	session.SetConn(sm.conn)
+	sm.activeSessions = append(sm.activeSessions, session)
+	sm.mu.Unlock()
 
 	resp, err := sm.conn.Conn.ResumeSession(ctx, acp.ResumeSessionRequest{
 		Cwd:        session.Cwd,
@@ -261,11 +267,8 @@ func (sm *SessionManager) ResumeSession(ctx context.Context, session *ACPSession
 		return nil, err
 	}
 
-	session.SetConn(sm.conn)
 	session.SetMode(*resp.Modes)
 	session.SetConfigOptions(resp.ConfigOptions)
-
-	sm.activeSessions = append(sm.activeSessions, session)
 
 	return session, nil
 }
@@ -274,16 +277,16 @@ func (sm *SessionManager) ResumeSession(ctx context.Context, session *ACPSession
 // for a session and free any resources associated with that active session.
 func (sm *SessionManager) CloseSession(ctx context.Context, sessionID string) error {
 	sm.mu.Lock()
-	defer sm.mu.Unlock()
-
 	session := sm.getActiveSession(sessionID)
 	if session == nil {
+		sm.mu.Unlock()
 		return fmt.Errorf("no active session found: %s", sessionID)
 	}
+	sm.mu.Unlock()
 
 	// If the agent does not support close active sessions, return without error.
 	closeCap := session.Conn().AgentCapabilities.SessionCapabilities.Close
-	if closeCap != nil {
+	if closeCap == nil {
 		return nil
 	}
 
@@ -297,9 +300,12 @@ func (sm *SessionManager) CloseSession(ctx context.Context, sessionID string) er
 	}
 
 	session.Close()
+
+	sm.mu.Lock()
 	sm.activeSessions = slices.DeleteFunc(sm.activeSessions, func(sn *ACPSession) bool {
 		return sn.SessionID == sessionID
 	})
+	sm.mu.Unlock()
 
 	return nil
 }

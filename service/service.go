@@ -2,6 +2,7 @@ package service
 
 import (
 	"context"
+	"errors"
 	"io"
 	"log"
 	"time"
@@ -122,9 +123,7 @@ func (s *ServiceFacade) Close(ctx context.Context) {
 		s.previewSrv.Destroy(ctx)
 	}
 
-	if s.acpSessionManager != nil {
-		s.acpSessionManager.Close(ctx)
-	}
+	s.stopAcpSessionManager(ctx)
 
 	log.Println("service down")
 }
@@ -217,6 +216,9 @@ func (s *ServiceFacade) SetProjectDir(dir string) {
 				PartialRender: false,
 			}, nil)
 	}()
+
+	// stop the last acpSessionManager
+	s.stopAcpSessionManager(context.Background())
 }
 
 func (s *ServiceFacade) RestartPreview(ctx context.Context, onFinish func()) {
@@ -253,29 +255,11 @@ func (s *ServiceFacade) Console() *console.ConsoleState {
 }
 
 func (s *ServiceFacade) StartACPSession(ctx context.Context, projectDir string) (*agent.ACPSession, error) {
-
 	if s.acpSessionManager == nil {
-		// make a session manager for test
-		s.acpSessionManager = &agent.SessionManager{}
-
-		client := agent.NewACPClient(s.acpSessionManager)
-
-		compilerExt := extensions.TypstCompilerExt(s.CurrentProjectDir(), s.Settings().Typst())
-		client.RegisterExtension("typstify/compileTypst", compilerExt)
-
-		s.acpSessionManager.Start(ctx,
-			agent.AgentConfig{
-				Name: "Claude Code",
-				Cmd:  "npx",
-				Args: []string{"-y", "@agentclientprotocol/claude-agent-acp@0.35.0"},
-			},
-			// agent.AgentConfig{
-			// 	Name: "Codex",
-			// 	Cmd:  "npx",
-			// 	Args: []string{"-y", "@zed-industries/codex-acp"},
-			// },
-			client,
-		)
+		err := s.startAcpSessionManager(ctx)
+		if err != nil {
+			return nil, err
+		}
 	}
 
 	return s.acpSessionManager.NewSession(ctx, projectDir)
@@ -290,4 +274,66 @@ func (s *ServiceFacade) CloseACPSession(ctx context.Context, sessionID string) e
 	}
 
 	return s.acpSessionManager.CloseSession(ctx, sessionID)
+}
+
+func (s *ServiceFacade) startAcpSessionManager(ctx context.Context) error {
+	cwd := s.CurrentProjectDir()
+	if cwd == "" {
+		return errors.New("No project dir is open")
+	}
+
+	childCtx, cancel := context.WithTimeout(ctx, 30*time.Second)
+	defer cancel()
+
+	mgr := &agent.SessionManager{}
+	client := agent.NewACPClient(mgr)
+
+	compilerExt := extensions.TypstCompilerExt(s.CurrentProjectDir(), s.Settings().Typst())
+	client.RegisterExtension("typstify/compileTypst", compilerExt)
+
+	if err := mgr.Start(childCtx,
+		agent.AgentConfig{
+			Name: "Claude Code",
+			Cmd:  "npx",
+			Args: []string{"-y", "@agentclientprotocol/claude-agent-acp@0.35.0"},
+		},
+		// agent.AgentConfig{
+		// 	Name: "Codex",
+		// 	Cmd:  "npx",
+		// 	Args: []string{"-y", "@zed-industries/codex-acp"},
+		// },
+		client,
+	); err != nil {
+		return err
+	}
+
+	s.acpSessionManager = mgr
+	return nil
+}
+
+func (s *ServiceFacade) stopAcpSessionManager(ctx context.Context) {
+	childCtx, cancel := context.WithTimeout(ctx, 10*time.Second)
+	defer cancel()
+
+	if s.acpSessionManager != nil {
+		s.acpSessionManager.Close(childCtx)
+		s.acpSessionManager = nil
+	}
+}
+
+func (s *ServiceFacade) AcpSessionManager() *agent.SessionManager {
+	if s.acpSessionManager != nil {
+		return s.acpSessionManager
+	}
+
+	childCtx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
+	defer cancel()
+
+	err := s.startAcpSessionManager(childCtx)
+	if err != nil {
+		log.Println("start ACP session manager failed: ", err)
+		return nil
+	}
+
+	return s.acpSessionManager
 }

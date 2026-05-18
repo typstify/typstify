@@ -128,10 +128,6 @@ func (s *StatusBar) Update(gtx C) (consoleClicked, chatClicked bool) {
 func (s *StatusBar) Layout(gtx C, th *theme.Theme) D {
 	s.Update(gtx)
 
-	if s.notification.lastMessage == nil && s.vm.CurrentView() == nil {
-		return D{}
-	}
-
 	return layout.Inset{
 		Top:    unit.Dp(4),
 		Bottom: unit.Dp(4),

@@ -11,6 +11,12 @@ import (
 	"github.com/coder/acp-go-sdk"
 )
 
+// maxSessionUpdates is the buffered updateChan channel size, used
+// to avoid blocking the LoadSession, as ACP replays all messages
+// before LoadSession responds. The value can be increased or descreased
+// depending on the chat message size.
+const maxSessionUpdates = 2000
+
 type (
 	PromptResponse = acp.PromptResponse
 
@@ -68,6 +74,9 @@ type ACPSession struct {
 	CurrentTurn    *PromptTurn
 
 	// channel used to exchange session/update data.
+	// updateChan should have a large enough buffer to hold
+	// updates replayed during LoadSession, otherwise the code will
+	// be blocked.
 	updateChan chan any
 	grantChan  chan PermissionGrantRequest
 	// bound to a view or not. A session has to be bound to
@@ -79,7 +88,7 @@ func NewACPSession(sessionID string, cwd string) *ACPSession {
 	return &ACPSession{
 		SessionID:  sessionID,
 		Cwd:        cwd,
-		updateChan: make(chan any, 1),
+		updateChan: make(chan any, maxSessionUpdates),
 		grantChan:  make(chan PermissionGrantRequest),
 	}
 }
@@ -345,7 +354,7 @@ func (sn *ACPSession) RequestPermission(req acp.RequestPermissionRequest, grantR
 func (sn *ACPSession) PublishUpdate(update any) {
 	sn.mu.Lock()
 	if sn.updateChan == nil {
-		sn.updateChan = make(chan any, 3)
+		sn.updateChan = make(chan any, maxSessionUpdates)
 	}
 	sn.mu.Unlock()
 
