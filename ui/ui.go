@@ -22,6 +22,7 @@ import (
 	"looz.ws/typstify/i18n"
 	"looz.ws/typstify/service"
 	"looz.ws/typstify/service/settings"
+	"looz.ws/typstify/ui/assistant"
 	"looz.ws/typstify/ui/dialog"
 	"looz.ws/typstify/ui/editors"
 	"looz.ws/typstify/ui/palette"
@@ -135,6 +136,7 @@ func (ui *UI) registerViews() {
 	vm.Register(dialog.PublishPkgDialogViewID, func() view.View { return dialog.NewPublishPkgDialog(ui.srv) })
 	vm.Register(dialog.SyncBibDialogViewID, func() view.View { return dialog.NewSyncBibDialog(ui.srv) })
 	vm.Register(dialog.ViewBibInfoDialogViewID, func() view.View { return dialog.NewBibInfoDialog(ui.srv) })
+	vm.Register(assistant.AgentChatViewID, func() view.View { return assistant.NewAgentChatView(ui.srv) })
 
 	ui.vm = vm
 	ui.srv.SetViewManager(vm.ViewManager)

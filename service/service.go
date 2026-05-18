@@ -267,8 +267,13 @@ func (s *ServiceFacade) StartACPSession(ctx context.Context, projectDir string) 
 			agent.AgentConfig{
 				Name: "Claude Code",
 				Cmd:  "npx",
-				Args: []string{"-y", "@zed-industries/claude-code-acp@latest"},
+				Args: []string{"-y", "@agentclientprotocol/claude-agent-acp@0.35.0"},
 			},
+			// agent.AgentConfig{
+			// 	Name: "Codex",
+			// 	Cmd:  "npx",
+			// 	Args: []string{"-y", "@zed-industries/codex-acp"},
+			// },
 			client,
 		)
 	}
