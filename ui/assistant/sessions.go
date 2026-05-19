@@ -3,42 +3,51 @@ package assistant
 import (
 	"context"
 	"errors"
+	"image/color"
 	"strings"
 	"sync/atomic"
 	"time"
 
 	"gioui.org/layout"
+	"gioui.org/text"
 	"gioui.org/unit"
 	"gioui.org/widget"
 	"gioui.org/widget/material"
 	"github.com/oligo/gioview/misc"
 	"github.com/oligo/gioview/theme"
 	"github.com/oligo/gioview/view"
+	gvwidget "github.com/oligo/gioview/widget"
+	"github.com/sahilm/fuzzy"
 	"looz.ws/typstify/agent"
 	"looz.ws/typstify/i18n"
 	"looz.ws/typstify/service"
 	"looz.ws/typstify/utils"
+	"looz.ws/typstify/widgets"
 	"looz.ws/typstify/widgets/icons"
 )
 
 var (
-	historyIcon = icons.NewSvgIcon(icons.History)
+	historyIcon = icons.NewSvgIcon(icons.MessagesSquare)
+	searchIcon  = icons.NewSvgIcon(icons.Search)
 )
 
 // SessionHistory implements [navpanel.NavSection]
 type SessionHistory struct {
 	srv *service.ServiceFacade
 
-	list       widget.List
-	sessions   []*agent.ACPSession
-	fetched    atomic.Bool
-	fetchErr   error
-	loadBtns   []widget.Clickable
-	resumeBtns []widget.Clickable
+	list             widget.List
+	sessions         []*agent.ACPSession
+	filteredSessions []*agent.ACPSession
+	fetched          atomic.Bool
+	fetchErr         error
+	labels           []widgets.InteractiveLabel
+	selectedIdx      int
 
 	// OnSessionSelected is called when the user clicks Load or Resume.
 	// sessionID is the selected session ID; load is true for Load, false for Resume.
 	OnSessionSelected func(session *agent.ACPSession, load bool)
+
+	searchInput gvwidget.TextField
 }
 
 func NewSessionHistory(srv *service.ServiceFacade) *SessionHistory {
@@ -81,8 +90,29 @@ func (s *SessionHistory) Title() string {
 
 func (s *SessionHistory) Layout(gtx C, th *theme.Theme) D {
 	s.fetchSessions()
-	s.ensureButtons()
 
+	return layout.Flex{
+		Axis: layout.Vertical,
+	}.Layout(gtx,
+		layout.Rigid(func(gtx C) D {
+			s.searchInput.Leading = func(gtx C) D {
+				return searchIcon.Layout(gtx, th.Fg, th.TextSize)
+			}
+			s.searchInput.Alignment = text.Start
+			s.searchInput.MaxChars = 128
+			s.searchInput.SingleLine = true
+			s.searchInput.Padding = unit.Dp(6)
+
+			return s.searchInput.Layout(gtx, th, "")
+		}),
+		layout.Rigid(layout.Spacer{Height: unit.Dp(4)}.Layout),
+		layout.Flexed(1, func(gtx C) D {
+			return s.layout(gtx, th)
+		}),
+	)
+}
+
+func (s *SessionHistory) layout(gtx C, th *theme.Theme) D {
 	if s.fetchErr != nil {
 		return layout.Center.Layout(gtx, func(gtx C) D {
 			label := material.Label(th.Theme, th.TextSize, s.fetchErr.Error())
@@ -91,7 +121,16 @@ func (s *SessionHistory) Layout(gtx C, th *theme.Theme) D {
 		})
 
 	}
-	if len(s.sessions) == 0 {
+
+	if s.searchInput.Changed() {
+		pattern := strings.TrimSpace(s.searchInput.Text())
+		if pattern != "" {
+			s.filteredSessions = filterSessions(s.sessions, pattern)
+			s.labels = s.labels[:0]
+		}
+	}
+
+	if len(s.filteredSessions) == 0 {
 		return layout.Center.Layout(gtx, func(gtx C) D {
 			label := material.Label(th.Theme, th.TextSize, "No previous sessions")
 			label.Color = misc.WithAlpha(th.Fg, 0x60)
@@ -103,103 +142,69 @@ func (s *SessionHistory) Layout(gtx C, th *theme.Theme) D {
 	list.AnchorStrategy = material.Overlay
 	list.ScrollbarStyle = utils.MakeScrollbar(th.Theme, list.Scrollbar, misc.WithAlpha(th.Fg, 0x30))
 
-	return list.Layout(gtx, len(s.sessions), func(gtx C, index int) D {
+	return list.Layout(gtx, len(s.filteredSessions), func(gtx C, index int) D {
+		s.ensureButtons(index)
 		return s.layoutItem(gtx, th, index)
 	})
 }
 
 func (s *SessionHistory) layoutItem(gtx C, th *theme.Theme, index int) D {
-	sn := s.sessions[index]
+	sn := s.filteredSessions[index]
 	title := sn.Title()
 	if title == "" {
 		title = string(sn.SessionID)
 	}
 
 	updated := sn.UpdatedAt()
+	label := &s.labels[index]
+	clicked := false
+	lastIdx := s.selectedIdx
 
-	loadClicked := false
-	resumeClicked := false
-	if index < len(s.loadBtns) && s.loadBtns[index].Clicked(gtx) {
-		loadClicked = true
-	}
-	if index < len(s.resumeBtns) && s.resumeBtns[index].Clicked(gtx) {
-		resumeClicked = true
+	if label.Update(gtx) {
+		clicked = true
+		s.selectedIdx = index
+
+		if lastIdx < len(s.labels) && s.labels[lastIdx].IsSelected() {
+			s.labels[lastIdx].Unselect()
+		}
 	}
 
-	if loadClicked && s.OnSessionSelected != nil {
+	if clicked && s.OnSessionSelected != nil {
 		s.OnSessionSelected(sn, true)
-	}
-	if resumeClicked && s.OnSessionSelected != nil {
-		s.OnSessionSelected(sn, false)
 	}
 
 	return layout.Inset{
 		Top:    unit.Dp(4),
 		Bottom: unit.Dp(4),
-		Left:   unit.Dp(8),
+		Left:   unit.Dp(12),
 		Right:  unit.Dp(8),
 	}.Layout(gtx, func(gtx C) D {
-		return layout.Flex{Axis: layout.Vertical}.Layout(gtx,
-			layout.Rigid(func(gtx C) D {
-				label := material.Label(th.Theme, th.TextSize, title)
-				label.Color = th.Fg
-				label.MaxLines = 2
-				return label.Layout(gtx)
-			}),
-			layout.Rigid(layout.Spacer{Height: unit.Dp(2)}.Layout),
-			layout.Rigid(func(gtx C) D {
-				if updated == "" {
-					return D{}
-				}
-				label := material.Label(th.Theme, th.TextSize*0.9, updated)
-				label.Color = misc.WithAlpha(th.Fg, 0xb0)
-				return label.Layout(gtx)
-			}),
-			layout.Rigid(layout.Spacer{Height: unit.Dp(4)}.Layout),
-			layout.Rigid(func(gtx C) D {
-				return layout.Flex{Axis: layout.Horizontal}.Layout(gtx,
-					layout.Rigid(func(gtx C) D {
-						if index >= len(s.loadBtns) {
-							return D{}
-						}
+		return label.Layout(gtx, th, func(gtx C, textColor color.NRGBA) D {
+			return layout.Flex{Axis: layout.Vertical}.Layout(gtx,
+				layout.Rigid(func(gtx C) D {
+					label := material.Label(th.Theme, th.TextSize, title)
+					label.Color = th.Fg
+					label.MaxLines = 2
+					return label.Layout(gtx)
+				}),
+				layout.Rigid(layout.Spacer{Height: unit.Dp(4)}.Layout),
+				layout.Rigid(func(gtx C) D {
+					if updated.IsZero() {
+						return D{}
+					}
+					label := material.Label(th.Theme, th.TextSize*0.9, updated.Format(time.DateTime))
+					label.Color = misc.WithAlpha(th.Fg, 0xb0)
+					return label.Layout(gtx)
+				}),
+			)
+		})
 
-						btn := material.Button(th.Theme, &s.loadBtns[index], i18n.Translate("Load"))
-						btn.Inset = layout.Inset{
-							Top: unit.Dp(2), Bottom: unit.Dp(2),
-							Left: unit.Dp(8), Right: unit.Dp(8),
-						}
-						btn.Color = th.Fg
-						btn.Background = th.Bg
-						return btn.Layout(gtx)
-					}),
-					layout.Rigid(layout.Spacer{Width: unit.Dp(8)}.Layout),
-					layout.Rigid(func(gtx C) D {
-						if index >= len(s.resumeBtns) {
-							return D{}
-						}
-
-						btn := material.Button(th.Theme, &s.resumeBtns[index], i18n.Translate("Resume"))
-						btn.Inset = layout.Inset{
-							Top: unit.Dp(2), Bottom: unit.Dp(2),
-							Left: unit.Dp(8), Right: unit.Dp(8),
-						}
-						btn.Color = th.Fg
-						btn.Background = th.Bg
-						return btn.Layout(gtx)
-
-					}),
-				)
-			}),
-		)
 	})
 }
 
-func (s *SessionHistory) ensureButtons() {
-	if len(s.loadBtns) < len(s.sessions) {
-		for i := len(s.loadBtns); i < len(s.sessions); i++ {
-			s.loadBtns = append(s.loadBtns, widget.Clickable{})
-			s.resumeBtns = append(s.resumeBtns, widget.Clickable{})
-		}
+func (s *SessionHistory) ensureButtons(index int) {
+	for len(s.labels) <= index {
+		s.labels = append(s.labels, widgets.InteractiveLabel{})
 	}
 }
 
@@ -229,6 +234,7 @@ func (s *SessionHistory) fetchSessions() {
 		}
 
 		s.sessions = sessions
+		s.filteredSessions = s.sessions
 	}
 }
 
@@ -248,4 +254,24 @@ func (s *SessionHistory) onSessionSelected(session *agent.ACPSession, load bool)
 	}
 
 	s.srv.RequestSwitch(intent)
+}
+
+type chatSessions []*agent.ACPSession
+
+func (src chatSessions) String(i int) string {
+	return src[i].Title()
+}
+
+func (src chatSessions) Len() int {
+	return len(src)
+}
+
+func filterSessions(src []*agent.ACPSession, pattern string) []*agent.ACPSession {
+	matches := fuzzy.FindFrom(pattern, chatSessions(src))
+	matched := make([]*agent.ACPSession, 0, matches.Len())
+	for _, m := range matches {
+		matched = append(matched, src[m.Index])
+	}
+
+	return matched
 }

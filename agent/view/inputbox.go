@@ -9,8 +9,11 @@ import (
 	"gioui.org/font"
 	"gioui.org/io/key"
 	"gioui.org/layout"
+	"gioui.org/op"
 	"gioui.org/text"
 	"gioui.org/unit"
+	"gioui.org/widget/material"
+	"github.com/oligo/gioview/misc"
 	"github.com/oligo/gioview/theme"
 	"github.com/oligo/gvcode"
 	"github.com/oligo/gvcode/addons/completion"
@@ -19,6 +22,7 @@ import (
 	"github.com/sahilm/fuzzy"
 
 	"looz.ws/typstify/agent"
+	"looz.ws/typstify/i18n"
 )
 
 type InputBox struct {
@@ -112,7 +116,19 @@ func (b *InputBox) Layout(gtx C, th *theme.Theme) D {
 	b.rsPopup.TextSize = th.TextSize
 
 	return layout.UniformInset(unit.Dp(6)).Layout(gtx, func(gtx C) D {
-		return b.Editor.Layout(gtx, th.Shaper)
+		macro := op.Record(gtx.Ops)
+		label := material.Label(th.Theme, th.TextSize, i18n.Translate("Type @ to include resource, and / to use skills."))
+		label.Color = misc.WithAlpha(th.Fg, 0xb0)
+		_ = label.Layout(gtx)
+		call := macro.Stop()
+
+		editorDims := b.Editor.Layout(gtx, th.Shaper)
+
+		if b.Editor.Text() == "" {
+			call.Add(gtx.Ops)
+		}
+
+		return editorDims
 	})
 
 }

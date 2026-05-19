@@ -126,7 +126,6 @@ func (v *AgentChat) Layout(gtx C, th *theme.Theme) D {
 func (v *AgentChat) layoutHeader(gtx C, th *theme.Theme) D {
 	agentName := v.agentDisplayName()
 	sessionTitle := v.session.Title()
-	mode := v.session.CurrentModeID()
 
 	return widget.Border{
 		Color: misc.WithAlpha(th.Fg, 0x30),
@@ -140,39 +139,23 @@ func (v *AgentChat) layoutHeader(gtx C, th *theme.Theme) D {
 		}.Layout(gtx, func(gtx C) D {
 			return layout.Flex{
 				Axis:      layout.Horizontal,
-				Alignment: layout.Middle,
-				Spacing:   layout.SpaceBetween,
+				Alignment: layout.Baseline,
 			}.Layout(gtx,
 				layout.Rigid(func(gtx C) D {
-					return layout.Flex{
-						Axis:      layout.Horizontal,
-						Alignment: layout.Baseline,
-					}.Layout(gtx,
-						layout.Rigid(func(gtx C) D {
-							label := material.Label(th.Theme, th.TextSize, agentName)
-							label.Color = th.Fg
-							label.Font.Weight = font.Black
-							return label.Layout(gtx)
-						}),
-						layout.Rigid(func(gtx C) D {
-							if mode == "" {
-								return D{}
-							}
-							return layout.Inset{Left: unit.Dp(6)}.Layout(gtx, func(gtx C) D {
-								modeLabel := material.Label(th.Theme, th.TextSize*0.8, mode)
-								modeLabel.Color = misc.WithAlpha(th.Fg, 0xb0)
-								return modeLabel.Layout(gtx)
-							})
-						}),
-					)
+					label := material.Label(th.Theme, th.TextSize, agentName)
+					label.Color = th.Fg
+					label.Font.Weight = font.Black
+					return label.Layout(gtx)
 				}),
-				layout.Rigid(func(gtx C) D {
-					if sessionTitle == "" {
-						return D{}
-					}
-					st := material.Label(th.Theme, th.TextSize*0.8, sessionTitle)
-					st.Color = misc.WithAlpha(th.Fg, 0xb0)
-					return st.Layout(gtx)
+				layout.Rigid(layout.Spacer{Width: unit.Dp(8)}.Layout),
+				layout.Flexed(1, func(gtx C) D {
+					return layout.Center.Layout(gtx, func(gtx C) D {
+						if sessionTitle == "" {
+							return D{}
+						}
+						st := material.Label(th.Theme, th.TextSize*0.9, sessionTitle)
+						return st.Layout(gtx)
+					})
 				}),
 			)
 		})
@@ -204,7 +187,7 @@ func (v *AgentChat) layoutMessages(gtx C, th *theme.Theme, padding unit.Dp) D {
 
 	if len(msgs) == 0 {
 		return layout.Center.Layout(gtx, func(gtx C) D {
-			label := material.Label(th.Theme, th.TextSize, "Start a conversation")
+			label := material.Label(th.Theme, th.TextSize, i18n.Translate("Type to start a conversation, press Shift+Enter to send"))
 			label.Color = misc.WithAlpha(th.Fg, 0xb0)
 			return label.Layout(gtx)
 		})
@@ -431,6 +414,8 @@ func (v *AgentChat) doSend() {
 		Content: text,
 	})
 	v.mu.Unlock()
+
+	v.scrollToEnd()
 	v.invalidate()
 
 	go func() {
