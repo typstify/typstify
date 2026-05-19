@@ -36,6 +36,7 @@ type SessionHistory struct {
 	srv *service.ServiceFacade
 
 	list             widget.List
+	projectDir       string
 	sessions         []*agent.ACPSession
 	filteredSessions []*agent.ACPSession
 	fetched          atomic.Bool
@@ -209,13 +210,18 @@ func (s *SessionHistory) ensureButtons(index int) {
 }
 
 func (s *SessionHistory) fetchSessions() {
-	if s.fetched.CompareAndSwap(false, true) {
-		cwd := s.srv.CurrentProjectDir()
-		if cwd == "" {
-			s.fetched.Store(false)
-			return
-		}
+	cwd := s.srv.CurrentProjectDir()
+	if cwd == "" {
+		return
+	}
 
+	if cwd != "" && cwd != s.projectDir {
+		s.fetched.Store(false)
+		s.projectDir = cwd
+		return
+	}
+
+	if s.fetched.CompareAndSwap(false, true) {
 		manager := s.srv.AcpSessionManager()
 		if manager == nil {
 			s.fetchErr = errors.New("no session manager.")
