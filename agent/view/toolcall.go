@@ -1,6 +1,8 @@
 package view
 
 import (
+	"slices"
+
 	"gioui.org/layout"
 	"gioui.org/unit"
 	"gioui.org/widget"
@@ -8,6 +10,7 @@ import (
 	"github.com/coder/acp-go-sdk"
 	"github.com/oligo/gioview/misc"
 	"github.com/oligo/gioview/theme"
+	"github.com/rogpeppe/go-internal/diff"
 	"looz.ws/typstify/i18n"
 	"looz.ws/typstify/widgets/icons"
 )
@@ -17,10 +20,12 @@ var (
 )
 
 type ToolCallStyle struct {
-	msg       *chatMessage
-	selection widget.Selectable
-	mdBock    markdownBlock
-	card      CardStyle
+	msg            *chatMessage
+	parsedDiff     []byte
+	titleSelection widget.Selectable
+	selection      widget.Selectable
+	mdBock         markdownBlock
+	card           CardStyle
 }
 
 func (t *ToolCallStyle) Layout(gtx C, th *theme.Theme, msg chatMessage) D {
@@ -40,7 +45,7 @@ func (t *ToolCallStyle) Layout(gtx C, th *theme.Theme, msg chatMessage) D {
 	)
 }
 
-func (t ToolCallStyle) layoutHeader(gtx C, th *theme.Theme) D {
+func (t *ToolCallStyle) layoutHeader(gtx C, th *theme.Theme) D {
 	tc := t.msg.ToolCall
 	if tc == nil {
 		return D{}
@@ -55,7 +60,7 @@ func (t ToolCallStyle) layoutHeader(gtx C, th *theme.Theme) D {
 		layout.Rigid(func(gtx C) D {
 			title := material.Label(th.Theme, th.TextSize, t.msg.Content)
 			title.MaxLines = 1
-			title.State = &t.selection
+			title.State = &t.titleSelection
 			return title.Layout(gtx)
 		}),
 		layout.Rigid(layout.Spacer{Width: unit.Dp(4)}.Layout),
@@ -68,7 +73,7 @@ func (t ToolCallStyle) layoutHeader(gtx C, th *theme.Theme) D {
 
 }
 
-func (t ToolCallStyle) layoutExtraContent(gtx C, th *theme.Theme) D {
+func (t *ToolCallStyle) layoutExtraContent(gtx C, th *theme.Theme) D {
 	tc := t.msg.ToolCall
 	if tc == nil {
 		return D{}
@@ -76,22 +81,22 @@ func (t ToolCallStyle) layoutExtraContent(gtx C, th *theme.Theme) D {
 
 	children := []layout.FlexChild{}
 
-	if len(tc.Locations) > 0 {
-		children = append(children, layout.Rigid(func(gtx C) D {
-			locations := make([]layout.FlexChild, 0, len(tc.Locations))
-			for _, loc := range tc.Locations {
-				locations = append(locations, layout.Rigid(func(gtx C) D {
-					label := material.Label(th.Theme, th.TextSize*0.8, loc.Path)
-					label.Color = misc.WithAlpha(th.Fg, 0xb0)
-					return label.Layout(gtx)
-				}))
-			}
-			return layout.Flex{
-				Axis: layout.Vertical,
-			}.Layout(gtx, locations...)
-		}),
-		)
-	}
+	// if len(tc.Locations) > 0 {
+	// 	children = append(children, layout.Rigid(func(gtx C) D {
+	// 		locations := make([]layout.FlexChild, 0, len(tc.Locations))
+	// 		for _, loc := range tc.Locations {
+	// 			locations = append(locations, layout.Rigid(func(gtx C) D {
+	// 				label := material.Label(th.Theme, th.TextSize*0.8, loc.Path)
+	// 				label.Color = misc.WithAlpha(th.Fg, 0xb0)
+	// 				return label.Layout(gtx)
+	// 			}))
+	// 		}
+	// 		return layout.Flex{
+	// 			Axis: layout.Vertical,
+	// 		}.Layout(gtx, locations...)
+	// 	}),
+	// 	)
+	// }
 
 	if len(tc.Content) > 0 {
 		if len(children) > 0 {
@@ -149,7 +154,13 @@ func (t ToolCallStyle) layoutExtraContent(gtx C, th *theme.Theme) D {
 	}.Layout(gtx, children...)
 }
 
-func (t ToolCallStyle) layoutContentBlock(gtx C, th *theme.Theme, content *acp.ToolCallContentContent) D {
+var (
+	markdownContentTools = []acp.ToolKind{
+		acp.ToolKindFetch,
+	}
+)
+
+func (t *ToolCallStyle) layoutContentBlock(gtx C, th *theme.Theme, content *acp.ToolCallContentContent) D {
 	if content == nil {
 		return D{}
 	}
@@ -158,13 +169,32 @@ func (t ToolCallStyle) layoutContentBlock(gtx C, th *theme.Theme, content *acp.T
 		return D{}
 	}
 
-	return t.mdBock.Layout(gtx, th, []byte(text))
+	if slices.Contains(markdownContentTools, t.msg.ToolCall.Kind) {
+		return t.mdBock.Layout(gtx, th, []byte(text))
+	}
+
+	label := material.Label(th.Theme, th.TextSize, text)
+	label.State = &t.selection
+	label.LineHeightScale = 1.5
+	return label.Layout(gtx)
 }
 
-func (t ToolCallStyle) layoutContentDiff(gtx C, th *theme.Theme, content *acp.ToolCallContentDiff) D {
+func (t *ToolCallStyle) layoutContentDiff(gtx C, th *theme.Theme, content *acp.ToolCallContentDiff) D {
 	if content == nil {
 		return D{}
 	}
+
+	if t.parsedDiff == nil {
+		var oldText, newText string
+		if content.OldText != nil {
+			oldText = *content.OldText
+		}
+		newText = content.NewText
+
+		t.parsedDiff = diff.Diff("old", []byte(oldText), "new", []byte(newText))
+
+	}
+
 	return layout.Flex{
 		Axis: layout.Vertical,
 	}.Layout(gtx,
@@ -173,16 +203,15 @@ func (t ToolCallStyle) layoutContentDiff(gtx C, th *theme.Theme, content *acp.To
 			label.Color = misc.WithAlpha(th.Fg, 0xb0)
 			return label.Layout(gtx)
 		}),
+		layout.Rigid(layout.Spacer{Height: unit.Dp(4)}.Layout),
 		layout.Rigid(func(gtx C) D {
-			if content.OldText != nil {
-				label := material.Label(th.Theme, th.TextSize, "- "+*content.OldText)
+			if t.parsedDiff != nil {
+				label := material.Label(th.Theme, th.TextSize, string(t.parsedDiff))
+				label.State = &t.selection
+				label.LineHeightScale = 1.5
 				return label.Layout(gtx)
 			}
 			return D{}
-		}),
-		layout.Rigid(func(gtx C) D {
-			label := material.Label(th.Theme, th.TextSize, "+ "+content.NewText)
-			return label.Layout(gtx)
 		}),
 	)
 }
@@ -194,7 +223,7 @@ func truncate(s string, maxLen int) string {
 	return s[:maxLen] + "..."
 }
 
-func (t ToolCallStyle) layoutTerminal(gtx C, th *theme.Theme, content *acp.ToolCallContentTerminal) D {
+func (t *ToolCallStyle) layoutTerminal(gtx C, th *theme.Theme, content *acp.ToolCallContentTerminal) D {
 	if content == nil {
 		return D{}
 	}

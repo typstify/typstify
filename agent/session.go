@@ -7,6 +7,7 @@ import (
 	"log"
 	"sync"
 	"sync/atomic"
+	"time"
 
 	"github.com/coder/acp-go-sdk"
 )
@@ -93,6 +94,10 @@ func NewACPSession(sessionID string, cwd string) *ACPSession {
 	}
 }
 
+func (sn *ACPSession) String() string {
+	return sn.SessionID
+}
+
 func (sn *ACPSession) Active() bool {
 	sn.mu.Lock()
 	defer sn.mu.Unlock()
@@ -122,11 +127,19 @@ func (sn *ACPSession) Title() string {
 	return sn.title
 }
 
-func (sn *ACPSession) UpdatedAt() string {
+func (sn *ACPSession) UpdatedAt() time.Time {
 	sn.mu.Lock()
 	defer sn.mu.Unlock()
+	if sn.updatedAt == "" {
+		return time.Time{}
+	}
+	t, err := time.Parse("2006-01-02T15:04:05.000Z", sn.updatedAt)
+	if err != nil {
+		log.Println("value: ", sn.updatedAt, err)
+		return time.Time{}
+	}
 
-	return sn.updatedAt
+	return t
 }
 
 func (sn *ACPSession) AvailableModes() []acp.SessionMode {

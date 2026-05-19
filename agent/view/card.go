@@ -50,8 +50,8 @@ func (t *CardStyle) Layout(gtx C, th *theme.Theme, header, body layout.Widget) D
 					return D{}
 				}
 				return layout.Inset{
-					Top: unit.Dp(6), Bottom: unit.Dp(6),
-					Left: unit.Dp(6), Right: unit.Dp(6),
+					Top: unit.Dp(8), Bottom: unit.Dp(8),
+					Left: unit.Dp(12), Right: unit.Dp(12),
 				}.Layout(gtx, body)
 			}),
 		)

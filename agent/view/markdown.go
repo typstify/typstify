@@ -6,12 +6,14 @@ import (
 	"image/color"
 	"log"
 	"math"
+	"strings"
 
 	"gioui.org/font"
 	"gioui.org/gesture"
 	"gioui.org/unit"
 	"gioui.org/x/markdown"
 	"gioui.org/x/richtext"
+	"github.com/inkeliz/giohyperlink"
 	"github.com/oligo/gioview/theme"
 )
 
@@ -46,15 +48,16 @@ func (mb *markdownBlock) parse(th *theme.Theme, content []byte) error {
 			Typeface: th.Face,
 		},
 		// TODO: use editor fonts?
-		MonospaceFont: font.Font{Typeface: "monospace"},
-		DefaultSize:   textSize,
-		DefaultColor:  textColor,
-		H6Size:        textSize,
-		H5Size:        unit.Sp(math.Round(1.2 * float64(textSize))),
-		H4Size:        unit.Sp(math.Round(1.3 * float64(textSize))),
-		H3Size:        unit.Sp(math.Round(1.4 * float64(textSize))),
-		H2Size:        unit.Sp(math.Round(1.5 * float64(textSize))),
-		H1Size:        unit.Sp(math.Round(1.6 * float64(textSize))),
+		MonospaceFont:    font.Font{Typeface: "monospace"},
+		DefaultSize:      textSize,
+		DefaultColor:     textColor,
+		InteractiveColor: th.ContrastBg,
+		H6Size:           textSize,
+		H5Size:           unit.Sp(math.Round(1.2 * float64(textSize))),
+		H4Size:           unit.Sp(math.Round(1.3 * float64(textSize))),
+		H3Size:           unit.Sp(math.Round(1.4 * float64(textSize))),
+		H2Size:           unit.Sp(math.Round(1.5 * float64(textSize))),
+		H1Size:           unit.Sp(math.Round(1.6 * float64(textSize))),
 	}
 
 	if !contentUpdated && mb.config == config {
@@ -86,8 +89,14 @@ func (mb *markdownBlock) update(gtx C) {
 		case richtext.Click:
 			if event.ClickData.Kind == gesture.KindClick {
 				link := url.(string)
-				// TODO: handle link click.
-				log.Println("link clicked!", link)
+				isHttpLink := strings.HasPrefix(link, "https://") || strings.HasPrefix(link, "http://")
+				if isHttpLink {
+					if err := giohyperlink.Open(link); err != nil {
+						log.Printf("error: opening hyperlink: %v, url: %s", err, link)
+					}
+				} else {
+					// TODO: handle local files
+				}
 
 			}
 		}
@@ -102,7 +111,7 @@ func (mb *markdownBlock) Layout(gtx C, th *theme.Theme, content []byte) D {
 	if err != nil {
 		return D{}
 	}
-	
+
 	if len(mb.spans) == 0 {
 		return D{}
 	}

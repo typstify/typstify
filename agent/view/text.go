@@ -38,6 +38,7 @@ func (u *UserMsgStyle) Layout(gtx C, th *theme.Theme, msg chatMessage) D {
 			label := material.Label(th.Theme, th.TextSize, msg.Content)
 			label.Color = th.Fg
 			label.State = &u.selection
+			label.LineHeightScale = 1.5
 			return label.Layout(gtx)
 		})
 		call := macro.Stop()
@@ -104,7 +105,8 @@ func (p *PlanMsgStyle) Layout(gtx C, th *theme.Theme, msg chatMessage) D {
 		},
 		func(gtx C) D {
 			label := material.Label(th.Theme, th.TextSize, msg.Content)
-			label.Color = misc.WithAlpha(th.Fg, 0x80)
+			label.LineHeightScale = 1.5
+			label.State = &p.selection
 			return label.Layout(gtx)
 		},
 	)

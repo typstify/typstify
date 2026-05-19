@@ -181,6 +181,9 @@ var LightBulb []byte
 //go:embed lucide/square-check.svg
 var SquareCheck []byte
 
+//go:embed lucide/messages-square.svg
+var MessagesSquare []byte
+
 func newIcon(iconData []byte) *giosvg.Icon {
 	vector, err := giosvg.NewVector(iconData)
 	if err != nil {
