@@ -72,7 +72,7 @@ func (p *PermissionGrantPopup) layoutPermissionOptions(gtx C, th *theme.Theme, p
 		idx := i // capture
 		opt := options[idx]
 		children = append(children, layout.Rigid(func(gtx C) D {
-			btn := material.Button(th.Theme, &perm.buttons[idx], permissionLabel(opt.Kind, opt.Name))
+			btn := material.Button(th.Theme, &perm.buttons[idx], permissionLabel(opt.Kind))
 			btn.Inset = layout.Inset{
 				Top: unit.Dp(4), Bottom: unit.Dp(4),
 				Left: unit.Dp(8), Right: unit.Dp(8),
@@ -100,10 +100,10 @@ func (p *PermissionGrantPopup) layoutPermissionOptions(gtx C, th *theme.Theme, p
 
 // --- Helpers ---
 
-func permissionLabel(kind acp.PermissionOptionKind, name string) string {
-	if name != "" {
-		return name
-	}
+func permissionLabel(kind acp.PermissionOptionKind) string {
+	// if name != "" {
+	// 	return name
+	// }
 	switch kind {
 	case acp.PermissionOptionKindAllowOnce:
 		return "Allow Once"
