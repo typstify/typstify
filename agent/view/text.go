@@ -63,7 +63,7 @@ func (a *AgentMsgStyle) Layout(gtx C, th *theme.Theme, msg chatMessage) D {
 		return D{}
 	}
 	return layout.Inset{
-		Top: unit.Dp(4), Bottom: unit.Dp(4),
+		Top: unit.Dp(6), Bottom: unit.Dp(6),
 	}.Layout(gtx, func(gtx C) D {
 		return a.mdBock.Layout(gtx, th, []byte(msg.Content))
 	})

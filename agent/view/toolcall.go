@@ -2,8 +2,10 @@ package view
 
 import (
 	"slices"
+	"time"
 
 	"gioui.org/layout"
+	"gioui.org/op"
 	"gioui.org/unit"
 	"gioui.org/widget"
 	"gioui.org/widget/material"
@@ -51,13 +53,11 @@ func (t *ToolCallStyle) layoutHeader(gtx C, th *theme.Theme) D {
 		return D{}
 	}
 
-	statusStr := " [" + string(tc.Status) + "]"
-
 	return layout.Flex{
 		Axis:      layout.Horizontal,
 		Alignment: layout.Middle,
 	}.Layout(gtx,
-		layout.Rigid(func(gtx C) D {
+		layout.Flexed(1, func(gtx C) D {
 			title := material.Label(th.Theme, th.TextSize, t.msg.Content)
 			title.MaxLines = 1
 			title.State = &t.titleSelection
@@ -65,10 +65,9 @@ func (t *ToolCallStyle) layoutHeader(gtx C, th *theme.Theme) D {
 		}),
 		layout.Rigid(layout.Spacer{Width: unit.Dp(4)}.Layout),
 		layout.Rigid(func(gtx C) D {
-			status := material.Label(th.Theme, th.TextSize*0.85, statusStr)
-			status.Color = misc.WithAlpha(th.Fg, 0x80)
-			return status.Layout(gtx)
+			return toolcallStatusWidget(gtx, th, tc.Status)
 		}),
+		layout.Rigid(layout.Spacer{Width: unit.Dp(8)}.Layout),
 	)
 
 }
@@ -230,4 +229,37 @@ func (t *ToolCallStyle) layoutTerminal(gtx C, th *theme.Theme, content *acp.Tool
 	label := material.Label(th.Theme, th.TextSize, i18n.Translate("Terminal: %s", content.TerminalId))
 	label.Color = misc.WithAlpha(th.Fg, 0x60)
 	return label.Layout(gtx)
+}
+
+const progressSpinnerFrameDuration = 150 * time.Millisecond
+
+var progressSpinnerFrames = [...]string{"◐", "◓", "◑", "◒"}
+
+// helper to render the tool call status.
+func toolcallStatusWidget(gtx C, th *theme.Theme, status acp.ToolCallStatus) D {
+
+	textSymbol := func(statusStr string) D {
+		status := material.Label(th.Theme, th.TextSize*0.9, statusStr)
+		status.Color = misc.WithAlpha(th.Fg, 0xb0)
+		return status.Layout(gtx)
+	}
+
+	switch status {
+	case acp.ToolCallStatusPending:
+		return textSymbol("\u29D6")
+	case acp.ToolCallStatusInProgress:
+		gtx.Execute(op.InvalidateCmd{
+			At: gtx.Now.Add(progressSpinnerFrameDuration),
+		})
+
+		frame := int(gtx.Now.UnixMilli()/progressSpinnerFrameDuration.Milliseconds()) % len(progressSpinnerFrames)
+		return textSymbol(progressSpinnerFrames[frame])
+	case acp.ToolCallStatusCompleted:
+		return textSymbol("\u2713")
+	case acp.ToolCallStatusFailed:
+		return textSymbol("\u2717")
+	default:
+		return textSymbol(string(status))
+
+	}
 }
