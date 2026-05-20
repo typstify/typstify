@@ -213,7 +213,7 @@ func (v *AgentChat) layoutMessagesWithScroll(gtx C, th *theme.Theme, padding uni
 	dims := v.layoutMessageList(gtx, th, padding, msgs)
 	call := macro.Stop()
 
-	if v.list.Position.OffsetLast >= 0 {
+	if !v.messagesOverflow() {
 		call.Add(gtx.Ops)
 		return dims
 	}
@@ -235,6 +235,11 @@ func (v *AgentChat) layoutMessagesResetShortList(gtx C, th *theme.Theme, padding
 
 	v.list.ScrollToEnd = false
 	return v.layoutMessageList(gtx, th, padding, msgs)
+}
+
+func (v *AgentChat) messagesOverflow() bool {
+	pos := v.list.Position
+	return pos.First > 0 || pos.BeforeEnd || pos.OffsetLast < 0
 }
 
 func (v *AgentChat) layoutMessageList(gtx C, th *theme.Theme, padding unit.Dp, msgs []chatMessage) D {
