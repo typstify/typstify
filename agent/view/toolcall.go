@@ -13,6 +13,7 @@ import (
 	"github.com/oligo/gioview/misc"
 	"github.com/oligo/gioview/theme"
 	"github.com/rogpeppe/go-internal/diff"
+	"looz.ws/typstify/agent"
 	"looz.ws/typstify/i18n"
 	"looz.ws/typstify/widgets/icons"
 )
@@ -22,12 +23,14 @@ var (
 )
 
 type ToolCallStyle struct {
+	session        *agent.ACPSession
 	msg            *chatMessage
 	parsedDiff     []byte
 	titleSelection widget.Selectable
 	selection      widget.Selectable
 	mdBock         markdownBlock
 	card           CardStyle
+	terminal       TerminalStyle
 }
 
 func (t *ToolCallStyle) Layout(gtx C, th *theme.Theme, msg chatMessage) D {
@@ -226,9 +229,22 @@ func (t *ToolCallStyle) layoutTerminal(gtx C, th *theme.Theme, content *acp.Tool
 	if content == nil {
 		return D{}
 	}
-	label := material.Label(th.Theme, th.TextSize, i18n.Translate("Terminal: %s", content.TerminalId))
-	label.Color = misc.WithAlpha(th.Fg, 0x60)
-	return label.Layout(gtx)
+
+	if t.session == nil {
+		label := material.Label(th.Theme, th.TextSize, i18n.Translate("Terminal: %s", content.TerminalId))
+		label.Color = misc.WithAlpha(th.Fg, 0x60)
+		return label.Layout(gtx)
+	}
+
+	terminal := t.session.GetTerminal(content.TerminalId)
+
+	if terminal == nil {
+		label := material.Label(th.Theme, th.TextSize, i18n.Translate("Terminal: %s", content.TerminalId))
+		label.Color = misc.WithAlpha(th.Fg, 0x60)
+		return label.Layout(gtx)
+	}
+
+	return t.terminal.Layout(gtx, th, terminal)
 }
 
 const progressSpinnerFrameDuration = 150 * time.Millisecond

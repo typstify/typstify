@@ -264,7 +264,7 @@ func (v *AgentChat) layoutMessage(gtx C, th *theme.Theme, msgs []chatMessage, in
 		case msgThought:
 			v.messageStyles = append(v.messageStyles, &ThoughtMsgStyle{})
 		case msgToolCall:
-			v.messageStyles = append(v.messageStyles, &ToolCallStyle{})
+			v.messageStyles = append(v.messageStyles, &ToolCallStyle{session: v.session})
 		case msgPlan:
 			v.messageStyles = append(v.messageStyles, &PlanMsgStyle{})
 		default:
