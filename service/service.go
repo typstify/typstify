@@ -19,9 +19,9 @@ import (
 	"looz.ws/typstify/service/settings"
 	"looz.ws/typstify/typst"
 	"looz.ws/typstify/typst/pkg"
-	"looz.ws/typstify/ui/console"
 	"looz.ws/typstify/utils"
 	"looz.ws/typstify/version"
+	"looz.ws/typstify/widgets/console"
 )
 
 type ServiceFacade struct {
@@ -81,7 +81,7 @@ func (s *ServiceFacade) Settings() *settings.Settings {
 }
 
 func (s *ServiceFacade) PkgService() *pkg.TypstPkgService {
-	s.pkgService.SetReporter(tpixCliReporter{c: s.consoleState}.Report)
+	s.pkgService.SetReporter(tpixCliReporter{w: s.consoleState}.Report)
 	return s.pkgService
 }
 

@@ -1,9 +1,10 @@
 package service
 
 import (
+	"io"
+
 	"github.com/typstify/tpix-cli/config"
 	"looz.ws/typstify/service/settings"
-	"looz.ws/typstify/ui/console"
 )
 
 type tpixCredentialProvider struct {
@@ -30,11 +31,11 @@ func (c *tpixCredentialProvider) Save(cred config.Credentials) error {
 }
 
 type tpixCliReporter struct {
-	c *console.ConsoleState
+	w io.Writer
 }
 
 func (r tpixCliReporter) Report(message string) {
-	if r.c != nil {
-		r.c.Write([]byte(message))
+	if r.w != nil {
+		r.w.Write([]byte(message))
 	}
 }
