@@ -28,7 +28,7 @@ func (w *lockedWriter) Write(p []byte) (n int, err error) {
 	return w.buf.Write(p)
 }
 
-type acpTernimal struct {
+type ACPTerminal struct {
 	ID              string
 	SessionId       string
 	OutputByteLimit int
@@ -38,8 +38,8 @@ type acpTernimal struct {
 	exited          atomic.Bool
 }
 
-func newTerminal(req acp.CreateTerminalRequest) *acpTernimal {
-	t := &acpTernimal{
+func newTerminal(req acp.CreateTerminalRequest) *ACPTerminal {
+	t := &ACPTerminal{
 		ID:        uuid.NewString(),
 		SessionId: string(req.SessionId),
 	}
@@ -72,19 +72,19 @@ func newTerminal(req acp.CreateTerminalRequest) *acpTernimal {
 	return t
 }
 
-func (t *acpTernimal) writer() *lockedWriter {
+func (t *ACPTerminal) writer() *lockedWriter {
 	return &lockedWriter{buf: &t.outputBuf, mu: &t.bufMu}
 }
 
-func (t *acpTernimal) Start() error {
+func (t *ACPTerminal) Start() error {
 	return t.cmd.Start()
 }
 
-func (t *acpTernimal) IsKilled() bool {
+func (t *ACPTerminal) IsKilled() bool {
 	return t.exited.Load()
 }
 
-func (t *acpTernimal) Kill() error {
+func (t *ACPTerminal) Kill() error {
 	if t.exited.CompareAndSwap(false, true) {
 		return t.cmd.Cancel()
 	}
@@ -97,7 +97,7 @@ func (t *acpTernimal) Kill() error {
 //
 // Calling Output() twice without any intervening writes to the buffer
 // will yield the exact same string.
-func (t *acpTernimal) Output() (_ string, truncated bool) {
+func (t *ACPTerminal) Output() (_ string, truncated bool) {
 	t.bufMu.Lock()
 	defer t.bufMu.Unlock()
 
@@ -121,7 +121,15 @@ func (t *acpTernimal) Output() (_ string, truncated bool) {
 	return string(data[start:]), true
 }
 
-func (t *acpTernimal) ExitStatus() (exitCode int, signal syscall.Signal) {
+// OutputSize returns total buffered output size in bytes.
+func (t *ACPTerminal) OutputSize() int {
+	t.bufMu.Lock()
+	defer t.bufMu.Unlock()
+
+	return t.outputBuf.Len()
+}
+
+func (t *ACPTerminal) ExitStatus() (exitCode int, signal syscall.Signal) {
 	if t.cmd.ProcessState == nil {
 		return -1, -1
 	}
@@ -140,7 +148,7 @@ func (t *acpTernimal) ExitStatus() (exitCode int, signal syscall.Signal) {
 	return
 }
 
-func (t *acpTernimal) Wait() error {
+func (t *ACPTerminal) Wait() error {
 	if t.exited.CompareAndSwap(false, true) {
 		return t.cmd.Wait()
 	}
@@ -163,7 +171,7 @@ func getShell() (string, []string) {
 	return "bash", []string{"-c"}
 }
 
-func (t *acpTernimal) buildScriptCmd(ctx context.Context, script string, args []string) *exec.Cmd {
+func (t *ACPTerminal) buildScriptCmd(ctx context.Context, script string, args []string) *exec.Cmd {
 	shell, args := getShell()
 	fullArgs := append(args, script)
 	cmd := utils.BuildCmd(ctx, shell, fullArgs...)

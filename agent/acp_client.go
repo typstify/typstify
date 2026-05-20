@@ -9,7 +9,6 @@ import (
 	"log"
 	"os"
 	"path/filepath"
-	"slices"
 	"strings"
 	"sync"
 
@@ -24,9 +23,6 @@ type ExtentionHandler func(params json.RawMessage) (any, error)
 // ACPClient implements a ACP client.
 type ACPClient struct {
 	sm *SessionManager
-	// ongoing terminals
-	terminals []*acpTernimal
-	tmMu      sync.Mutex
 
 	extMethods map[string]ExtentionHandler
 	extMu      sync.Mutex
@@ -246,35 +242,6 @@ func (a *ACPClient) SessionUpdate(ctx context.Context, params acp.SessionNotific
 	return nil
 }
 
-func (a *ACPClient) getTerminal(terminalID string) *acpTernimal {
-	a.tmMu.Lock()
-	defer a.tmMu.Unlock()
-
-	idx := slices.IndexFunc(a.terminals, func(t *acpTernimal) bool {
-		return t.ID == terminalID
-	})
-	if idx < 0 {
-		return nil
-	}
-
-	return a.terminals[idx]
-}
-
-func (a *ACPClient) releaseTerminal(terminalID string) error {
-	a.tmMu.Lock()
-	defer a.tmMu.Unlock()
-
-	idx := slices.IndexFunc(a.terminals, func(t *acpTernimal) bool {
-		return t.ID == terminalID
-	})
-	if idx < 0 {
-		return fmt.Errorf("terminal not found: %s", terminalID)
-	}
-
-	a.terminals = slices.Delete(a.terminals, idx, idx+1)
-	return nil
-}
-
 // CreateTerminal implements [acp.Client].
 func (a *ACPClient) CreateTerminal(ctx context.Context, params acp.CreateTerminalRequest) (acp.CreateTerminalResponse, error) {
 	emptyResp := acp.CreateTerminalResponse{}
@@ -284,15 +251,18 @@ func (a *ACPClient) CreateTerminal(ctx context.Context, params acp.CreateTermina
 		return emptyResp, err
 	}
 
+	session := a.sm.GetActiveSession(string(params.SessionId))
+	if session == nil {
+		return emptyResp, fmt.Errorf("no active session: %s", params.SessionId)
+	}
+
 	terminal := newTerminal(params)
 	if err := terminal.Start(); err != nil {
 		log.Println("CreateTerminal error: ", err)
 		return emptyResp, err
 	}
 
-	a.tmMu.Lock()
-	defer a.tmMu.Unlock()
-	a.terminals = append(a.terminals, terminal)
+	session.AddTerminal(terminal)
 
 	return acp.CreateTerminalResponse{
 		TerminalId: terminal.ID,
@@ -318,7 +288,12 @@ func (a *ACPClient) KillTerminal(ctx context.Context, params acp.KillTerminalReq
 		return emptyResp, err
 	}
 
-	terminal := a.getTerminal(params.TerminalId)
+	session := a.sm.GetActiveSession(string(params.SessionId))
+	if session == nil {
+		return emptyResp, fmt.Errorf("no active session: %s", params.SessionId)
+	}
+
+	terminal := session.GetTerminal(params.TerminalId)
 	if terminal == nil {
 		return emptyResp, errors.New("terminal not found")
 	}
@@ -342,7 +317,12 @@ func (a *ACPClient) ReleaseTerminal(ctx context.Context, params acp.ReleaseTermi
 		return emptyResp, err
 	}
 
-	terminal := a.getTerminal(params.TerminalId)
+	session := a.sm.GetActiveSession(string(params.SessionId))
+	if session == nil {
+		return emptyResp, fmt.Errorf("no active session: %s", params.SessionId)
+	}
+
+	terminal := session.GetTerminal(params.TerminalId)
 	if terminal == nil {
 		return emptyResp, errors.New("terminal not found")
 	}
@@ -352,7 +332,7 @@ func (a *ACPClient) ReleaseTerminal(ctx context.Context, params acp.ReleaseTermi
 		return emptyResp, err
 	}
 
-	err = a.releaseTerminal(params.TerminalId)
+	err = session.ReleaseTerminal(params.TerminalId)
 	if err != nil {
 		return emptyResp, err
 	}
@@ -368,7 +348,12 @@ func (a *ACPClient) TerminalOutput(ctx context.Context, params acp.TerminalOutpu
 		return resp, err
 	}
 
-	terminal := a.getTerminal(params.TerminalId)
+	session := a.sm.GetActiveSession(string(params.SessionId))
+	if session == nil {
+		return resp, fmt.Errorf("no active session: %s", params.SessionId)
+	}
+
+	terminal := session.GetTerminal(params.TerminalId)
 	if terminal == nil {
 		return resp, errors.New("terminal not found")
 	}
@@ -403,7 +388,12 @@ func (a *ACPClient) WaitForTerminalExit(ctx context.Context, params acp.WaitForT
 		return resp, err
 	}
 
-	terminal := a.getTerminal(params.TerminalId)
+	session := a.sm.GetActiveSession(string(params.SessionId))
+	if session == nil {
+		return resp, fmt.Errorf("no active session: %s", params.SessionId)
+	}
+
+	terminal := session.GetTerminal(params.TerminalId)
 	if terminal == nil {
 		return resp, errors.New("terminal not found")
 	}

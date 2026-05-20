@@ -5,6 +5,7 @@ import (
 	"errors"
 	"fmt"
 	"log"
+	"slices"
 	"sync"
 	"sync/atomic"
 	"time"
@@ -73,6 +74,10 @@ type ACPSession struct {
 	// ongoing prompt turn info
 	hasOngoingTurn atomic.Bool
 	CurrentTurn    *PromptTurn
+
+	// ongoing terminals
+	terminals []*ACPTerminal
+	tmMu      sync.Mutex
 
 	// channel used to exchange session/update data.
 	// updateChan should have a large enough buffer to hold
@@ -438,6 +443,41 @@ func (sn *ACPSession) SubscribeUpdates(ctx context.Context, sub SessionUpdateSub
 	}()
 }
 
+func (sn *ACPSession) AddTerminal(terminal *ACPTerminal) {
+	sn.tmMu.Lock()
+	defer sn.tmMu.Unlock()
+	sn.terminals = append(sn.terminals, terminal)
+}
+
+func (sn *ACPSession) GetTerminal(terminalID string) *ACPTerminal {
+	sn.tmMu.Lock()
+	defer sn.tmMu.Unlock()
+
+	idx := slices.IndexFunc(sn.terminals, func(t *ACPTerminal) bool {
+		return t.ID == terminalID
+	})
+	if idx < 0 {
+		return nil
+	}
+
+	return sn.terminals[idx]
+}
+
+func (sn *ACPSession) ReleaseTerminal(terminalID string) error {
+	sn.tmMu.Lock()
+	defer sn.tmMu.Unlock()
+
+	idx := slices.IndexFunc(sn.terminals, func(t *ACPTerminal) bool {
+		return t.ID == terminalID
+	})
+	if idx < 0 {
+		return fmt.Errorf("terminal not found: %s", terminalID)
+	}
+
+	sn.terminals = slices.Delete(sn.terminals, idx, idx+1)
+	return nil
+}
+
 func (sn *ACPSession) Close() {
 	if sn.CurrentTurn != nil {
 		sn.CurrentTurn.Close()
@@ -449,5 +489,9 @@ func (sn *ACPSession) Close() {
 
 	if sn.grantChan != nil {
 		close(sn.grantChan)
+	}
+
+	for _, t := range sn.terminals {
+		t.Kill()
 	}
 }
