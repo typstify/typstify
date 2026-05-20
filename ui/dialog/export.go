@@ -2,6 +2,7 @@ package dialog
 
 import (
 	"fmt"
+	"io"
 	"strings"
 
 	"gioui.org/layout"
@@ -42,12 +43,16 @@ type ExportDialog struct {
 	noPdfTags       widget.Bool
 	nameInput       gw.TextField
 
-	formatChoices []layout.FlexChild
-	targetFile    string
+	formatChoices  []layout.FlexChild
+	targetFile     string
+	compilerOutput io.Writer
 }
 
 func NewExportDialog(srv *service.ServiceFacade) view.View {
-	d := &ExportDialog{srv: srv}
+	d := &ExportDialog{
+		srv:            srv,
+		compilerOutput: srv.Console(),
+	}
 
 	dialog := NewDialogModal(ExportDialogViewID, i18n.Translate("Build And Export"), i18n.Translate("Export"))
 	dialog.Dialog = d
@@ -88,11 +93,11 @@ func (d *ExportDialog) OnConfirm() error {
 	compiler.PdfVersion = typst.PdfVersion(d.pdfVersion.Value)
 	compiler.PdfStandard = typst.PdfStandard(d.pdfStandard.Value)
 	compiler.NoPdfTags = d.noPdfTags.Value
-	compiler.CmdOutput = d.srv.Console()
+	compiler.CmdOutput = d.compilerOutput
 
 	params, err := compiler.BuildParams(d.targetFile, d.nameInput.Text())
 	if err != nil {
-		d.srv.Console().Write([]byte(err.Error()))
+		d.compilerOutput.Write([]byte(err.Error()))
 		return nil
 	}
 

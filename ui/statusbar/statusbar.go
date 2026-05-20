@@ -21,7 +21,6 @@ import (
 	"looz.ws/typstify/i18n"
 	"looz.ws/typstify/service"
 	"looz.ws/typstify/service/bus"
-	"looz.ws/typstify/ui/console"
 	"looz.ws/typstify/utils"
 	"looz.ws/typstify/widgets"
 	"looz.ws/typstify/widgets/icons"
@@ -66,7 +65,6 @@ type StatusBar struct {
 	vm                 view.ViewManager
 	notification       *NotificationBar
 	gitStatusIndicator *GitStatusIndicator
-	consoleState       *console.ConsoleState
 	showConsoleBtn     widget.Clickable
 	showChatBtn        widget.Clickable
 }
@@ -182,12 +180,8 @@ func (s *StatusBar) Layout(gtx C, th *theme.Theme) D {
 					layout.Rigid(layout.Spacer{Width: unit.Dp(12)}.Layout),
 					layout.Rigid(func(gtx C) D {
 						return material.Clickable(gtx, &s.showConsoleBtn, func(gtx C) D {
-							fillColor := th.Fg
-							if s.consoleState.HasMore() {
-								fillColor = th.ContrastBg
-							}
 							return layout.UniformInset(unit.Dp(2)).Layout(gtx, func(gtx C) D {
-								return consoleIcon.Layout(gtx, fillColor, th.TextSize)
+								return consoleIcon.Layout(gtx, th.Fg, th.TextSize)
 							})
 						})
 					}),
@@ -203,7 +197,6 @@ func NewStatusBar(srv *service.ServiceFacade, vm view.ViewManager) *StatusBar {
 	sb := &StatusBar{
 		vm:           vm,
 		notification: &NotificationBar{},
-		consoleState: srv.Console(),
 		gitStatusIndicator: &GitStatusIndicator{
 			workspaceSrv:   srv.Workspace(),
 			eventBus:       srv.EventBus(),

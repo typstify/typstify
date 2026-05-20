@@ -5,11 +5,11 @@ import (
 	"github.com/oligo/gioview/view"
 	"looz.ws/typstify/service"
 	"looz.ws/typstify/ui/assistant"
-	"looz.ws/typstify/ui/console"
 	"looz.ws/typstify/ui/navpanel"
 	"looz.ws/typstify/ui/preview"
 	"looz.ws/typstify/ui/statusbar"
 	"looz.ws/typstify/widgets"
+	"looz.ws/typstify/widgets/console"
 
 	"gioui.org/app"
 	"gioui.org/io/key"
@@ -61,9 +61,9 @@ func (hv *HomeView) ID() string {
 }
 
 func (hv *HomeView) toggleConsole() {
-	hv.srv.Console().ShowConsole = !hv.srv.Console().ShowConsole
+	hv.consolePanel.ShowConsole = !hv.consolePanel.ShowConsole
 
-	if !hv.srv.Console().ShowConsole {
+	if !hv.consolePanel.ShowConsole {
 		hv.lastYRatio = hv.yresizer.Ratio
 		hv.yresizer.Ratio = 1.0
 	} else {
@@ -270,7 +270,7 @@ func (hv *HomeView) layoutMain(gtx C, th *theme.Theme) D {
 		layout.Flexed(1, func(gtx C) D {
 			// Top offset = tabbar + spacer = rightPanelH - this child's height.
 			hv.srv.ViewAreaTopOffset = rightPanelH - gtx.Constraints.Max.Y
-			if !hv.srv.Console().ShowConsole {
+			if !hv.consolePanel.ShowConsole {
 				return hv.layoutView(gtx, th)
 			}
 
