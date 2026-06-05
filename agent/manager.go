@@ -14,6 +14,7 @@ import (
 
 	"github.com/coder/acp-go-sdk"
 	"looz.ws/typstify/utils"
+	"looz.ws/typstify/version"
 )
 
 type AgentConfig struct {
@@ -77,6 +78,10 @@ func (sm *SessionManager) Start(ctx context.Context, agentConfig AgentConfig, cl
 	// Initialize
 	initResp, err := conn.Initialize(ctx, acp.InitializeRequest{
 		ProtocolVersion: acp.ProtocolVersionNumber,
+		ClientInfo: &acp.Implementation{
+			Name:    "Typstify",
+			Version: version.BinVersion,
+		},
 		ClientCapabilities: acp.ClientCapabilities{
 			Meta: client.ExtensionCapabilities(),
 			Fs: acp.FileSystemCapabilities{

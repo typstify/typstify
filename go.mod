@@ -7,7 +7,7 @@ require (
 	gioui.org/x v0.9.0
 	github.com/alecthomas/chroma/v2 v2.15.0
 	github.com/apstndb/go-lsp-export v0.0.0-20250111110713-da502b65ef68
-	github.com/coder/acp-go-sdk v0.12.2
+	github.com/coder/acp-go-sdk v0.13.5
 	github.com/denisbrodbeck/machineid v1.0.1
 	github.com/dustin/go-humanize v1.0.1
 	github.com/fsnotify/fsnotify v1.7.0
