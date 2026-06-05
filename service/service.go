@@ -5,6 +5,7 @@ import (
 	"errors"
 	"io"
 	"log"
+	"os"
 	"time"
 
 	"github.com/oligo/gioview/explorer"
@@ -291,6 +292,9 @@ func (s *ServiceFacade) startAcpSessionManager(ctx context.Context) error {
 	compilerExt := extensions.TypstCompilerExt(s.CurrentProjectDir(), s.Settings().Typst())
 	client.RegisterExtension("typstify/compileTypst", compilerExt)
 
+	// Setting env ACP_DEBUG=1 will turn Typstify into ACP debug mode.
+	acpDebug := os.Getenv("ACP_DEBUG") == "1"
+
 	if err := mgr.Start(childCtx,
 		agent.AgentConfig{
 			Name: "Claude Code",
@@ -303,6 +307,7 @@ func (s *ServiceFacade) startAcpSessionManager(ctx context.Context) error {
 		// 	Args: []string{"-y", "@zed-industries/codex-acp"},
 		// },
 		client,
+		acpDebug,
 	); err != nil {
 		return err
 	}

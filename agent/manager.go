@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"io"
 	"log"
 	"log/slog"
 	"os"
@@ -47,7 +48,7 @@ type SessionManager struct {
 
 // Start runs a agent through ACP client. The config is used to specify
 // which agent to be started.
-func (sm *SessionManager) Start(ctx context.Context, agentConfig AgentConfig, client *ACPClient) error {
+func (sm *SessionManager) Start(ctx context.Context, agentConfig AgentConfig, client *ACPClient, enableDebug bool) error {
 	sm.mu.Lock()
 	defer sm.mu.Unlock()
 
@@ -72,7 +73,12 @@ func (sm *SessionManager) Start(ctx context.Context, agentConfig AgentConfig, cl
 		return fmt.Errorf("failed to start agent: %w", err)
 	}
 
-	conn := acp.NewClientSideConnection(client, stdin, stdout)
+	in, out := stdin, stdout
+	if enableDebug {
+		in, out = duplicatedIO(stdin, stdout)
+	}
+
+	conn := acp.NewClientSideConnection(client, in, out)
 	conn.SetLogger(slog.Default()) // TODO: redirect to app console.
 
 	// Initialize
@@ -372,4 +378,29 @@ func checkACPErr(err error) error {
 	} else {
 		return fmt.Errorf("ACP request error: %w", err)
 	}
+}
+
+func duplicatedIO(stdin io.WriteCloser, stdout io.ReadCloser) (io.WriteCloser, io.ReadCloser) {
+	// Duplicate what the Client sends TO the Agent (Client -> Agent)
+	// Anything written to loggedStdin goes to both the agent's stdin AND the console
+	loggedStdin := struct {
+		io.Writer
+		io.Closer
+	}{
+		Writer: io.MultiWriter(stdin, os.Stderr),
+		Closer: stdin,
+	}
+
+	// Duplicate what the Agent sends BACK to the Client (Agent -> Client)
+	// As the ACP client reads from loggedStdout, a copy is automatically piped to the console
+	loggedStdout := struct {
+		io.Reader
+		io.Closer
+	}{
+		Reader: io.TeeReader(stdout, os.Stderr),
+		Closer: stdout,
+	}
+
+	return loggedStdin, loggedStdout
+
 }
