@@ -113,7 +113,7 @@ func (sm *SessionManager) Start(ctx context.Context, agentConfig AgentConfig, cl
 		AgentCapabilities: initResp.AgentCapabilities,
 	}
 
-	log.Printf("Connected to %s (ACP version %v), Agent capabilities: %v", initResp.AgentInfo.Name, initResp.ProtocolVersion, initResp.AgentCapabilities)
+	log.Printf("Connected to %s (ACP version %v)", initResp.AgentInfo.Name, initResp.ProtocolVersion)
 	return nil
 }
 
@@ -126,11 +126,6 @@ func (sm *SessionManager) NewSession(ctx context.Context, cwd string) (*ACPSessi
 		return nil, fmt.Errorf("not connected to agent")
 	}
 
-	log.Println("Agent process ID and exit status: ", conn.cmd.Process.Pid, conn.cmd.ProcessState.String())
-	defer func() {
-		log.Println("[After NewSession] Agent process ID and exit status: ", conn.cmd.Process.Pid, conn.cmd.ProcessState.String())
-	}()
-
 	cwd, err := filepath.Abs(cwd)
 	if err != nil {
 		return nil, err
@@ -141,7 +136,6 @@ func (sm *SessionManager) NewSession(ctx context.Context, cwd string) (*ACPSessi
 		McpServers: []acp.McpServer{},
 	})
 
-	log.Println("ACP error: ", err, resp.SessionId)
 	err = checkACPErr(err)
 	if err != nil {
 		return nil, err
