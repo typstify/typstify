@@ -42,6 +42,7 @@ func (p PermissionGrantPopup) Layout(gtx C, th *theme.Theme) D {
 					prompt := material.Label(th.Theme, th.TextSize, "Allow "+toolTitle+"?")
 					prompt.Color = th.Fg
 					prompt.Font.Weight = font.Bold
+					prompt.MaxLines = 2
 					return prompt.Layout(gtx)
 				}),
 				layout.Rigid(layout.Spacer{Height: unit.Dp(6)}.Layout),
