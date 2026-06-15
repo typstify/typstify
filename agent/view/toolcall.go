@@ -1,6 +1,7 @@
 package view
 
 import (
+	"encoding/json"
 	"slices"
 	"time"
 
@@ -31,6 +32,8 @@ type ToolCallStyle struct {
 	mdBock         markdownBlock
 	card           CardStyle
 	terminal       TerminalStyle
+	inputCard      CardStyle
+	outputCard     CardStyle
 }
 
 func (t *ToolCallStyle) Layout(gtx C, th *theme.Theme, msg chatMessage) D {
@@ -100,6 +103,53 @@ func (t *ToolCallStyle) layoutExtraContent(gtx C, th *theme.Theme) D {
 	// 	)
 	// }
 
+	if tc.RawInput != nil {
+		rawBytes, err := json.MarshalIndent(tc.RawInput, "", "  ")
+		if err == nil {
+			rawInput := string(rawBytes)
+			children = append(children,
+				layout.Rigid(func(gtx C) D {
+					return t.inputCard.Layout(gtx, th,
+						func(gtx C) D {
+							label := material.Label(th.Theme, th.TextSize*0.8, i18n.Translate("Raw Input", rawInput))
+							label.Color = misc.WithAlpha(th.Fg, 0xb0)
+							return label.Layout(gtx)
+						},
+						func(gtx C) D {
+							label := material.Label(th.Theme, th.TextSize*0.8, rawInput)
+							label.Color = misc.WithAlpha(th.Fg, 0xb0)
+							return label.Layout(gtx)
+						},
+					)
+				}),
+			)
+		}
+	}
+
+	if tc.RawOutput != nil {
+		rawBytes, err := json.MarshalIndent(tc.RawOutput, "", "  ")
+		if err == nil {
+			rawOutput := string(rawBytes)
+			children = append(children,
+				layout.Rigid(layout.Spacer{Height: unit.Dp(4)}.Layout),
+				layout.Rigid(func(gtx C) D {
+					return t.outputCard.Layout(gtx, th,
+						func(gtx C) D {
+							label := material.Label(th.Theme, th.TextSize*0.8, i18n.Translate("Raw Output", rawOutput))
+							label.Color = misc.WithAlpha(th.Fg, 0xb0)
+							return label.Layout(gtx)
+						},
+						func(gtx C) D {
+							label := material.Label(th.Theme, th.TextSize*0.8, rawOutput)
+							label.Color = misc.WithAlpha(th.Fg, 0xb0)
+							return label.Layout(gtx)
+						},
+					)
+				}),
+			)
+		}
+	}
+
 	if len(tc.Content) > 0 {
 		if len(children) > 0 {
 			children = append(children, layout.Rigid(layout.Spacer{Height: unit.Dp(4)}.Layout))
@@ -128,28 +178,6 @@ func (t *ToolCallStyle) layoutExtraContent(gtx C, th *theme.Theme) D {
 			}.Layout(gtx, contents...)
 		}))
 	}
-
-	// if rawInput, ok := tc.RawInput.(string); ok && rawInput != "" {
-	// 	children = append(children,
-	// 		layout.Rigid(layout.Spacer{Height: unit.Dp(4)}.Layout),
-	// 		layout.Rigid(func(gtx C) D {
-	// 			label := material.Label(th.Theme, th.TextSize*0.8, i18n.Translate("Input: %s", rawInput))
-	// 			label.Color = misc.WithAlpha(th.Fg, 0x60)
-	// 			return label.Layout(gtx)
-	// 		}),
-	// 	)
-	// }
-
-	// if rawOutput, ok := tc.RawOutput.(string); ok && rawOutput != "" {
-	// 	children = append(children,
-	// 		layout.Rigid(layout.Spacer{Height: unit.Dp(4)}.Layout),
-	// 		layout.Rigid(func(gtx C) D {
-	// 			label := material.Label(th.Theme, th.TextSize*0.8, i18n.Translate("Output: %s", rawOutput))
-	// 			label.Color = misc.WithAlpha(th.Fg, 0x60)
-	// 			return label.Layout(gtx)
-	// 		}),
-	// 	)
-	// }
 
 	return layout.Flex{
 		Axis: layout.Vertical,
