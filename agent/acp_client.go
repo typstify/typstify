@@ -48,7 +48,7 @@ func (a *ACPClient) ReadTextFile(ctx context.Context, params acp.ReadTextFileReq
 		return emptyResp, fmt.Errorf("no active session: %s", params.SessionId)
 	}
 
-	absPath, err := resolvePath(session.Cwd, params.Path)
+	absPath, err := resolvePath(session.Cwd, nil, params.Path)
 	if err != nil {
 		return emptyResp, err
 	}
@@ -108,7 +108,7 @@ func (a *ACPClient) WriteTextFile(ctx context.Context, params acp.WriteTextFileR
 		return emptyResp, fmt.Errorf("no active session: %s", params.SessionId)
 	}
 
-	absPath, err := resolvePath(session.Cwd, params.Path)
+	absPath, err := resolvePath(session.Cwd, nil, params.Path)
 	if err != nil {
 		return emptyResp, err
 	}
@@ -256,7 +256,12 @@ func (a *ACPClient) CreateTerminal(ctx context.Context, params acp.CreateTermina
 		return emptyResp, fmt.Errorf("no active session: %s", params.SessionId)
 	}
 
-	terminal := newTerminal(params)
+	terminal, err := newTerminal(session.Cwd, params)
+	if err != nil {
+		log.Println("CreateTerminal error: ", err)
+		return emptyResp, err
+	}
+
 	if err := terminal.Start(); err != nil {
 		log.Println("CreateTerminal error: ", err)
 		return emptyResp, err
@@ -413,25 +418,6 @@ func (a *ACPClient) WaitForTerminalExit(ctx context.Context, params acp.WaitForT
 	resp.Signal = sig
 
 	return resp, nil
-}
-
-// resolvePath resolves a file path relative to the session cwd, preventing
-// directory traversal outside the project root.
-func resolvePath(cwd, path string) (string, error) {
-	absPath := path
-	if !filepath.IsAbs(path) {
-		absPath = filepath.Join(cwd, path)
-	}
-
-	clean := filepath.Clean(absPath)
-
-	// Verify the resolved path stays within the project directory.
-	rel, err := filepath.Rel(cwd, clean)
-	if err != nil || strings.HasPrefix(rel, "..") {
-		return "", fmt.Errorf("path %s is outside project directory", path)
-	}
-
-	return clean, nil
 }
 
 func (a *ACPClient) RegisterExtension(method string, handler ExtentionHandler) error {
