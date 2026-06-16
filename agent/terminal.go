@@ -31,6 +31,7 @@ func (w *lockedWriter) Write(p []byte) (n int, err error) {
 type ACPTerminal struct {
 	ID              string
 	SessionId       string
+	SessionCwd      string
 	OutputByteLimit int
 	cmd             *exec.Cmd
 	outputBuf       bytes.Buffer
@@ -38,10 +39,11 @@ type ACPTerminal struct {
 	exited          atomic.Bool
 }
 
-func newTerminal(req acp.CreateTerminalRequest) *ACPTerminal {
+func newTerminal(cwd string, req acp.CreateTerminalRequest) (*ACPTerminal, error) {
 	t := &ACPTerminal{
-		ID:        uuid.NewString(),
-		SessionId: string(req.SessionId),
+		ID:         uuid.NewString(),
+		SessionId:  string(req.SessionId),
+		SessionCwd: cwd,
 	}
 
 	if req.OutputByteLimit != nil {
@@ -49,12 +51,7 @@ func newTerminal(req acp.CreateTerminalRequest) *ACPTerminal {
 	}
 
 	ctx := context.Background()
-	var cmd *exec.Cmd
-	if isScript(req.Command) {
-		cmd = t.buildScriptCmd(ctx, req.Command, req.Args)
-	} else {
-		cmd = utils.BuildCmd(ctx, req.Command, req.Args...)
-	}
+	cmd := buildCmd(ctx, req.Command, req.Args)
 
 	envs := make([]string, 0, len(req.Env))
 	for _, env := range req.Env {
@@ -63,13 +60,19 @@ func newTerminal(req acp.CreateTerminalRequest) *ACPTerminal {
 	cmd.Env = append(envs, cmd.Environ()...)
 
 	if req.Cwd != nil && *req.Cwd != "" {
-		cmd.Dir = *req.Cwd
+		resolvedCwd, err := resolvePath(t.SessionCwd, nil, *req.Cwd)
+		if err != nil {
+			return nil, err
+		}
+		cmd.Dir = resolvedCwd
+	} else {
+		cmd.Dir = t.SessionCwd
 	}
 
 	cmd.Stdout = t.writer()
 	cmd.Stderr = t.writer()
 	t.cmd = cmd
-	return t
+	return t, nil
 }
 
 func (t *ACPTerminal) writer() *lockedWriter {
@@ -156,7 +159,7 @@ func (t *ACPTerminal) Wait() error {
 }
 
 var (
-	cmdNamePattern = regexp.MustCompile(`^[\w_][\w\d_.]$`)
+	cmdNamePattern = regexp.MustCompile(`^[\w][\w.\-]*$`)
 )
 
 func isScript(cmd string) bool {
@@ -171,10 +174,15 @@ func getShell() (string, []string) {
 	return "bash", []string{"-c"}
 }
 
-func (t *ACPTerminal) buildScriptCmd(ctx context.Context, script string, args []string) *exec.Cmd {
-	shell, args := getShell()
-	fullArgs := append(args, script)
-	cmd := utils.BuildCmd(ctx, shell, fullArgs...)
+func buildCmd(ctx context.Context, command string, args []string) *exec.Cmd {
+	var cmd *exec.Cmd
+	if isScript(command) {
+		shell, args := getShell()
+		fullArgs := append(args, command)
+		cmd = utils.BuildCmd(ctx, shell, fullArgs...)
+	} else {
+		cmd = utils.BuildCmd(ctx, command, args...)
+	}
 
 	return cmd
 }

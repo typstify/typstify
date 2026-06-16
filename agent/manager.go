@@ -106,6 +106,11 @@ func (sm *SessionManager) Start(ctx context.Context, agentConfig AgentConfig, cl
 		return err
 	}
 
+	go func() {
+		<- conn.Done()
+		log.Println("Peer closed connections")
+	}()
+
 	sm.conn = &AgentConn{
 		cmd:               cmd,
 		Conn:              conn,
