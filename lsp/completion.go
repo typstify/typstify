@@ -51,7 +51,7 @@ func (c *LspAutoCompletor) Trigger() gvcode.Trigger {
 
 func (c *LspAutoCompletor) Suggest(ctx gvcode.CompletionContext) []gvcode.CompletionCandidate {
 	// Notify LSP server the editor content has changed:
-	c.client.OnEditorUpdated(c.filePath, c.editor)
+	c.client.OnEditorUpdated(c.filePath, c.editor.GetReader())
 
 	// Then request the completion result based on the new version of content.
 	c.candicates = c.candicates[:0]

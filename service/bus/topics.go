@@ -9,6 +9,7 @@ const (
 	TopicWorkspaceFileChanged = "workspace.file.changed"
 	TopicGitBranchChanged     = "git.branch.changed"
 	TopicGitFileStaged        = "git.file.staged"
+	TopicPreviewToggle        = "preview.toggle" // for agent tool
 )
 
 type FileChangedEvent struct {
@@ -23,4 +24,5 @@ var allTopics = []string{
 	TopicWorkspaceFileChanged,
 	TopicGitBranchChanged,
 	TopicGitFileStaged,
+	TopicPreviewToggle,
 }

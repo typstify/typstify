@@ -12,7 +12,7 @@ import (
 	"looz.ws/typstify/typst"
 )
 
-type CompileHeler struct {
+type CompileHelper struct {
 	projectDir string
 	settings   *settings.TypstSettings
 
@@ -25,14 +25,14 @@ type CompileHeler struct {
 	CmdOutput   io.Writer
 }
 
-func NewCompileHelper(projectDir string, settings *settings.TypstSettings) *CompileHeler {
-	return &CompileHeler{
+func NewCompileHelper(projectDir string, settings *settings.TypstSettings) *CompileHelper {
+	return &CompileHelper{
 		projectDir: projectDir,
 		settings:   settings,
 	}
 }
 
-func (ch *CompileHeler) BuildParams(targetFile string, outFilename string) (*typst.CompileParams, error) {
+func (ch *CompileHelper) BuildParams(targetFile string, outFilename string) (*typst.CompileParams, error) {
 	if ch.Format == "" {
 		ch.Format = typst.PDF
 	}
@@ -98,7 +98,7 @@ func (ch *CompileHeler) BuildParams(targetFile string, outFilename string) (*typ
 	return params, nil
 }
 
-func (ch *CompileHeler) Compile(params *typst.CompileParams) error {
+func (ch *CompileHelper) Compile(params *typst.CompileParams) error {
 	if params == nil || params.InputFile == "" {
 		return errors.New("invalid compile params")
 	}
@@ -111,7 +111,7 @@ func (ch *CompileHeler) Compile(params *typst.CompileParams) error {
 	return err
 }
 
-func (ch *CompileHeler) fontPaths() []string {
+func (ch *CompileHelper) fontPaths() []string {
 	fontPaths := []string{ch.projectDir}
 	if ch.settings.ExtraFontPath != "" {
 		fontPaths = append(fontPaths, ch.settings.ExtraFontPath)
@@ -120,7 +120,7 @@ func (ch *CompileHeler) fontPaths() []string {
 	return fontPaths
 }
 
-func (ch *CompileHeler) onExportFile(params *typst.CompileParams) error {
+func (ch *CompileHelper) onExportFile(params *typst.CompileParams) error {
 	// use project dir as work dir for Typst to properly resolve imported resources.
 	compiler, err := typst.NewCompiler(ch.projectDir)
 	if err != nil {

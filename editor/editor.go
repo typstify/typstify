@@ -293,7 +293,7 @@ func (me *TextEditor) handleEvents(gtx layout.Context) {
 			me.highlighter.Highlight(me.state)
 			me.searchbar.ReSearch()
 			if me.lspClient != nil {
-				me.lspClient.OnEditorUpdated(me.filename, me.state)
+				me.lspClient.OnEditorUpdated(me.filename, me.state.GetReader())
 			}
 
 			me.updateDiff()
@@ -572,7 +572,7 @@ func (me *TextEditor) reloadContent(content []byte, hash string) error {
 	me.updateDiff()
 
 	if me.lspClient != nil {
-		me.lspClient.OnEditorUpdated(me.filename, me.state)
+		me.lspClient.OnEditorUpdated(me.filename, me.state.GetReader())
 		me.lspClient.OnEditorSaved(me.filename)
 	}
 
@@ -588,7 +588,7 @@ func (me *TextEditor) NavigateToLine(line, col int) {
 // Let the LSP server(tinymist) detect the focused file.
 func (me *TextEditor) FocusLsp() {
 	if me.lspClient != nil {
-		me.lspClient.OnEditorUpdated(me.filename, me.state)
+		me.lspClient.OnEditorUpdated(me.filename, me.state.GetReader())
 	}
 }
 
@@ -691,7 +691,7 @@ func (te *TextEditor) SetupLsp(gtx layout.Context, client *lsp.Client) {
 
 	cm.AddCompletor(completor, te.popup)
 	te.state.WithOptions(gvcode.WithAutoCompletion(cm))
-	client.OnEditorUpdated(te.filename, te.state)
+	client.OnEditorUpdated(te.filename, te.state.GetReader())
 }
 
 func (me *TextEditor) updateDiff() {

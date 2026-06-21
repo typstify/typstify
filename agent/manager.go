@@ -44,6 +44,17 @@ type SessionManager struct {
 	// Active ACP sessions which are either newly created, loaded or resumed from Agents.
 	activeSessions []*ACPSession
 	mu             sync.Mutex
+
+	// Optional mcp servers to use when initializing sessions
+	mcpServers []acp.McpServer
+}
+
+func NewSessionManager(mcpServers []acp.McpServer) *SessionManager {
+	servers := make([]acp.McpServer, 0) // mcpServers must not be nil
+	servers = append(servers, mcpServers...)
+	return &SessionManager{
+		mcpServers: servers,
+	}
 }
 
 // Start runs a agent through ACP client. The config is used to specify
@@ -107,7 +118,7 @@ func (sm *SessionManager) Start(ctx context.Context, agentConfig AgentConfig, cl
 	}
 
 	go func() {
-		<- conn.Done()
+		<-conn.Done()
 		log.Println("Peer closed connections")
 	}()
 
@@ -138,7 +149,7 @@ func (sm *SessionManager) NewSession(ctx context.Context, cwd string) (*ACPSessi
 
 	resp, err := conn.Conn.NewSession(ctx, acp.NewSessionRequest{
 		Cwd:        cwd,
-		McpServers: []acp.McpServer{},
+		McpServers: sm.mcpServers,
 	})
 
 	err = checkACPErr(err)
@@ -234,7 +245,7 @@ func (sm *SessionManager) LoadSession(ctx context.Context, session *ACPSession) 
 
 	resp, err := sm.conn.Conn.LoadSession(ctx, acp.LoadSessionRequest{
 		Cwd:        session.Cwd,
-		McpServers: []acp.McpServer{},
+		McpServers: sm.mcpServers,
 		SessionId:  acp.SessionId(session.SessionID),
 	})
 
@@ -275,7 +286,7 @@ func (sm *SessionManager) ResumeSession(ctx context.Context, session *ACPSession
 
 	resp, err := sm.conn.Conn.ResumeSession(ctx, acp.ResumeSessionRequest{
 		Cwd:        session.Cwd,
-		McpServers: []acp.McpServer{},
+		McpServers: sm.mcpServers,
 		SessionId:  acp.SessionId(session.SessionID),
 	})
 
