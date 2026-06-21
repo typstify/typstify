@@ -253,7 +253,7 @@ func (s *SessionHistory) onSessionSelected(session *agent.ACPSession, load bool)
 	intent := view.Intent{
 		Target:      AgentChatViewID,
 		ShowAsModal: false,
-		RequireNew:  true, // Don't overwrite existing chats.
+		RequireNew:  false, // Replace existing chat view, to ensure there is only one global AgentChatView.
 		Params: map[string]any{
 			"session": session,
 		},

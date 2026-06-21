@@ -147,6 +147,20 @@ func (eb *EventBus) Unsubscribe(instance interface{}) {
 	}
 }
 
+func (eb *EventBus) UnsubscribeByName(instance interface{}, name string) {
+	key := fmt.Sprintf("%p:%s", instance, name)
+
+	for _, topic := range eb.bus.Topics() {
+		for _, h := range eb.bus.TopicHandlerKeys(topic) {
+			if h == key {
+				eb.bus.DeregisterHandler(h)
+			}
+		}
+	}
+
+	delete(eb.handleFuncs, key)
+}
+
 func (eb *EventBus) close() {
 	for _, topic := range eb.bus.Topics() {
 		for _, h := range eb.bus.TopicHandlerKeys(topic) {

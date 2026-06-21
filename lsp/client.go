@@ -12,7 +12,6 @@ import (
 	"sync/atomic"
 	"time"
 
-	"github.com/oligo/gvcode"
 	"github.com/pkg/errors"
 	"golang.org/x/exp/jsonrpc2"
 	"looz.ws/typstify/lsp/protocol"
@@ -356,8 +355,8 @@ func (c *Client) Handle(ctx context.Context, req *jsonrpc2.Request) (interface{}
 }
 
 // OnEditorUpdated should be called when editor loads a file, or content changed, or when the editor closed.
-func (c *Client) OnEditorUpdated(filePath string, state *gvcode.Editor) {
-	c.docCache.Update(filePath, state.GetReader())
+func (c *Client) OnEditorUpdated(filePath string, state io.ReadSeeker) {
+	c.docCache.Update(filePath, state)
 	if !c.IsReady() {
 		return
 	}

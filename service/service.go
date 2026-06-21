@@ -3,19 +3,21 @@ package service
 import (
 	"context"
 	"errors"
+	"fmt"
 	"io"
 	"log"
 	"os"
 	"time"
 
+	"github.com/coder/acp-go-sdk"
 	"github.com/oligo/gioview/explorer"
 	"github.com/oligo/gioview/image"
 	"github.com/oligo/gioview/view"
 	"github.com/typstify/tpix-cli/api"
 	"looz.ws/typstify/agent"
-	"looz.ws/typstify/agent/extensions"
 	"looz.ws/typstify/lsp"
 	"looz.ws/typstify/service/bus"
+	"looz.ws/typstify/service/mcp"
 	"looz.ws/typstify/service/net"
 	"looz.ws/typstify/service/settings"
 	"looz.ws/typstify/typst"
@@ -36,6 +38,7 @@ type ServiceFacade struct {
 	fileChooserBuilder func() *explorer.FileChooser
 	consoleState       *console.ConsoleState
 	acpSessionManager  *agent.SessionManager
+	mcpServer          *agent.McpServer // the built-in mcp server
 
 	currentProjectDir string
 
@@ -125,7 +128,9 @@ func (s *ServiceFacade) Close(ctx context.Context) {
 	}
 
 	s.stopAcpSessionManager(ctx)
-
+	if s.mcpServer != nil {
+		s.mcpServer.Shutdown(ctx)
+	}
 	log.Println("service down")
 }
 
@@ -255,6 +260,40 @@ func (s *ServiceFacade) Console() *console.ConsoleState {
 	return s.consoleState
 }
 
+func (s *ServiceFacade) initMcpServer(ctx context.Context) {
+	if s.mcpServer != nil {
+		s.mcpServer.Shutdown(ctx)
+	}
+
+	s.mcpServer = agent.NewMcpServer()
+
+	client := lsp.GetLspClient(s.currentProjectDir, s.Settings())
+
+	// compilerTool := mcp.TypstCompilerHandler(s.CurrentProjectDir(), s.Settings().Typst())
+	// agent.AddMcpTool(s.mcpServer, mcp.TypstCompilerTool, compilerTool)
+	editorToolSrv := mcp.NewEditorMcpService(s.currentProjectDir, s.settings, client, s.previewSrv, s.eventbus)
+	s.mcpServer.RegisterToolProvider(editorToolSrv)
+
+	s.mcpServer.Run()
+}
+
+func (s *ServiceFacade) listMcpServer() []acp.McpServer {
+	mcpServers := make([]acp.McpServer, 0)
+
+	// built-in mcp server
+	ip, port := s.mcpServer.Addr()
+	mcpServers = append(mcpServers, acp.McpServer{
+		Http: &acp.McpServerHttpInline{
+			Name:    agent.ServerName,
+			Type:    "http",
+			Url:     fmt.Sprintf("http://%s:%d", ip, port),
+			Headers: []acp.HttpHeader{},
+		},
+	})
+
+	return mcpServers
+}
+
 func (s *ServiceFacade) StartACPSession(ctx context.Context, projectDir string) (*agent.ACPSession, error) {
 	if s.acpSessionManager == nil {
 		err := s.startAcpSessionManager(ctx)
@@ -286,11 +325,11 @@ func (s *ServiceFacade) startAcpSessionManager(ctx context.Context) error {
 	childCtx, cancel := context.WithTimeout(ctx, 30*time.Second)
 	defer cancel()
 
-	mgr := &agent.SessionManager{}
-	client := agent.NewACPClient(mgr)
+	// start the mcp server
+	s.initMcpServer(ctx)
 
-	compilerExt := extensions.TypstCompilerExt(s.CurrentProjectDir(), s.Settings().Typst())
-	client.RegisterExtension("typstify/compileTypst", compilerExt)
+	mgr := agent.NewSessionManager(s.listMcpServer())
+	client := agent.NewACPClient(mgr)
 
 	// Setting env ACP_DEBUG=1 will turn Typstify into ACP debug mode.
 	acpDebug := os.Getenv("ACP_DEBUG") == "1"
