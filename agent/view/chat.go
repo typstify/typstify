@@ -2,9 +2,11 @@ package view
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"image"
 	"log"
+	"slices"
 	"strings"
 	"sync"
 
@@ -334,7 +336,7 @@ func (v *AgentChat) layoutInput(gtx C, th *theme.Theme) D {
 									}),
 									layout.Rigid(layout.Spacer{Width: unit.Dp(8)}.Layout),
 									layout.Rigid(func(gtx C) D {
-										if !v.canSend() || !v.isPromptRunning() {
+										if !v.canSend() && !v.isPromptRunning() {
 											gtx = gtx.Disabled()
 										}
 
@@ -410,13 +412,19 @@ func (v *AgentChat) doSend() {
 		return
 	}
 
+	blocks := v.inputEditor.Blocks()
 	v.inputEditor.SetText("")
+
+	textBlkIdx := slices.IndexFunc(blocks, func(blk acp.ContentBlock) bool { return blk.Text != nil })
+	if textBlkIdx < 0 {
+		panic("expects at least one text block")
+	}
 
 	// Echo the user message locally so it appears immediately.
 	v.mu.Lock()
 	v.messages = append(v.messages, chatMessage{
 		Kind:    msgUser,
-		Content: text,
+		Content: blocks[textBlkIdx].Text.Text,
 	})
 	v.mu.Unlock()
 
@@ -424,10 +432,14 @@ func (v *AgentChat) doSend() {
 	v.invalidate()
 
 	go func() {
-		block := acp.TextBlock(text)
-		resp, err := v.session.Prompt(context.Background(), block)
-		if err != nil {
+		resp, err := v.session.Prompt(context.Background(), blocks...)
+		if err != nil && !errors.Is(err, agent.ErrPromptBuffered) {
+			v.mu.Lock()
+			v.messages = append(v.messages, chatMessage{Kind: msgAgent, Content: fmt.Sprintf("[System Error] %s", err.Error())})
+			v.mu.Unlock()
 			log.Printf("chat: prompt error: %v", err)
+		} else if errors.Is(err, agent.ErrPromptBuffered) {
+			log.Printf("prompt buffered")
 		} else {
 			log.Printf("prompt turn finished, reason: %s", resp.StopReason)
 		}

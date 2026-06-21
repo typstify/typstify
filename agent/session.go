@@ -74,6 +74,10 @@ type ACPSession struct {
 	// ongoing prompt turn info
 	hasOngoingTurn atomic.Bool
 	CurrentTurn    *PromptTurn
+	// When there is a ongoing turn, succeeded input from user will be buffered, and sent when the previous
+	// turn is finished.
+	contentBuf   []acp.ContentBlock
+	contentBufMu sync.Mutex
 
 	// ongoing terminals
 	terminals []*ACPTerminal
@@ -89,6 +93,8 @@ type ACPSession struct {
 	// a view implementing a SessionUpdateSubsciber to work.
 	bound bool
 }
+
+var ErrPromptBuffered = errors.New("A prompt turn is ongoing, prompt was buffered for later.")
 
 func NewACPSession(sessionID string, cwd string) *ACPSession {
 	return &ACPSession{
@@ -296,12 +302,25 @@ func (sn *ACPSession) Prompt(ctx context.Context, contents ...acp.ContentBlock) 
 	}
 
 	if !sn.hasOngoingTurn.CompareAndSwap(false, true) {
-		return PromptResponse{}, errors.New("A prompt turn is ongoing, please wait for it to finish, or cancel it")
+		//return PromptResponse{}, errors.New("A prompt turn is ongoing, please wait for it to finish, or cancel it")
+		sn.contentBufMu.Lock()
+		sn.contentBuf = append(sn.contentBuf, contents...)
+		sn.contentBufMu.Unlock()
+		return acp.PromptResponse{}, ErrPromptBuffered
 	}
 
 	defer func() {
 		sn.hasOngoingTurn.Store(false)
 		sn.CurrentTurn = nil
+
+		// check if there is buffered messages
+		sn.contentBufMu.Lock()
+		buf := sn.contentBuf
+		sn.contentBuf = sn.contentBuf[:0]
+		sn.contentBufMu.Unlock()
+		if len(buf) > 0 {
+			sn.Prompt(ctx, buf...)
+		}
 	}()
 
 	// start a new turn.
@@ -491,6 +510,13 @@ func (sn *ACPSession) Close() {
 		close(sn.grantChan)
 	}
 
+	sn.bound = false
+	sn.contentBufMu.Lock()
+	sn.contentBuf = nil
+	sn.contentBufMu.Unlock()
+
+	sn.tmMu.Lock()
+	defer sn.tmMu.Unlock()
 	for _, t := range sn.terminals {
 		t.Kill()
 	}
