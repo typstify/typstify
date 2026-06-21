@@ -1,9 +1,11 @@
 package view
 
 import (
+	"fmt"
 	"image"
 	"os"
 	"path/filepath"
+	"regexp"
 	"strings"
 
 	"gioui.org/font"
@@ -13,6 +15,7 @@ import (
 	"gioui.org/text"
 	"gioui.org/unit"
 	"gioui.org/widget/material"
+	"github.com/coder/acp-go-sdk"
 	"github.com/oligo/gioview/misc"
 	"github.com/oligo/gioview/theme"
 	"github.com/oligo/gvcode"
@@ -26,6 +29,7 @@ import (
 )
 
 type InputBox struct {
+	rootDir string
 	*gvcode.Editor
 	colorScheme *syntax.ColorScheme
 	cmdPopup    *completion.CompletionPopup
@@ -55,6 +59,7 @@ func newInputBox(session *agent.ACPSession) *InputBox {
 	ed.WithOptions(gvcode.WithAutoCompletion(cm))
 
 	b := &InputBox{
+		rootDir:  session.Cwd,
 		Editor:   ed,
 		cmdPopup: cmdPopup,
 		rsPopup:  rsPopup,
@@ -131,6 +136,48 @@ func (b *InputBox) Layout(gtx C, th *theme.Theme) D {
 		return editorDims
 	})
 
+}
+
+var resourceMentionPattern = regexp.MustCompile(`(?:^|\s)@([\w\.\-\/]+)(?:\s|$)`)
+
+// Parse user input to extract text and resource-mentions into different ACP content blocks.
+// Example input:  @hello.typ Please fix @main.typ and editor successfully resolves it @hello.typ
+func (b *InputBox) Blocks() []acp.ContentBlock {
+	text := strings.TrimSpace(b.Text())
+	if len(text) == 0 {
+		return nil
+	}
+
+	blocks := make([]acp.ContentBlock, 0)
+
+	blocks = append(blocks, acp.TextBlock(text))
+
+	resourceMatches := resourceMentionPattern.FindAllStringSubmatch(text, -1)
+	if len(resourceMatches) == 0 {
+		return blocks
+	}
+
+	resourceMap := make(map[string]bool)
+
+	for _, match := range resourceMatches {
+		if len(match) <= 1 {
+			continue
+		}
+
+		resPath := match[1] // the capture group
+		absResPath, err := filepath.Abs(filepath.Join(b.rootDir, resPath))
+		if err != nil {
+			continue
+		}
+		if _, exists := resourceMap[absResPath]; exists {
+			continue
+		}
+
+		blocks = append(blocks, acp.ResourceLinkBlock(resPath, fmt.Sprintf("file://%s", absResPath)))
+		resourceMap[absResPath] = true
+	}
+
+	return blocks
 }
 
 var _ gvcode.Completor = (*commandCompletor)(nil)
