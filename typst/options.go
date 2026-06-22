@@ -221,3 +221,60 @@ func (opt *InitCmdOptions) Build() []string {
 
 	return opts
 }
+
+type FontCmdOptions struct {
+	// Adds additional directories that are recursively searched for fonts
+	// [env: TYPST_FONT_PATHS=]
+	FontPaths []string
+
+	// Ensures system fonts won't be searched, unless explicitly included via
+	//      `--font-path`
+	IgnoreSystemFonts bool
+	// Ensures fonts embedded into Typst won't be considered [env: TYPST_IGNORE_EMBEDDED_FONTS=]
+	IgnoreEmbeddedFonts bool
+
+	// Lists style variants of each font family too.
+	Variants bool
+}
+
+func (opt *FontCmdOptions) Build() []string {
+	opts := make([]string, 0)
+	v := ParseVersion(CurrentVersion())
+
+	setPair := func(key string, value any) {
+		opts = append(opts, "--"+key)
+		if val, ok := value.(string); ok {
+			if val != "" {
+				opts = append(opts, val)
+			}
+		} else {
+			opts = append(opts, fmt.Sprintf("%v", value))
+		}
+	}
+
+	if len(opt.FontPaths) > 0 {
+		for _, fontPath := range opt.FontPaths {
+			if fontPath != "" {
+				setPair("font-path", fontPath)
+			}
+		}
+	}
+
+	if opt.Variants {
+		setPair("variants", "")
+	}
+
+	if v.AtLeast(0, 12, 0) {
+		if opt.IgnoreSystemFonts {
+			setPair("ignore-system-fonts", "")
+		}
+	}
+
+	if v.AtLeast(0, 14, 0) {
+		if opt.IgnoreEmbeddedFonts {
+			setPair("ignore-embedded-fonts", "")
+		}
+	}
+
+	return opts
+}

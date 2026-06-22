@@ -23,6 +23,7 @@ import (
 	"looz.ws/typstify/lsp"
 	lspProtocol "looz.ws/typstify/lsp/protocol"
 	"looz.ws/typstify/service"
+	"looz.ws/typstify/service/mcp"
 	"looz.ws/typstify/ui/dialog"
 	uipreview "looz.ws/typstify/ui/preview"
 	"looz.ws/typstify/ui/viewer"
@@ -468,6 +469,21 @@ func (te *TypstEditor) OnOutlineSymbolSelected(symbol lspProtocol.DocumentSymbol
 // CaretLine returns the current caret line (0-indexed) for outline bi-directional sync.
 func (te *TypstEditor) CaretLine() int {
 	return te.lastCaretPos.Line
+}
+
+// GetActiveDocument implements mcp.ActiveDocProvider.
+func (te *TypstEditor) GetActiveDocument() mcp.ActiveDocument {
+	var doc mcp.ActiveDocument
+	doc.File = te.targetFile
+
+	if te.srcEditor != nil {
+		start, end := te.srcEditor.Selection()
+		doc.CursorPos = start
+		doc.Selection.Start = start
+		doc.Selection.End = end
+		doc.Selection.Content = te.srcEditor.SelectedText()
+	}
+	return doc
 }
 
 func (te *TypstEditor) closeChat() {
