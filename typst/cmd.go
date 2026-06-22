@@ -1,10 +1,14 @@
 package typst
 
 import (
+	"bufio"
+	"bytes"
 	"context"
+	"fmt"
 	"log"
 	"regexp"
 	"runtime"
+	"strconv"
 	"strings"
 
 	"looz.ws/typstify/utils"
@@ -53,10 +57,94 @@ func QueryCmd() []string {
 	return nil
 }
 
-func FontsCmd() []string {
-	cmd := cmdBuilder.Build(context.Background(), "fonts")
-	out, _ := cmd.Output()
-	return strings.Split(string(out), "\n")
+type FontVariant struct {
+	Style   string `json:"style"`
+	Weight  int    `json:"weight"`
+	Stretch string `json:"stretch"`
+}
+
+type FontFamily struct {
+	Name     string        `json:"name"`
+	Variants []FontVariant `json:"variants,omitempty"`
+}
+
+// FontCmd runs `typst fonts` command in the editor environment and return parsed
+// font families.
+//
+// Command sample output:
+//
+//	Grantha Sangam MN
+//	- Style: Normal, Weight: 400, Stretch: FontStretch(1000)
+//	- Style: Normal, Weight: 700, Stretch: FontStretch(1000)
+//	Gujarati MT
+//	- Style: Normal, Weight: 400, Stretch: FontStretch(1000)
+//	- Style: Normal, Weight: 700, Stretch: FontStretch(1000)
+//	Gujarati Sangam MN
+//	- Style: Normal, Weight: 400, Stretch: FontStretch(1000)
+//	- Style: Normal, Weight: 700, Stretch: FontStretch(1000)
+//
+// If variants is not passed, no variant list is returned.
+func FontsCmd(ctx context.Context, opts *FontCmdOptions) ([]FontFamily, error) {
+	args := []string{"fonts"}
+	args = append(args, opts.Build()...)
+
+	cmd := cmdBuilder.Build(ctx, args...)
+	out, err := cmd.Output()
+	if err != nil {
+		return nil, err
+	}
+
+	scanner := bufio.NewScanner(bytes.NewReader(out))
+
+	var variantRE = regexp.MustCompile(
+		`^- Style:\s*(.+?),\s*Weight:\s*(\d+),\s*Stretch:\s*(.+)$`,
+	)
+
+	fonts := make([]FontFamily, 0)
+	var current *FontFamily
+
+	for scanner.Scan() {
+		line := strings.TrimSpace(scanner.Text())
+		if line == "" {
+			continue
+		}
+
+		if !strings.HasPrefix(line, "- ") {
+			// start of a new font
+			if current != nil {
+				fonts = append(fonts, *current)
+			}
+			current = &FontFamily{Name: line}
+			continue
+		}
+
+		if current == nil {
+			return nil, fmt.Errorf("variant without family: %q", line)
+		}
+
+		// parse varient line
+		m := variantRE.FindStringSubmatch(line)
+		if m == nil {
+			return nil, fmt.Errorf("invalid variant line: %q", line)
+		}
+
+		weight, err := strconv.Atoi(m[2])
+		if err != nil {
+			return nil, fmt.Errorf("invalid variant weight: %q", m[2])
+		}
+
+		current.Variants = append(current.Variants, FontVariant{
+			Style:   m[1],
+			Weight:  weight,
+			Stretch: m[3],
+		})
+	}
+
+	if err := scanner.Err(); err != nil {
+		return nil, err
+	}
+
+	return fonts, nil
 }
 
 func VersionCmd() string {

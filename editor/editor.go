@@ -579,6 +579,16 @@ func (me *TextEditor) reloadContent(content []byte, hash string) error {
 	return nil
 }
 
+// Selection returns the current selection range as rune offsets.
+func (me *TextEditor) Selection() (start, end int) {
+	return me.state.Selection()
+}
+
+// SelectedText returns the currently selected text.
+func (me *TextEditor) SelectedText() string {
+	return me.state.SelectedText()
+}
+
 // NavigateToLine moves the editor caret to the given line and column (0-indexed).
 func (me *TextEditor) NavigateToLine(line, col int) {
 	off, _ := me.state.ConvertPos(line, col)

@@ -32,6 +32,10 @@ type McpToolProvider interface {
 	RegisterTools(s *McpServer) error
 }
 
+type McpResourceProvider interface {
+	RegisterResources(s *McpServer) error
+}
+
 func NewMcpServer() *McpServer {
 	return &McpServer{
 		mcpServer: mcpsdk.NewServer(
@@ -113,6 +117,10 @@ func (s *McpServer) Shutdown(ctx context.Context) error {
 
 func (s *McpServer) RegisterToolProvider(provider McpToolProvider) {
 	provider.RegisterTools(s)
+}
+
+func (s *McpServer) RegisterResourceProvider(provider McpResourceProvider) {
+	provider.RegisterResources(s)
 }
 
 func (s *McpServer) AddResource(resource *mcpsdk.Resource, handler mcpsdk.ResourceHandler) error {

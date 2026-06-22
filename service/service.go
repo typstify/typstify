@@ -271,7 +271,21 @@ func (s *ServiceFacade) initMcpServer(ctx context.Context) {
 
 	// compilerTool := mcp.TypstCompilerHandler(s.CurrentProjectDir(), s.Settings().Typst())
 	// agent.AddMcpTool(s.mcpServer, mcp.TypstCompilerTool, compilerTool)
-	editorToolSrv := mcp.NewEditorMcpService(s.currentProjectDir, s.settings, client, s.previewSrv, s.eventbus)
+	activeDocQuerier := func() *mcp.ActiveDocument {
+		if s.vm == nil {
+			return nil
+		}
+		cv := s.vm.CurrentView()
+		if cv == nil {
+			return nil
+		}
+		if provider, ok := cv.(mcp.ActiveDocProvider); ok {
+			doc := provider.GetActiveDocument()
+			return &doc
+		}
+		return nil
+	}
+	editorToolSrv := mcp.NewEditorMcpService(s.currentProjectDir, s.settings, client, s.previewSrv, s.eventbus, activeDocQuerier)
 	s.mcpServer.RegisterToolProvider(editorToolSrv)
 
 	s.mcpServer.Run()
