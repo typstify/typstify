@@ -99,7 +99,16 @@ func (s *TypstPkgService) CachedPkgs() ([]TypstPkg, error) {
 	return list, nil
 }
 
-func (s *TypstPkgService) Download(namespace string, name string, version string) (int, error) {
+func (s *TypstPkgService) GetLocalPackagePath(pkgSpec string) string {
+	namespace, name, version := tpix.ParsePkgSpec(pkgSpec)
+	return filepath.Join(s.cacheDir, namespace, name, version)
+}
+
+func (s *TypstPkgService) CacheDir() string {
+	return s.cacheDir
+}
+
+func (s *TypstPkgService) Download(namespace string, name string, version string) (string, int, error) {
 	spec := fmt.Sprintf("@%s/%s", namespace, name)
 	if version != "" {
 		spec += ":" + version
@@ -108,7 +117,7 @@ func (s *TypstPkgService) Download(namespace string, name string, version string
 	return tpix.DownloadPackage(spec, s.cacheDir, false, s.reporter)
 }
 
-func (s *TypstPkgService) DownloadWithSpec(spec string) (int, error) {
+func (s *TypstPkgService) DownloadWithSpec(spec string) (string, int, error) {
 
 	return tpix.DownloadPackage(spec, s.cacheDir, false, s.reporter)
 }
@@ -134,4 +143,39 @@ func (s *TypstPkgService) AccessibleNamesapces() ([]api.UserNamespace, error) {
 	}
 
 	return profile.Namespaces, nil
+}
+
+func (s *TypstPkgService) GetPkgDetail(pkgSpec string) (TypstPkg, error) {
+	resp, err := tpix.QueryPackage(pkgSpec)
+	if err != nil {
+		return TypstPkg{}, err
+	}
+
+	latestVersion := ""
+	if len(resp.Versions) > 0 {
+		latestVersion = resp.Versions[0].Version
+	}
+
+	cachePath := filepath.Join(s.cacheDir, resp.Namespace, resp.Name, latestVersion)
+	_, statErr := os.Stat(cachePath)
+	isCached := statErr == nil
+
+	return TypstPkg{
+		SearchResult: api.SearchResult{
+			Name:          resp.Name,
+			Namespace:     resp.Namespace,
+			Description:   resp.Description,
+			LatestVersion: latestVersion,
+			PublishedAt:   resp.LastPublishedAt,
+			License:       resp.License,
+			IsTemplate:    resp.IsTemplate,
+			CreatedAt:     resp.CreatedAt,
+		},
+		IsCached: isCached,
+		Versions: resp.Versions,
+	}, nil
+}
+
+func (s *TypstPkgService) PkgIndexForLLM() (string, error) {
+	return tpix.GetPackageIndex()
 }

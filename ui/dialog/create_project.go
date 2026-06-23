@@ -103,7 +103,7 @@ func (d *CreateProjectDialog) createDocumentProject(req *ProjectCreateReq) (stri
 
 	if req.TemplateName != "" {
 		dir := filepath.Join(req.ProjectDir, req.Name)
-		_, err := d.srv.PkgService().DownloadWithSpec(req.TemplateName)
+		_, _, err := d.srv.PkgService().DownloadWithSpec(req.TemplateName)
 		if err != nil {
 			return "", err
 		}

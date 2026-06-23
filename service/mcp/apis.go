@@ -107,6 +107,116 @@ var getActiveDocumentTool = &mcpsdk.Tool{
 	Title:       "Get Active Document",
 }
 
+// Package API
+type DownloadPackageParams struct {
+	PkgSpec string `json:"pkgSpec" jsonschema:"Package specifier, e.g. @namespace/name:version. If version is omitted, the latest version is downloaded."`
+}
+
+type DownloadPackageResult struct {
+	Path string `json:"path" jsonschema:"Local path of the downloaded package"`
+}
+
+type QueryPackageDetailParams struct {
+	PkgSpec string `json:"pkgSpec" jsonschema:"Package specifier, e.g. @namespace/name:version"`
+}
+
+type SearchPackagesParams struct {
+	Queries []string `json:"queries" jsonschema:"Search query strings. Multiple queries are run in parallel and results are deduplicated."`
+	Limit   int      `json:"limit,omitempty" jsonschema:"Maximum number of results to return"`
+}
+
+type PublishPackageParams struct {
+	PkgDir    string `json:"pkgDir" jsonschema:"Directory of the package to publish"`
+	Namespace string `json:"namespace" jsonschema:"Target namespace to publish to"`
+}
+
+type PublishPackageResult struct {
+	Success bool   `json:"success" jsonschema:"Whether the publish succeeded"`
+	Log     string `json:"log" jsonschema:"Result message"`
+}
+
+type PackageInfo struct {
+	Name          string   `json:"name" jsonschema:"Package name"`
+	Namespace     string   `json:"namespace" jsonschema:"Package namespace"`
+	Description   string   `json:"description" jsonschema:"Package description"`
+	LatestVersion string   `json:"latestVersion" jsonschema:"Latest available version"`
+	License       string   `json:"license,omitempty" jsonschema:"Package license"`
+	IsTemplate    bool     `json:"isTemplate" jsonschema:"Whether this is a template"`
+	IsCached      bool     `json:"isCached" jsonschema:"Whether the package is cached locally"`
+	ImportPath    string   `json:"importPath" jsonschema:"Import path for use in Typst, e.g. @namespace/name:version"`
+	Authors       []string `json:"authors,omitempty" jsonschema:"Package authors"`
+	Categories    []string `json:"categories,omitempty" jsonschema:"Package categories"`
+	Versions      []string `json:"versions,omitempty" jsonschema:"Available versions"`
+}
+
+type ListLocalPackagesResult struct {
+	Packages []PackageInfo `json:"packages" jsonschema:"List of cached Typst packages"`
+}
+
+type SearchPackagesResult struct {
+	Results []PackageInfo `json:"results" jsonschema:"Search results"`
+}
+
+var listLocalPackagesTool = &mcpsdk.Tool{
+	Name:        "listLocalPackages",
+	Description: "List locally cached Typst packages.",
+	Title:       "List Local Packages",
+}
+
+var downloadPackageTool = &mcpsdk.Tool{
+	Name:        "downloadPackage",
+	Description: "Download a Typst package from the registry. Use pkgSpec like @namespace/name:version.",
+	Title:       "Download Package",
+}
+
+var queryPackageDetailTool = &mcpsdk.Tool{
+	Name:        "queryPackageDetail",
+	Description: "Query details of a Typst package from the registry.",
+	Title:       "Query Package Detail",
+}
+
+var searchPackagesTool = &mcpsdk.Tool{
+	Name:        "searchPackages",
+	Description: "Search Typst packages in the registry.",
+	Title:       "Search Packages",
+}
+
+var publishPackageTool = &mcpsdk.Tool{
+	Name:        "publishPackage",
+	Description: "Publish a Typst package to a namespace.",
+	Title:       "Publish Package",
+}
+
+var getUserInfoTool = &mcpsdk.Tool{
+	Name:        "getUserInfo",
+	Description: "Get the current logged-in user's TPIX profile.",
+	Title:       "Get User Info",
+}
+
+type ReadPackageMetadataParams struct {
+	Offset int `json:"offset" jsonschema:"0-based starting line offset to read from"`
+	Limit  int `json:"limit,omitempty" jsonschema:"Maximum number of lines to read. 0 means read to the end."`
+}
+
+type ReadPackageMetadataResult struct {
+	Text       string `json:"text" jsonschema:"The lines of index text"`
+	Offset     int    `json:"offset" jsonschema:"The offset that was read from"`
+	TotalLines int    `json:"totalLines" jsonschema:"Total number of lines in the full index"`
+}
+
+var readPackageIndexTool = &mcpsdk.Tool{
+	Name:        "readPackageIndex",
+	Description: "Read accessible Typst package index by line range. The result is very large, so paginate with offset and limit.",
+	Title:       "Read Package Index",
+}
+
+var userProfileResource = &mcpsdk.Resource{
+	Name:        "user-profile",
+	Description: "The current logged-in user's TPIX profile",
+	Title:       "User Profile",
+	URI:         "typstify://user-profile",
+}
+
 var activeDocumentResource = &mcpsdk.Resource{
 	Name:        "active-document",
 	Description: "The active document being edited",
