@@ -91,7 +91,7 @@ func (v *AgentChat) Layout(gtx C, th *theme.Theme) D {
 	}
 
 	defer clip.Rect{Max: gtx.Constraints.Max}.Push(gtx.Ops).Pop()
-	paint.FillShape(gtx.Ops, th.Bg2, clip.Rect{Max: gtx.Constraints.Max}.Op())
+	paint.FillShape(gtx.Ops, th.Bg, clip.Rect{Max: gtx.Constraints.Max}.Op())
 
 	return layout.Flex{
 		Axis: layout.Vertical,
@@ -295,7 +295,7 @@ func (v *AgentChat) layoutInput(gtx C, th *theme.Theme) D {
 				Path:  clip.UniformRRect(borderRect, rr).Path(gtx.Ops),
 				Width: float32(gtx.Dp(unit.Dp(1))),
 			}.Op().Push(gtx.Ops).Pop()
-			paint.Fill(gtx.Ops, misc.WithAlpha(th.Fg, 0x12))
+			paint.Fill(gtx.Ops, misc.WithAlpha(th.Fg, 0x36))
 			return D{Size: borderRect.Max}
 		}),
 		layout.Stacked(func(gtx C) D {

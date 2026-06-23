@@ -104,20 +104,16 @@ func (t *ToolCallStyle) layoutExtraContent(gtx C, th *theme.Theme) D {
 	// }
 
 	if tc.RawInput != nil {
-		rawBytes, err := json.MarshalIndent(tc.RawInput, "", "  ")
-		if err == nil {
-			rawInput := string(rawBytes)
+		if rawInput := prettyRawJSON(tc.RawInput); rawInput != "" {
 			children = append(children,
 				layout.Rigid(func(gtx C) D {
 					return t.inputCard.Layout(gtx, th,
 						func(gtx C) D {
 							label := material.Label(th.Theme, th.TextSize*0.8, i18n.Translate("Raw Input", rawInput))
-							label.Color = misc.WithAlpha(th.Fg, 0xb0)
 							return label.Layout(gtx)
 						},
 						func(gtx C) D {
 							label := material.Label(th.Theme, th.TextSize*0.8, rawInput)
-							label.Color = misc.WithAlpha(th.Fg, 0xb0)
 							return label.Layout(gtx)
 						},
 					)
@@ -127,21 +123,17 @@ func (t *ToolCallStyle) layoutExtraContent(gtx C, th *theme.Theme) D {
 	}
 
 	if tc.RawOutput != nil {
-		rawBytes, err := json.MarshalIndent(tc.RawOutput, "", "  ")
-		if err == nil {
-			rawOutput := string(rawBytes)
+		if rawOutput := prettyRawJSON(tc.RawOutput); rawOutput != "" {
 			children = append(children,
 				layout.Rigid(layout.Spacer{Height: unit.Dp(4)}.Layout),
 				layout.Rigid(func(gtx C) D {
 					return t.outputCard.Layout(gtx, th,
 						func(gtx C) D {
 							label := material.Label(th.Theme, th.TextSize*0.8, i18n.Translate("Raw Output", rawOutput))
-							label.Color = misc.WithAlpha(th.Fg, 0xb0)
 							return label.Layout(gtx)
 						},
 						func(gtx C) D {
 							label := material.Label(th.Theme, th.TextSize*0.8, rawOutput)
-							label.Color = misc.WithAlpha(th.Fg, 0xb0)
 							return label.Layout(gtx)
 						},
 					)
@@ -244,6 +236,26 @@ func (t *ToolCallStyle) layoutContentDiff(gtx C, th *theme.Theme, content *acp.T
 			return D{}
 		}),
 	)
+}
+
+// prettyRawJSON formats a raw tool call value as indented JSON. If the value is
+// a JSON string, it is parsed and re-formatted; otherwise it is marshaled directly.
+func prettyRawJSON(raw any) string {
+	if raw == nil {
+		return ""
+	}
+	if s, ok := raw.(string); ok {
+		// Try to unmarshal as JSON so we can pretty-print the structure.
+		var v any
+		if err := json.Unmarshal([]byte(s), &v); err == nil {
+			raw = v
+		}
+	}
+	b, err := json.MarshalIndent(raw, "", "  ")
+	if err != nil {
+		return ""
+	}
+	return string(b)
 }
 
 func truncate(s string, maxLen int) string {
