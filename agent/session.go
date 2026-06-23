@@ -146,7 +146,6 @@ func (sn *ACPSession) UpdatedAt() time.Time {
 	}
 	t, err := time.Parse("2006-01-02T15:04:05.000Z", sn.updatedAt)
 	if err != nil {
-		log.Println("value: ", sn.updatedAt, err)
 		return time.Time{}
 	}
 
@@ -443,7 +442,14 @@ func (sn *ACPSession) SubscribeUpdates(ctx context.Context, sub SessionUpdateSub
 				case ConfigOptionUpdate:
 					sn.SetConfigOptions(update.ConfigOptions)
 				case SessionInfoUpdate:
-					sn.UpdateInfo(*update.Title, *update.UpdatedAt)
+					var title, updatedAt string
+					if update.Title != nil {
+						title = *update.Title
+					}
+					if update.UpdatedAt != nil {
+						updatedAt = *update.UpdatedAt
+					}
+					sn.UpdateInfo(title, updatedAt)
 				case UsageUpdate:
 					sn.UpdateUsage(update)
 				default:
