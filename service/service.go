@@ -261,6 +261,9 @@ func (s *ServiceFacade) Console() *console.ConsoleState {
 }
 
 func (s *ServiceFacade) initMcpServer(ctx context.Context) {
+	if s.settings.Tpix().LoginAt <= 0 {
+		return
+	}
 	if s.mcpServer != nil {
 		s.mcpServer.Shutdown(ctx)
 	}
@@ -288,22 +291,28 @@ func (s *ServiceFacade) initMcpServer(ctx context.Context) {
 	editorToolSrv := mcp.NewEditorMcpService(s.currentProjectDir, s.settings, client, s.previewSrv, s.eventbus, activeDocQuerier)
 	s.mcpServer.RegisterToolProvider(editorToolSrv)
 
+	pkgToolSrv := mcp.NewPackageMcpService(s.currentProjectDir, s.settings.Tpix(), s.PkgService())
+	s.mcpServer.RegisterToolProvider(pkgToolSrv)
+	s.mcpServer.RegisterResourceProvider(pkgToolSrv)
+
 	s.mcpServer.Run()
 }
 
 func (s *ServiceFacade) listMcpServer() []acp.McpServer {
 	mcpServers := make([]acp.McpServer, 0)
 
-	// built-in mcp server
-	ip, port := s.mcpServer.Addr()
-	mcpServers = append(mcpServers, acp.McpServer{
-		Http: &acp.McpServerHttpInline{
-			Name:    agent.ServerName,
-			Type:    "http",
-			Url:     fmt.Sprintf("http://%s:%d", ip, port),
-			Headers: []acp.HttpHeader{},
-		},
-	})
+	if s.settings.Tpix().LoginAt > 0 {
+		// built-in mcp server
+		ip, port := s.mcpServer.Addr()
+		mcpServers = append(mcpServers, acp.McpServer{
+			Http: &acp.McpServerHttpInline{
+				Name:    agent.ServerName,
+				Type:    "http",
+				Url:     fmt.Sprintf("http://%s:%d", ip, port),
+				Headers: []acp.HttpHeader{},
+			},
+		})
+	}
 
 	return mcpServers
 }

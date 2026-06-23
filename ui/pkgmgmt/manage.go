@@ -229,7 +229,7 @@ func (vw *PkgListView) loadData(kind string, category string, query string) {
 
 func (vw *PkgListView) downloadPkg(pkgInfo *pkg.TypstPkg) {
 	go func() {
-		count, err := vw.srv.PkgService().Download(pkgInfo.Namespace, pkgInfo.Name, pkgInfo.LatestVersion)
+		_, count, err := vw.srv.PkgService().Download(pkgInfo.Namespace, pkgInfo.Name, pkgInfo.LatestVersion)
 		if err != nil {
 			vw.srv.EventBus().Emit(bus.TopicStatusbarNotifyEvent, statusbar.Notification{Content: i18n.Translate("Download package failed: ") + err.Error(), Level: 2})
 		} else {
