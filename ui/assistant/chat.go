@@ -177,7 +177,7 @@ func (cv *AgentChatView) loadExisting(sn *agent.ACPSession) {
 
 func (cv *AgentChatView) Layout(gtx layout.Context, th *theme.Theme) layout.Dimensions {
 	defer clip.Rect{Max: gtx.Constraints.Max}.Push(gtx.Ops).Pop()
-	paint.FillShape(gtx.Ops, th.Bg2, clip.Rect{Max: gtx.Constraints.Max}.Op())
+	paint.FillShape(gtx.Ops, th.Bg, clip.Rect{Max: gtx.Constraints.Max}.Op())
 
 	if !cv.chatReady.Load() || cv.chat == nil {
 		return layout.Center.Layout(gtx, func(gtx C) D {
