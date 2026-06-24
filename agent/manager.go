@@ -12,10 +12,15 @@ import (
 	"path/filepath"
 	"slices"
 	"sync"
+	"sync/atomic"
 
 	"github.com/coder/acp-go-sdk"
 	"looz.ws/typstify/utils"
 	"looz.ws/typstify/version"
+)
+
+var (
+	AuthRequiredErr = errors.New("Authentication required")
 )
 
 type AgentConfig struct {
@@ -29,6 +34,8 @@ type AgentConn struct {
 	Conn              *acp.ClientSideConnection
 	AgentInfo         acp.Implementation
 	AgentCapabilities acp.AgentCapabilities
+	AuthMethods       []acp.AuthMethod
+	Authenticated     atomic.Bool
 }
 
 func (c *AgentConn) Close() error {
@@ -57,9 +64,17 @@ func NewSessionManager(mcpServers []acp.McpServer) *SessionManager {
 	}
 }
 
+func (sm *SessionManager) Config() AgentConfig {
+	return sm.agentConfig
+}
+
+func (sm *SessionManager) AgentConn() *AgentConn {
+	return sm.conn
+}
+
 // Start runs a agent through ACP client. The config is used to specify
 // which agent to be started.
-func (sm *SessionManager) Start(ctx context.Context, agentConfig AgentConfig, client *ACPClient, enableDebug bool) error {
+func (sm *SessionManager) Start(ctx context.Context, agentConfig AgentConfig, enableDebug bool, agentLogStreamer io.Writer) error {
 	sm.mu.Lock()
 	defer sm.mu.Unlock()
 
@@ -71,7 +86,13 @@ func (sm *SessionManager) Start(ctx context.Context, agentConfig AgentConfig, cl
 	// Use a clean context other than the incoming ctx, to prevent the command
 	// from being canceled accidentally.
 	cmd := utils.BuildCmd(context.Background(), agentConfig.Cmd, agentConfig.Args...)
-	cmd.Stderr = os.Stderr
+
+	if agentLogStreamer != nil {
+		cmd.Stderr = agentLogStreamer
+	} else {
+		cmd.Stderr = os.Stderr
+	}
+
 	stdin, err := cmd.StdinPipe()
 	if err != nil {
 		return fmt.Errorf("stdin pipe error: %w", err)
@@ -90,6 +111,7 @@ func (sm *SessionManager) Start(ctx context.Context, agentConfig AgentConfig, cl
 		in, out = duplicatedIO(stdin, stdout)
 	}
 
+	client := NewACPClient(sm)
 	conn := acp.NewClientSideConnection(client, in, out)
 	conn.SetLogger(slog.Default()) // TODO: redirect to app console.
 
@@ -127,9 +149,32 @@ func (sm *SessionManager) Start(ctx context.Context, agentConfig AgentConfig, cl
 		Conn:              conn,
 		AgentInfo:         *initResp.AgentInfo,
 		AgentCapabilities: initResp.AgentCapabilities,
+		AuthMethods:       initResp.AuthMethods,
 	}
 
 	log.Printf("Connected to %s (ACP version %v)", initResp.AgentInfo.Name, initResp.ProtocolVersion)
+	if !initResp.AgentCapabilities.McpCapabilities.Http {
+		log.Printf("Warning: Agent does not support MCP over HTTP, built-in tools may not be accessible")
+	}
+
+	return nil
+}
+
+func (sm *SessionManager) Authenticate(ctx context.Context, methodID string) error {
+	sm.mu.Lock()
+	conn := sm.conn
+	sm.mu.Unlock()
+
+	if conn == nil {
+		return fmt.Errorf("Agent not initialized")
+	}
+
+	_, err := conn.Conn.Authenticate(ctx, acp.AuthenticateRequest{MethodId: methodID})
+	err = checkACPErr(err)
+	if err != nil {
+		return err
+	}
+
 	return nil
 }
 
@@ -391,6 +436,9 @@ func checkACPErr(err error) error {
 	}
 
 	if re, ok := err.(*acp.RequestError); ok {
+		if re.Code == -32000 {
+			return AuthRequiredErr
+		}
 		return fmt.Errorf("ACP request error (%d): %s", re.Code, re.Message)
 	} else {
 		return fmt.Errorf("ACP request error: %w", err)

@@ -44,9 +44,12 @@ var _ view.View = (*AgentChatView)(nil)
 
 type AgentChatView struct {
 	*view.BaseView
-	srv       *service.ServiceFacade
-	chat      *agentview.AgentChat
-	chatReady atomic.Bool
+	srv                *service.ServiceFacade
+	chat               *agentview.AgentChat
+	authView           *agentview.AuthenticationView
+	chatReady          atomic.Bool
+	chatErr            error
+	pendingLoadSession *agent.ACPSession
 
 	lspClient      *lsp.Client
 	previewVisible bool
@@ -131,7 +134,9 @@ func (cv *AgentChatView) init() {
 			session, err := cv.srv.StartACPSession(context.Background(), projectDir)
 			if err != nil {
 				log.Printf("chat: failed to start ACP session: %v", err)
+				cv.chatErr = err
 				cv.chatReady.Store(false)
+				cv.srv.RefreshWindow()
 				return
 			}
 
@@ -161,7 +166,12 @@ func (cv *AgentChatView) loadExisting(sn *agent.ACPSession) {
 			session, err := cv.srv.AcpSessionManager().LoadSession(context.Background(), sn)
 			if err != nil {
 				log.Printf("chat: failed to load ACP session: %v", err)
+				cv.chatErr = err
+				if errors.Is(err, agent.AuthRequiredErr) {
+					cv.pendingLoadSession = sn
+				}
 				cv.chatReady.Store(false)
+				cv.srv.RefreshWindow()
 				return
 			}
 
@@ -169,9 +179,19 @@ func (cv *AgentChatView) loadExisting(sn *agent.ACPSession) {
 			cv.chat.SetInvalidator(func() {
 				cv.srv.RefreshWindow()
 			})
+			cv.chatErr = nil
 			cv.chatReady.Store(true)
 			cv.srv.RefreshWindow()
 		}()
+	}
+}
+
+func (cv *AgentChatView) reinit() {
+	if cv.pendingLoadSession == nil {
+		cv.init()
+	} else {
+		cv.loadExisting(cv.pendingLoadSession)
+		cv.pendingLoadSession = nil
 	}
 }
 
@@ -180,12 +200,48 @@ func (cv *AgentChatView) Layout(gtx layout.Context, th *theme.Theme) layout.Dime
 	paint.FillShape(gtx.Ops, th.Bg, clip.Rect{Max: gtx.Constraints.Max}.Op())
 
 	if !cv.chatReady.Load() || cv.chat == nil {
+		gtx.Constraints.Max.X = int(float32(gtx.Constraints.Max.X) * 0.7)
 		return layout.Center.Layout(gtx, func(gtx C) D {
+			if cv.chatErr != nil && errors.Is(cv.chatErr, agent.AuthRequiredErr) {
+				return cv.layoutAuthView(gtx, th)
+			}
+
+			if cv.chatErr != nil {
+				return material.Label(th.Theme, th.TextSize, cv.chatErr.Error()).Layout(gtx)
+			}
+
 			return material.Label(th.Theme, th.TextSize, i18n.Translate("Starting AI Assistant...")).Layout(gtx)
 		})
 	}
 
 	return cv.chat.Layout(gtx, th)
+}
+
+func (cv *AgentChatView) layoutAuthView(gtx layout.Context, th *theme.Theme) layout.Dimensions {
+	if !errors.Is(cv.chatErr, agent.AuthRequiredErr) {
+		return layout.Dimensions{}
+	}
+
+	if cv.authView == nil {
+		sm := cv.srv.AcpSessionManager()
+		if sm == nil {
+			return layout.Dimensions{}
+		}
+
+		conn := sm.AgentConn()
+		if conn == nil {
+			return layout.Dimensions{}
+		}
+
+		cv.authView = agentview.NewAuthenticationView(conn.AgentInfo, conn.AuthMethods, sm.Authenticate)
+	}
+
+	if cv.authView.Authenticated() {
+		cv.chatErr = nil
+		cv.reinit()
+	}
+
+	return cv.authView.Layout(gtx, th)
 }
 
 func (cv *AgentChatView) SetPreviewer(previewer *preview.Previewer) {

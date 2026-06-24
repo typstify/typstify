@@ -16,10 +16,11 @@ type Settings struct {
 	db       *bolt.DB
 	eventbus *bus.EventBus
 
-	general *GeneralSettings
-	editor  *EditorSettings
-	typst   *TypstSettings
-	tpix    *TpixSettings
+	general  *GeneralSettings
+	editor   *EditorSettings
+	typst    *TypstSettings
+	tpix     *TpixSettings
+	acpAgent *AcpAgentSettings
 }
 
 func configRoot() string {
@@ -101,6 +102,17 @@ func (s *Settings) Tpix() *TpixSettings {
 
 	s.tpix.Load()
 	return s.tpix
+}
+
+func (s *Settings) AcpAgent() *AcpAgentSettings {
+	if s.acpAgent == nil {
+		s.acpAgent = &AcpAgentSettings{
+			baseModel: s.initModel("acpAgent"),
+		}
+	}
+
+	s.acpAgent.Load()
+	return s.acpAgent
 }
 
 func (s *Settings) initModel(name string) baseModel {

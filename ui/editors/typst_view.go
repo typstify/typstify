@@ -17,6 +17,7 @@ import (
 	"github.com/oligo/gioview/theme"
 	"github.com/oligo/gioview/view"
 	"github.com/oligo/gvcode"
+	"looz.ws/typstify/agent"
 	agentview "looz.ws/typstify/agent/view"
 	"looz.ws/typstify/editor"
 	"looz.ws/typstify/i18n"
@@ -80,6 +81,8 @@ type TypstEditor struct {
 	// chat panel (toggled from editor header)
 	showChat  bool
 	chatView  *agentview.AgentChat
+	authView  *agentview.AuthenticationView
+	chatErr   error
 	chatReady atomic.Bool
 }
 
@@ -288,7 +291,15 @@ func (te *TypstEditor) Layout(gtx layout.Context, th *theme.Theme) layout.Dimens
 							if te.chatReady.Load() && te.chatView != nil {
 								return te.chatView.Layout(gtx, th)
 							} else {
+								gtx.Constraints.Max.X = int(float32(gtx.Constraints.Max.X) * 0.8)
+
 								return layout.Center.Layout(gtx, func(gtx C) D {
+									if te.chatErr != nil && errors.Is(te.chatErr, agent.AuthRequiredErr) {
+										return te.layoutAuthView(gtx, th)
+									}
+									if te.chatErr != nil {
+										return material.Label(th.Theme, th.TextSize, te.chatErr.Error()).Layout(gtx)
+									}
 									return material.Label(th.Theme, th.TextSize, i18n.Translate("Starting AI Assistant...")).Layout(gtx)
 								})
 							}
@@ -307,6 +318,34 @@ func (te *TypstEditor) Layout(gtx layout.Context, th *theme.Theme) layout.Dimens
 			}),
 		)
 	})
+}
+
+func (te *TypstEditor) layoutAuthView(gtx layout.Context, th *theme.Theme) layout.Dimensions {
+	if !errors.Is(te.chatErr, agent.AuthRequiredErr) {
+		return layout.Dimensions{}
+	}
+
+	if te.authView == nil {
+		sm := te.srv.AcpSessionManager()
+		if sm == nil {
+			return layout.Dimensions{}
+		}
+
+		conn := sm.AgentConn()
+		if conn == nil {
+			return layout.Dimensions{}
+		}
+
+		te.authView = agentview.NewAuthenticationView(conn.AgentInfo, conn.AuthMethods, sm.Authenticate)
+	}
+
+	if te.authView.Authenticated() {
+		te.chatErr = nil
+		te.showChat = false
+		te.toggleChat()
+	}
+
+	return te.authView.Layout(gtx, th)
 }
 
 func (te *TypstEditor) SetPreviewer(previewer *uipreview.Previewer) {
@@ -387,7 +426,9 @@ func (te *TypstEditor) toggleChat() {
 			if err != nil {
 				log.Printf("chat: failed to start ACP session: %v", err)
 				te.showChat = false
+				te.chatErr = err
 				te.chatReady.Store(false)
+				te.srv.RefreshWindow()
 				return
 			}
 
@@ -395,7 +436,9 @@ func (te *TypstEditor) toggleChat() {
 			te.chatView.SetInvalidator(func() {
 				te.srv.RefreshWindow()
 			})
+			te.chatErr = nil
 			te.chatReady.Store(true)
+			te.srv.RefreshWindow()
 		}()
 	}
 }

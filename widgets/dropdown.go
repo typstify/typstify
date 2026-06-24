@@ -280,6 +280,12 @@ func (d *Dropdown) Update(gtx C) bool {
 	return d.selectChanged
 }
 
+func (d *Dropdown) SetSelected(key string) {
+	if _, ok := d.labels[key]; ok {
+		d.selected = key
+	}
+}
+
 func (d *Dropdown) Value() string {
 	return d.selected
 }
