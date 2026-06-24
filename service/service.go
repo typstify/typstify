@@ -7,6 +7,8 @@ import (
 	"io"
 	"log"
 	"os"
+	"strings"
+	"sync"
 	"time"
 
 	"github.com/coder/acp-go-sdk"
@@ -38,6 +40,7 @@ type ServiceFacade struct {
 	fileChooserBuilder func() *explorer.FileChooser
 	consoleState       *console.ConsoleState
 	acpSessionManager  *agent.SessionManager
+	acpMu              sync.Mutex
 	mcpServer          *agent.McpServer // the built-in mcp server
 
 	currentProjectDir string
@@ -318,14 +321,36 @@ func (s *ServiceFacade) listMcpServer() []acp.McpServer {
 }
 
 func (s *ServiceFacade) StartACPSession(ctx context.Context, projectDir string) (*agent.ACPSession, error) {
-	if s.acpSessionManager == nil {
-		err := s.startAcpSessionManager(ctx)
-		if err != nil {
+	as := s.settings.AcpAgent()
+
+	s.acpMu.Lock()
+	mgr := s.acpSessionManager
+	// If the configured agent changed, stop the running one.
+	if mgr != nil && !configEqual(mgr.Config(), as) {
+		closeCtx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+		defer cancel()
+		if err := mgr.Close(closeCtx); err != nil {
+			log.Printf("close old ACP session manager: %v", err)
+		}
+		s.acpSessionManager = nil
+		mgr = nil
+	}
+	s.acpMu.Unlock()
+
+	if mgr == nil {
+		if err := s.startAcpSessionManager(ctx); err != nil {
 			return nil, err
 		}
+		s.acpMu.Lock()
+		mgr = s.acpSessionManager
+		s.acpMu.Unlock()
 	}
 
-	return s.acpSessionManager.NewSession(ctx, projectDir)
+	return mgr.NewSession(ctx, projectDir)
+}
+
+func configEqual(a agent.AgentConfig, as *settings.AcpAgentSettings) bool {
+	return a.Name == as.AgentName && a.Cmd == as.Cmd && strings.Join(a.Args, " ") == as.Args
 }
 
 func (s *ServiceFacade) CloseACPSession(ctx context.Context, sessionID string) error {
@@ -337,6 +362,25 @@ func (s *ServiceFacade) CloseACPSession(ctx context.Context, sessionID string) e
 	}
 
 	return s.acpSessionManager.CloseSession(ctx, sessionID)
+}
+
+// defaultAgentConfig is the fallback when no agent is configured.
+var defaultAgentConfig = agent.AgentConfig{
+	Name: "Claude Code",
+	Cmd:  "npx",
+	Args: []string{"-y", "@agentclientprotocol/claude-agent-acp@0.50.0"},
+}
+
+func (s *ServiceFacade) buildAgentConfig() agent.AgentConfig {
+	as := s.settings.AcpAgent()
+	if as.Cmd == "" {
+		return defaultAgentConfig
+	}
+	return agent.AgentConfig{
+		Name: as.AgentName,
+		Cmd:  as.Cmd,
+		Args: strings.Fields(as.Args),
+	}
 }
 
 func (s *ServiceFacade) startAcpSessionManager(ctx context.Context) error {
@@ -352,25 +396,14 @@ func (s *ServiceFacade) startAcpSessionManager(ctx context.Context) error {
 	s.initMcpServer(ctx)
 
 	mgr := agent.NewSessionManager(s.listMcpServer())
-	client := agent.NewACPClient(mgr)
 
 	// Setting env ACP_DEBUG=1 will turn Typstify into ACP debug mode.
 	acpDebug := os.Getenv("ACP_DEBUG") == "1"
+	agentConfig := s.buildAgentConfig()
 
-	if err := mgr.Start(childCtx,
-		agent.AgentConfig{
-			Name: "Claude Code",
-			Cmd:  "npx",
-			Args: []string{"-y", "@agentclientprotocol/claude-agent-acp@0.35.0"},
-		},
-		// agent.AgentConfig{
-		// 	Name: "Codex",
-		// 	Cmd:  "npx",
-		// 	Args: []string{"-y", "@zed-industries/codex-acp"},
-		// },
-		client,
-		acpDebug,
-	); err != nil {
+	// stream agent logs to console. Some agents like Cline write Device-auth flow guide
+	// to the console log stream, so user can complete the authentication flow.
+	if err := mgr.Start(childCtx, agentConfig, acpDebug, s.consoleState); err != nil {
 		return err
 	}
 
@@ -379,10 +412,12 @@ func (s *ServiceFacade) startAcpSessionManager(ctx context.Context) error {
 }
 
 func (s *ServiceFacade) stopAcpSessionManager(ctx context.Context) {
-	childCtx, cancel := context.WithTimeout(ctx, 10*time.Second)
-	defer cancel()
+	s.acpMu.Lock()
+	defer s.acpMu.Unlock()
 
 	if s.acpSessionManager != nil {
+		childCtx, cancel := context.WithTimeout(ctx, 10*time.Second)
+		defer cancel()
 		s.acpSessionManager.Close(childCtx)
 		s.acpSessionManager = nil
 	}

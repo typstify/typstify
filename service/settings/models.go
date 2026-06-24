@@ -19,12 +19,14 @@ var (
 	_ Model = (*EditorSettings)(nil)
 	_ Model = (*TypstSettings)(nil)
 	_ Model = (*TpixSettings)(nil)
+	_ Model = (*AcpAgentSettings)(nil)
 )
 
 var (
-	defaultGeneralSettings *GeneralSettings
-	defaultEditorSettings  *EditorSettings
-	defaultTypstSettings   *TypstSettings
+	defaultGeneralSettings  *GeneralSettings
+	defaultEditorSettings   *EditorSettings
+	defaultTypstSettings    *TypstSettings
+	defaultAcpAgentSettings *AcpAgentSettings
 )
 
 type GeneralSettings struct {
@@ -81,6 +83,19 @@ type TpixSettings struct {
 	RefreshToken string `key:"refreshToken"`
 	LoginAt      int64  `key:"loginAt"`
 }
+
+type AcpAgentSettings struct {
+	baseModel
+
+	AgentID   string `key:"agentId"`   // registry ID, or empty for custom
+	AgentName string `key:"agentName"` // display name
+	Cmd       string `key:"cmd"`       // resolved command, e.g. "npx"
+	Args      string `key:"args"`      // resolved args, space-separated
+}
+
+func (s *AcpAgentSettings) Validate() error { return nil }
+func (s *AcpAgentSettings) Save() error     { return s.save(s) }
+func (s *AcpAgentSettings) Load() error     { return s.load(s, defaultAcpAgentSettings) }
 
 func (g *GeneralSettings) Save() error {
 	if err := g.Validate(); err != nil {
@@ -309,6 +324,13 @@ func init() {
 		ExtraFontPath:       "",
 		BuildDeps:           0,
 		OutputDir:           "",
+	}
+
+	defaultAcpAgentSettings = &AcpAgentSettings{
+		AgentID:   "claude-acp",
+		AgentName: "Claude Code",
+		Cmd:       "npx",
+		Args:      "-y @agentclientprotocol/claude-agent-acp@0.35.0",
 	}
 }
 
