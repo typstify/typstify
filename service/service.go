@@ -29,6 +29,10 @@ import (
 	"looz.ws/typstify/widgets/console"
 )
 
+const (
+	staticMcpServerPort = 5322
+)
+
 type ServiceFacade struct {
 	vm                 view.ViewManager
 	settings           *settings.Settings
@@ -271,7 +275,12 @@ func (s *ServiceFacade) initMcpServer(ctx context.Context) {
 		s.mcpServer.Shutdown(ctx)
 	}
 
-	s.mcpServer = agent.NewMcpServer()
+	serverPort := 0
+	useStaticPort := s.settings.AcpAgent().UseStaticMcpPort == 1
+	if useStaticPort {
+		serverPort = staticMcpServerPort
+	}
+	s.mcpServer = agent.NewMcpServer(serverPort)
 
 	client := lsp.GetLspClient(s.currentProjectDir, s.Settings())
 
@@ -334,6 +343,7 @@ func (s *ServiceFacade) StartACPSession(ctx context.Context, projectDir string) 
 		}
 		s.acpSessionManager = nil
 		mgr = nil
+		log.Println("agent config changed, restarting session manager...")
 	}
 	s.acpMu.Unlock()
 
@@ -350,7 +360,7 @@ func (s *ServiceFacade) StartACPSession(ctx context.Context, projectDir string) 
 }
 
 func configEqual(a agent.AgentConfig, as *settings.AcpAgentSettings) bool {
-	return a.Name == as.AgentName && a.Cmd == as.Cmd && strings.Join(a.Args, " ") == as.Args
+	return a.Name == as.AgentName && a.Cmd == as.Cmd && strings.Join(a.Args, " ") == as.Args && strings.Join(a.Env, " ") == as.Env
 }
 
 func (s *ServiceFacade) CloseACPSession(ctx context.Context, sessionID string) error {
@@ -380,6 +390,7 @@ func (s *ServiceFacade) buildAgentConfig() agent.AgentConfig {
 		Name: as.AgentName,
 		Cmd:  as.Cmd,
 		Args: strings.Fields(as.Args),
+		Env:  strings.Fields(as.Env),
 	}
 }
 
@@ -401,8 +412,8 @@ func (s *ServiceFacade) startAcpSessionManager(ctx context.Context) error {
 	acpDebug := os.Getenv("ACP_DEBUG") == "1"
 	agentConfig := s.buildAgentConfig()
 
-	// stream agent logs to console. Some agents like Cline write Device-auth flow guide
-	// to the console log stream, so user can complete the authentication flow.
+	// stream agent logs(usually streamed via stderr) to console. Some agents like Cline
+	// write Device-auth flow guide to the console log stream, so user can complete the authentication flow.
 	if err := mgr.Start(childCtx, agentConfig, acpDebug, s.consoleState); err != nil {
 		return err
 	}

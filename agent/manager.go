@@ -27,6 +27,7 @@ type AgentConfig struct {
 	Name string
 	Cmd  string
 	Args []string
+	Env  []string // KEY=value pairs, appended to process env
 }
 
 type AgentConn struct {
@@ -86,6 +87,7 @@ func (sm *SessionManager) Start(ctx context.Context, agentConfig AgentConfig, en
 	// Use a clean context other than the incoming ctx, to prevent the command
 	// from being canceled accidentally.
 	cmd := utils.BuildCmd(context.Background(), agentConfig.Cmd, agentConfig.Args...)
+	cmd.Env = append(cmd.Env, agentConfig.Env...)
 
 	if agentLogStreamer != nil {
 		cmd.Stderr = agentLogStreamer
@@ -154,7 +156,7 @@ func (sm *SessionManager) Start(ctx context.Context, agentConfig AgentConfig, en
 
 	log.Printf("Connected to %s (ACP version %v)", initResp.AgentInfo.Name, initResp.ProtocolVersion)
 	if !initResp.AgentCapabilities.McpCapabilities.Http {
-		log.Printf("Warning: Agent does not support MCP over HTTP, built-in tools may not be accessible")
+		log.Printf("Warning: Agent does not support MCP over HTTP, built-in tools will not be accessible")
 	}
 
 	return nil
@@ -202,7 +204,9 @@ func (sm *SessionManager) NewSession(ctx context.Context, cwd string) (*ACPSessi
 		return nil, err
 	}
 	session := NewACPSession(string(resp.SessionId), cwd)
-	session.SetMode(*resp.Modes)
+	if resp.Modes != nil {
+		session.SetMode(*resp.Modes)
+	}
 	session.SetConn(conn)
 	session.SetConfigOptions(resp.ConfigOptions)
 
@@ -249,7 +253,15 @@ func (sm *SessionManager) ListSessions(ctx context.Context, filterCwd string) ([
 		for _, sn := range resp.Sessions {
 			// some fields is not populated, needs to call LoadSession to fill them.
 			session := NewACPSession(string(sn.SessionId), cwd)
-			session.UpdateInfo(*sn.Title, *sn.UpdatedAt)
+
+			var title, updatedAt string
+			if sn.Title != nil {
+				title = *sn.Title
+			}
+			if sn.UpdatedAt != nil {
+				updatedAt = *sn.UpdatedAt
+			}
+			session.UpdateInfo(title, updatedAt)
 
 			allAgentSessions = append(allAgentSessions, session)
 
@@ -299,7 +311,9 @@ func (sm *SessionManager) LoadSession(ctx context.Context, session *ACPSession) 
 		return nil, err
 	}
 
-	session.SetMode(*resp.Modes)
+	if resp.Modes != nil {
+		session.SetMode(*resp.Modes)
+	}
 	session.SetConfigOptions(resp.ConfigOptions)
 
 	return session, nil
@@ -340,7 +354,9 @@ func (sm *SessionManager) ResumeSession(ctx context.Context, session *ACPSession
 		return nil, err
 	}
 
-	session.SetMode(*resp.Modes)
+	if resp.Modes != nil {
+		session.SetMode(*resp.Modes)
+	}
 	session.SetConfigOptions(resp.ConfigOptions)
 
 	return session, nil

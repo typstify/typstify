@@ -3,6 +3,7 @@ package agent
 import (
 	"context"
 	"errors"
+	"fmt"
 	"log"
 	"log/slog"
 	"net"
@@ -36,8 +37,9 @@ type McpResourceProvider interface {
 	RegisterResources(s *McpServer) error
 }
 
-func NewMcpServer() *McpServer {
+func NewMcpServer(port int) *McpServer {
 	return &McpServer{
+		port: port,
 		mcpServer: mcpsdk.NewServer(
 			&mcpsdk.Implementation{
 				Name:    "typstify-mcp-server",
@@ -75,15 +77,21 @@ func (s *McpServer) Run() error {
 	serveMux.Handle("/", recoveryMiddleware(sseHandler))
 
 	if s.started.CompareAndSwap(false, true) {
+		s.serverAddr = "127.0.0.1"
+
 		address := "127.0.0.1:0" // use random port.
+		if s.port > 0 {
+			address = fmt.Sprintf("127.0.0.1:%d", s.port)
+		}
 		listener, err := net.Listen("tcp4", address)
 		if err != nil {
 			panic(err)
 		}
 
-		netAddr := listener.Addr().(*net.TCPAddr)
-		s.serverAddr = netAddr.IP.String()
-		s.port = netAddr.Port
+		if s.port <= 0 {
+			netAddr := listener.Addr().(*net.TCPAddr)
+			s.port = netAddr.Port
+		}
 
 		log.Printf("mcp server is running at %s:%d", s.serverAddr, s.port)
 

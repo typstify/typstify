@@ -91,6 +91,10 @@ type AcpAgentSettings struct {
 	AgentName string `key:"agentName"` // display name
 	Cmd       string `key:"cmd"`       // resolved command, e.g. "npx"
 	Args      string `key:"args"`      // resolved args, space-separated
+	Env       string `key:"env"`       // extra env vars, space-separated KEY=value pairs
+
+	// MCP server
+	UseStaticMcpPort int `key:"useStaticMcpPort"` // use fixed port when starting MCP server.
 }
 
 func (s *AcpAgentSettings) Validate() error { return nil }
@@ -327,10 +331,11 @@ func init() {
 	}
 
 	defaultAcpAgentSettings = &AcpAgentSettings{
-		AgentID:   "claude-acp",
-		AgentName: "Claude Code",
-		Cmd:       "npx",
-		Args:      "-y @agentclientprotocol/claude-agent-acp@0.35.0",
+		AgentID:          "claude-acp",
+		AgentName:        "Claude Code",
+		Cmd:              "npx",
+		Args:             "-y @agentclientprotocol/claude-agent-acp@0.35.0",
+		UseStaticMcpPort: 0, // not-fixed, or 1 for static port.
 	}
 }
 

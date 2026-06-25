@@ -183,8 +183,12 @@ func (sn *ACPSession) UpdateInfo(title string, updatedAt string) {
 	sn.mu.Lock()
 	defer sn.mu.Unlock()
 
-	sn.title = title
-	sn.updatedAt = updatedAt
+	if title != "" {
+		sn.title = title
+	}
+	if updatedAt != "" {
+		sn.updatedAt = updatedAt
+	}
 }
 
 func (sn *ACPSession) SetMode(modeState acp.SessionModeState) {

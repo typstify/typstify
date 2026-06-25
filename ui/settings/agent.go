@@ -33,12 +33,15 @@ type AgentView struct {
 	setting *settings.AcpAgentSettings
 
 	agentDropdown *widgets.Dropdown
+	confirmBtn    widget.Clickable
 	fetchBtn      widget.Clickable
 	registryErr   error
 	registryDone  bool
 
-	customNameField gvwidget.TextField
-	customCmdField  gvwidget.TextField
+	agentNameField   gvwidget.TextField
+	agentCmdField    gvwidget.TextField
+	agentEnvField    gvwidget.TextField
+	useStaticMCPPort widget.Bool
 
 	repoLink    widget.Clickable
 	binaryLinks map[string]*widget.Clickable
@@ -111,44 +114,55 @@ func joinArgs(args []string) string {
 
 func (v *AgentView) Layout(gtx C, th *theme.Theme) D {
 	v.checkRuntimes()
+	v.ensureDropdown()
 
 	if !v.isInitialized {
-		v.customNameField.SingleLine = true
-		v.customNameField.SetText(v.setting.AgentName)
-		v.customCmdField.SingleLine = true
+		v.agentNameField.SingleLine = true
+		v.agentNameField.SetText(v.setting.AgentName)
+		v.agentCmdField.SingleLine = true
 		if v.setting.Args != "" {
-			v.customCmdField.SetText(v.setting.Cmd + " " + v.setting.Args)
+			v.agentCmdField.SetText(v.setting.Cmd + " " + v.setting.Args)
 		} else {
-			v.customCmdField.SetText(v.setting.Cmd)
+			v.agentCmdField.SetText(v.setting.Cmd)
 		}
+
+		v.agentEnvField.SingleLine = true
+		v.agentEnvField.SetText(v.setting.Env)
+
+		v.useStaticMCPPort = widget.Bool{Value: v.setting.UseStaticMcpPort != 0}
+
 		v.isInitialized = true
 	}
 
-	if v.agentDropdown != nil {
-		if v.agentDropdown.Update(gtx) {
-			id := v.agentDropdown.Value()
-			if id != v.setting.AgentID {
-				if entry := settings.LookupAgent(id); entry != nil {
-					v.resolveAndSave(entry)
-					v.customNameField.SetText(v.setting.AgentName)
-					v.customCmdField.SetText(v.setting.Cmd + " " + v.setting.Args)
-				}
+	if v.confirmBtn.Clicked(gtx) {
+		agentId := v.agentDropdown.Value()
+		if agentId != "" {
+			if entry := settings.LookupAgent(agentId); entry != nil {
+				v.resolveAndSave(entry)
+				v.agentNameField.SetText(v.setting.AgentName)
+				v.agentCmdField.SetText(v.setting.Cmd + " " + v.setting.Args)
+				v.agentEnvField.SetText(v.setting.Env)
 			}
 		}
 	}
-	if v.customNameField.Submitted() {
+
+	if v.agentNameField.Changed() {
 		v.setting.AgentID = ""
-		v.setting.AgentName = v.customNameField.Text()
+		v.setting.AgentName = v.agentNameField.Text()
 		v.lastErr = v.setting.Save()
 	}
-	if v.customCmdField.Submitted() {
-		parts := strings.Fields(v.customCmdField.Text())
+	if v.agentCmdField.Changed() {
+		parts := strings.Fields(v.agentCmdField.Text())
 		if len(parts) > 0 {
 			v.setting.AgentID = ""
 			v.setting.Cmd = parts[0]
 			v.setting.Args = strings.Join(parts[1:], " ")
 			v.lastErr = v.setting.Save()
 		}
+	}
+	if v.agentEnvField.Changed() {
+		v.setting.Env = v.agentEnvField.Text()
+		v.lastErr = v.setting.Save()
 	}
 
 	if v.fetchBtn.Clicked(gtx) {
@@ -166,6 +180,15 @@ func (v *AgentView) Layout(gtx C, th *theme.Theme) D {
 		}()
 	}
 
+	if v.useStaticMCPPort.Update(gtx) {
+		if v.useStaticMCPPort.Value {
+			v.setting.UseStaticMcpPort = 1
+		} else {
+			v.setting.UseStaticMcpPort = 0
+		}
+		v.lastErr = v.setting.Save()
+	}
+
 	return layout.Inset{Top: unit.Dp(20)}.Layout(gtx, func(gtx C) D {
 		return layout.Flex{Axis: layout.Vertical}.Layout(gtx,
 			layout.Rigid(func(gtx C) D {
@@ -177,16 +200,48 @@ func (v *AgentView) Layout(gtx C, th *theme.Theme) D {
 				return D{}
 			}),
 			layout.Rigid(layout.Spacer{Height: unit.Dp(8)}.Layout),
+
 			layout.Rigid(func(gtx C) D {
-				return v.layoutDropdown(gtx, th)
+				return settingItem{}.Layout(gtx, th, i18n.Translate("Agent"),
+					i18n.Translate("Configure agent for AI assitant. You can either manually configure your own agent, or select one from the Agent Registry below."),
+					func(gtx C) D {
+						return v.layoutCommandForm(gtx, th)
+					})
+
 			}),
+
 			layout.Rigid(layout.Spacer{Height: unit.Dp(16)}.Layout),
+
 			layout.Rigid(func(gtx C) D {
-				return v.layoutSelectedDetail(gtx, th)
+				return settingItem{}.Layout(gtx, th, i18n.Translate("Agent Registry"),
+					i18n.Translate("Select an agent from the registry. Click use to overwrite the above configuration."),
+					func(gtx C) D {
+						return layout.Flex{Axis: layout.Vertical}.Layout(gtx,
+							layout.Rigid(func(gtx C) D {
+								return v.layoutDropdown(gtx, th)
+							}),
+							layout.Rigid(layout.Spacer{Height: unit.Dp(16)}.Layout),
+							layout.Rigid(func(gtx C) D {
+								return v.layoutSelectedDetail(gtx, th)
+							}),
+						)
+					})
 			}),
+
 			layout.Rigid(layout.Spacer{Height: unit.Dp(16)}.Layout),
+
 			layout.Rigid(func(gtx C) D {
-				return v.layoutCommandForm(gtx, th)
+				return settingItem{}.Layout(gtx, th, i18n.Translate("MCP"),
+					i18n.Translate(`The built-in MCP server use dynamic network port by default, and it registers itself to agent at runtime. 
+Some agents does not support runtime registration, you have to fix the MCP server port and register the server manually. When using static port, the server address is 127.0.0.1:5322, transport: http.`),
+					func(gtx C) D {
+						return layout.Flex{
+							Axis:      layout.Horizontal,
+							Alignment: layout.Middle,
+						}.Layout(gtx,
+							layout.Rigid(material.Switch(th.Theme, &v.useStaticMCPPort, "Use static port").Layout),
+						)
+					})
 			}),
 		)
 	})
@@ -215,29 +270,32 @@ func (v *AgentView) ensureDropdown() {
 }
 
 func (v *AgentView) layoutDropdown(gtx C, th *theme.Theme) D {
-	v.ensureDropdown()
-
-	return settingItem{}.Layout(gtx, th,
-		i18n.Translate("Agent"),
-		i18n.Translate("Select an agent from the registry. Custom configuration below takes precedence."),
-		func(gtx C) D {
-			return layout.Flex{Axis: layout.Horizontal, Alignment: layout.Middle}.Layout(gtx,
-				layout.Flexed(1, func(gtx C) D {
-					gtx.Constraints.Min.X = gtx.Dp(unit.Dp(300))
-					return v.agentDropdown.Layout(gtx, th)
-				}),
-				layout.Rigid(layout.Spacer{Width: unit.Dp(8)}.Layout),
-				layout.Rigid(func(gtx C) D {
-					btn := material.Button(th.Theme, &v.fetchBtn, i18n.Translate("Refresh"))
-					return btn.Layout(gtx)
-				}),
-			)
-		},
+	return layout.Flex{Axis: layout.Horizontal, Alignment: layout.Middle}.Layout(gtx,
+		layout.Flexed(1, func(gtx C) D {
+			gtx.Constraints.Min.X = gtx.Dp(unit.Dp(240))
+			return v.agentDropdown.Layout(gtx, th)
+		}),
+		layout.Rigid(layout.Spacer{Width: unit.Dp(6)}.Layout),
+		layout.Rigid(func(gtx C) D {
+			if v.agentDropdown.Value() == "" {
+				gtx = gtx.Disabled()
+			}
+			btn := material.Button(th.Theme, &v.confirmBtn, i18n.Translate("Use"))
+			btn.Inset = layout.Inset{Top: unit.Dp(4), Bottom: unit.Dp(4), Left: unit.Dp(8), Right: unit.Dp(8)}
+			return btn.Layout(gtx)
+		}),
+		layout.Rigid(layout.Spacer{Width: unit.Dp(4)}.Layout),
+		layout.Rigid(func(gtx C) D {
+			btn := material.Button(th.Theme, &v.fetchBtn, i18n.Translate("Refresh"))
+			btn.Inset = layout.Inset{Top: unit.Dp(4), Bottom: unit.Dp(4), Left: unit.Dp(8), Right: unit.Dp(8)}
+			return btn.Layout(gtx)
+		}),
 	)
+
 }
 
 func (v *AgentView) layoutSelectedDetail(gtx C, th *theme.Theme) D {
-	entry := settings.LookupAgent(v.setting.AgentID)
+	entry := settings.LookupAgent(v.agentDropdown.Value())
 	if entry == nil {
 		return D{}
 	}
@@ -458,7 +516,7 @@ func (v *AgentView) layoutCommandForm(gtx C, th *theme.Theme) D {
 				i18n.Translate("Select an agent above or type a name directly."),
 				func(gtx C) D {
 					gtx.Constraints.Min.X = gtx.Dp(unit.Dp(300))
-					return v.customNameField.Layout(gtx, th, i18n.Translate("Name"))
+					return v.agentNameField.Layout(gtx, th, i18n.Translate("Name"))
 				},
 			)
 		}),
@@ -469,7 +527,18 @@ func (v *AgentView) layoutCommandForm(gtx C, th *theme.Theme) D {
 				i18n.Translate("Select an agent above or edit directly, e.g. npx -y @scope/package"),
 				func(gtx C) D {
 					gtx.Constraints.Min.X = gtx.Dp(unit.Dp(300))
-					return v.customCmdField.Layout(gtx, th, i18n.Translate("npx -y @scope/package"))
+					return v.agentCmdField.Layout(gtx, th, i18n.Translate("npx -y @scope/package"))
+				},
+			)
+		}),
+		layout.Rigid(layout.Spacer{Height: unit.Dp(8)}.Layout),
+		layout.Rigid(func(gtx C) D {
+			return settingItem{}.Layout(gtx, th,
+				i18n.Translate("Environment"),
+				i18n.Translate("Extra environment variables, space-separated KEY=value pairs, e.g. FOO=bar BAZ=qux"),
+				func(gtx C) D {
+					gtx.Constraints.Min.X = gtx.Dp(unit.Dp(300))
+					return v.agentEnvField.Layout(gtx, th, i18n.Translate("FOO=bar BAZ=qux"))
 				},
 			)
 		}),
