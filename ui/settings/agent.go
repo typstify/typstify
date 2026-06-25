@@ -291,19 +291,21 @@ func (v *AgentView) layoutSelectedDetail(gtx C, th *theme.Theme) D {
 			if v.repoLink.Clicked(gtx) {
 				giohyperlink.Open(entry.Repository)
 			}
-			return v.repoLink.Layout(gtx, func(gtx C) D {
-				return layout.Flex{Axis: layout.Horizontal}.Layout(gtx,
-					layout.Rigid(func(gtx C) D {
-						l := material.Label(th.Theme, th.TextSize, i18n.Translate("Repository:"))
-						l.Font.Weight = font.SemiBold
-						return l.Layout(gtx)
-					}),
-					layout.Rigid(layout.Spacer{Width: unit.Dp(8)}.Layout),
-					layout.Rigid(func(gtx C) D {
+
+			return layout.Flex{Axis: layout.Horizontal}.Layout(gtx,
+				layout.Rigid(func(gtx C) D {
+					l := material.Label(th.Theme, th.TextSize, i18n.Translate("Repository:"))
+					l.Font.Weight = font.SemiBold
+					return l.Layout(gtx)
+				}),
+				layout.Rigid(layout.Spacer{Width: unit.Dp(8)}.Layout),
+				layout.Rigid(func(gtx C) D {
+					return material.Clickable(gtx, &v.repoLink, func(gtx C) D {
 						return linkLabel(gtx, th, entry.Repository)
-					}),
-				)
-			})
+					})
+				}),
+			)
+
 		}),
 		layout.Rigid(layout.Spacer{Height: unit.Dp(4)}.Layout),
 		layout.Rigid(layout.Spacer{Height: unit.Dp(8)}.Layout),
@@ -335,7 +337,7 @@ func (v *AgentView) layoutInstallGuide(gtx C, th *theme.Theme, entry *settings.A
 			i18n.Translate("Installation (npx)"),
 			"",
 			func(gtx C) D {
-				return layout.Flex{Axis: layout.Vertical}.Layout(gtx,
+				return layout.Flex{Axis: layout.Vertical, Gap: gtx.Dp(unit.Dp(4))}.Layout(gtx,
 					layout.Rigid(func(gtx C) D {
 						label := material.Label(th.Theme, th.TextSize, status)
 						label.Color = statusColor
@@ -345,7 +347,7 @@ func (v *AgentView) layoutInstallGuide(gtx C, th *theme.Theme, entry *settings.A
 						if fallback == "" {
 							return D{}
 						}
-						label := material.Label(th.Theme, th.TextSize*0.85, fallback)
+						label := material.Label(th.Theme, th.TextSize, fallback)
 						label.Color = misc.WithAlpha(th.Fg, 0xb0)
 						return label.Layout(gtx)
 					}),
@@ -371,7 +373,7 @@ func (v *AgentView) layoutInstallGuide(gtx C, th *theme.Theme, entry *settings.A
 			i18n.Translate("Installation (uvx)"),
 			"",
 			func(gtx C) D {
-				return layout.Flex{Axis: layout.Vertical}.Layout(gtx,
+				return layout.Flex{Axis: layout.Vertical, Gap: gtx.Dp(unit.Dp(4))}.Layout(gtx,
 					layout.Rigid(func(gtx C) D {
 						label := material.Label(th.Theme, th.TextSize, status)
 						label.Color = statusColor
@@ -381,7 +383,7 @@ func (v *AgentView) layoutInstallGuide(gtx C, th *theme.Theme, entry *settings.A
 						if fallback == "" {
 							return D{}
 						}
-						label := material.Label(th.Theme, th.TextSize*0.85, fallback)
+						label := material.Label(th.Theme, th.TextSize, fallback)
 						label.Color = misc.WithAlpha(th.Fg, 0xb0)
 						return label.Layout(gtx)
 					}),
@@ -414,19 +416,20 @@ func (v *AgentView) layoutInstallGuide(gtx C, th *theme.Theme, entry *settings.A
 							giohyperlink.Open(url)
 						}
 						items = append(items, layout.Rigid(func(gtx C) D {
-							return link.Layout(gtx, func(gtx C) D {
-								return layout.Flex{Axis: layout.Horizontal}.Layout(gtx,
-									layout.Rigid(func(gtx C) D {
-										label := material.Label(th.Theme, th.TextSize, platform)
-										label.Font.Weight = font.SemiBold
-										return label.Layout(gtx)
-									}),
-									layout.Rigid(layout.Spacer{Width: unit.Dp(8)}.Layout),
-									layout.Rigid(func(gtx C) D {
+							return layout.Flex{Axis: layout.Horizontal}.Layout(gtx,
+								layout.Rigid(func(gtx C) D {
+									label := material.Label(th.Theme, th.TextSize, platform)
+									label.Font.Weight = font.SemiBold
+									return label.Layout(gtx)
+								}),
+								layout.Rigid(layout.Spacer{Width: unit.Dp(8)}.Layout),
+								layout.Rigid(func(gtx C) D {
+									return material.Clickable(gtx, link, func(gtx C) D {
 										return linkLabel(gtx, th, url)
-									}),
-								)
-							})
+									})
+								}),
+							)
+
 						}))
 						items = append(items, layout.Rigid(layout.Spacer{Height: unit.Dp(2)}.Layout))
 					}

@@ -278,7 +278,7 @@ func (vw *WelcomeView) layoutShortcuts(gtx C, th *theme.Theme) D {
 				return shortcutLabel(gtx, i18n.Translate("Open/Hide Previewer: %s + P", key.ModShortcut.String()))
 			}),
 			layout.Rigid(func(gtx C) D {
-				return shortcutLabel(gtx, i18n.Translate("Open/Hide AI Assistant: %s + L", key.ModShortcut.String()))
+				return shortcutLabel(gtx, i18n.Translate("Open AI Assistant: %s + L", key.ModShortcut.String()))
 			}),
 		)
 	})
