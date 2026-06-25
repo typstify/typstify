@@ -1,0 +1,1769 @@
+{
+    "language": "zh-CN",
+    "messages": [
+        {
+            "id": "Please choose a method to authenticate the agent:",
+            "message": "Please choose a method to authenticate the agent:",
+            "translation": "请选择一种方式验证代理："
+        },
+        {
+            "id": "ID",
+            "message": "ID",
+            "translation": "ID"
+        },
+        {
+            "id": "Name",
+            "message": "Name",
+            "translation": "名称"
+        },
+        {
+            "id": "Description",
+            "message": "Description",
+            "translation": "描述"
+        },
+        {
+            "id": "Link",
+            "message": "Link",
+            "translation": "链接"
+        },
+        {
+            "id": "Required environment variables:",
+            "message": "Required environment variables:",
+            "translation": "需要的环境变量："
+        },
+        {
+            "id": "Args",
+            "message": "Args",
+            "translation": "参数"
+        },
+        {
+            "id": "Env",
+            "message": "Env",
+            "translation": "环境变量"
+        },
+        {
+            "id": "Type to start a conversation, press Shift+Enter to send",
+            "message": "Type to start a conversation, press Shift+Enter to send",
+            "translation": "输入以开始对话，按 Shift+Enter 发送"
+        },
+        {
+            "id": "Send",
+            "message": "Send",
+            "translation": "发送"
+        },
+        {
+            "id": "Stop",
+            "message": "Stop",
+            "translation": "停止"
+        },
+        {
+            "id": "Off",
+            "message": "Off",
+            "translation": "关"
+        },
+        {
+            "id": "On",
+            "message": "On",
+            "translation": "开"
+        },
+        {
+            "id": "Options",
+            "message": "Options",
+            "translation": "选项"
+        },
+        {
+            "id": "Type @ to include resource, and / to use skills.",
+            "message": "Type @ to include resource, and / to use skills.",
+            "translation": "输入 @ 引用资源，输入 / 使用技能"
+        },
+        {
+            "id": "No messages.",
+            "message": "No messages.",
+            "translation": "暂无消息"
+        },
+        {
+            "id": "Thinking",
+            "message": "Thinking",
+            "translation": "思考中"
+        },
+        {
+            "id": "Plan",
+            "message": "Plan",
+            "translation": "计划"
+        },
+        {
+            "id": "Raw Input",
+            "message": "Raw Input",
+            "translation": "原始输入",
+            "placeholders": [
+                {
+                    "id": "RawInput",
+                    "string": "%[1]v",
+                    "type": "string",
+                    "underlyingType": "string",
+                    "argNum": 1,
+                    "expr": "rawInput"
+                }
+            ]
+        },
+        {
+            "id": "Raw Output",
+            "message": "Raw Output",
+            "translation": "原始输出",
+            "placeholders": [
+                {
+                    "id": "RawOutput",
+                    "string": "%[1]v",
+                    "type": "string",
+                    "underlyingType": "string",
+                    "argNum": 1,
+                    "expr": "rawOutput"
+                }
+            ]
+        },
+        {
+            "id": "Terminal: {TerminalId}",
+            "message": "Terminal: {TerminalId}",
+            "translation": "终端: {TerminalId}",
+            "placeholders": [
+                {
+                    "id": "TerminalId",
+                    "string": "%[1]s",
+                    "type": "string",
+                    "underlyingType": "string",
+                    "argNum": 1,
+                    "expr": "content.TerminalId"
+                }
+            ]
+        },
+        {
+            "id": "Copy",
+            "message": "Copy",
+            "translation": "复制"
+        },
+        {
+            "id": "Cut",
+            "message": "Cut",
+            "translation": "剪切"
+        },
+        {
+            "id": "Paste",
+            "message": "Paste",
+            "translation": "粘贴"
+        },
+        {
+            "id": "Find \u0026 Replace",
+            "message": "Find \u0026 Replace",
+            "translation": "查找与替换"
+        },
+        {
+            "id": "Lock",
+            "message": "Lock",
+            "translation": "锁定"
+        },
+        {
+            "id": "Unlock",
+            "message": "Unlock",
+            "translation": "解锁"
+        },
+        {
+            "id": "Unwrap Lines",
+            "message": "Unwrap Lines",
+            "translation": "取消换行"
+        },
+        {
+            "id": "Wrap Lines",
+            "message": "Wrap Lines",
+            "translation": "自动换行"
+        },
+        {
+            "id": "Match Case",
+            "message": "Match Case",
+            "translation": "区分大小写"
+        },
+        {
+            "id": "Whole Word",
+            "message": "Whole Word",
+            "translation": "全词匹配"
+        },
+        {
+            "id": "Use Regex",
+            "message": "Use Regex",
+            "translation": "使用正则"
+        },
+        {
+            "id": "No results",
+            "message": "No results",
+            "translation": "无结果"
+        },
+        {
+            "id": "{CurrentMatch__1} of {MatchCount}",
+            "message": "{CurrentMatch__1} of {MatchCount}",
+            "translation": "{CurrentMatch__1} / {MatchCount}",
+            "placeholders": [
+                {
+                    "id": "CurrentMatch__1",
+                    "string": "%[1]d",
+                    "type": "int",
+                    "underlyingType": "int",
+                    "argNum": 1,
+                    "expr": "sb.currentMatch + 1"
+                },
+                {
+                    "id": "MatchCount",
+                    "string": "%[2]d",
+                    "type": "int",
+                    "underlyingType": "int",
+                    "argNum": 2,
+                    "expr": "sb.matchCount"
+                }
+            ]
+        },
+        {
+            "id": "Replace",
+            "message": "Replace",
+            "translation": "替换"
+        },
+        {
+            "id": "Replace All",
+            "message": "Replace All",
+            "translation": "全部替换"
+        },
+        {
+            "id": "Ln {Y__1}, Col {X__1}",
+            "message": "Ln {Y__1}, Col {X__1}",
+            "translation": "行 {Y__1}, 列 {X__1}",
+            "placeholders": [
+                {
+                    "id": "Y__1",
+                    "string": "%[1]d",
+                    "type": "int",
+                    "underlyingType": "int",
+                    "argNum": 1,
+                    "expr": "s.Pos.Y + 1"
+                },
+                {
+                    "id": "X__1",
+                    "string": "%[2]d",
+                    "type": "int",
+                    "underlyingType": "int",
+                    "argNum": 2,
+                    "expr": "s.Pos.X + 1"
+                }
+            ]
+        },
+        {
+            "id": "({SelectedChars} selected)",
+            "message": "({SelectedChars} selected)",
+            "translation": "（已选 {SelectedChars} 个字符）",
+            "placeholders": [
+                {
+                    "id": "SelectedChars",
+                    "string": "%[1]d",
+                    "type": "int",
+                    "underlyingType": "int",
+                    "argNum": 1,
+                    "expr": "s.SelectedChars"
+                }
+            ]
+        },
+        {
+            "id": "Exit",
+            "message": "Exit",
+            "translation": "退出"
+        },
+        {
+            "id": "Start",
+            "message": "Start",
+            "translation": "开始"
+        },
+        {
+            "id": "Typstify",
+            "message": "Typstify",
+            "translation": "Typstify"
+        },
+        {
+            "id": "Crafting Typst documents at the speed of thought.",
+            "message": "Crafting Typst documents at the speed of thought.",
+            "translation": "以思维的速度编写 Typst 文档。"
+        },
+        {
+            "id": "Welcome, {Username}!",
+            "message": "Welcome, {Username}!",
+            "translation": "欢迎, {Username}!",
+            "placeholders": [
+                {
+                    "id": "Username",
+                    "string": "%[1]s",
+                    "type": "string",
+                    "underlyingType": "string",
+                    "argNum": 1,
+                    "expr": "vw.srv.Settings().Tpix().Username"
+                }
+            ]
+        },
+        {
+            "id": "Getting Started",
+            "message": "Getting Started",
+            "translation": "开始使用"
+        },
+        {
+            "id": "New project...",
+            "message": "New project...",
+            "translation": "新建项目..."
+        },
+        {
+            "id": "Open existing project...",
+            "message": "Open existing project...",
+            "translation": "打开已有项目..."
+        },
+        {
+            "id": "Browse Packages/Templates...",
+            "message": "Browse Packages/Templates...",
+            "translation": "浏览包/模板..."
+        },
+        {
+            "id": "Learn more",
+            "message": "Learn more",
+            "translation": "了解更多"
+        },
+        {
+            "id": "To learn more about Typstify, go to",
+            "message": "To learn more about Typstify, go to",
+            "translation": "了解更多 Typstify 信息，请访问"
+        },
+        {
+            "id": "To learn more about TPIX, click",
+            "message": "To learn more about TPIX, click",
+            "translation": "了解更多 TPIX 信息，请访问"
+        },
+        {
+            "id": "Open/Hide File Explorer: {String} + D",
+            "message": "Open/Hide File Explorer: {String} + D",
+            "translation": "打开/隐藏文件管理器: {String} + D",
+            "placeholders": [
+                {
+                    "id": "String",
+                    "string": "%[1]s",
+                    "type": "string",
+                    "underlyingType": "string",
+                    "argNum": 1,
+                    "expr": "key.ModShortcut.String()"
+                }
+            ]
+        },
+        {
+            "id": "Open/Hide Console: {String} + K",
+            "message": "Open/Hide Console: {String} + K",
+            "translation": "打开/隐藏控制台: {String} + K",
+            "placeholders": [
+                {
+                    "id": "String",
+                    "string": "%[1]s",
+                    "type": "string",
+                    "underlyingType": "string",
+                    "argNum": 1,
+                    "expr": "key.ModShortcut.String()"
+                }
+            ]
+        },
+        {
+            "id": "Open/Hide Previewer: {String} + P",
+            "message": "Open/Hide Previewer: {String} + P",
+            "translation": "打开/隐藏预览器: {String} + P",
+            "placeholders": [
+                {
+                    "id": "String",
+                    "string": "%[1]s",
+                    "type": "string",
+                    "underlyingType": "string",
+                    "argNum": 1,
+                    "expr": "key.ModShortcut.String()"
+                }
+            ]
+        },
+        {
+            "id": "Open AI Assistant: {String} + L",
+            "message": "Open AI Assistant: {String} + L",
+            "translation": "打开 AI 助手: {String} + L",
+            "placeholders": [
+                {
+                    "id": "String",
+                    "string": "%[1]s",
+                    "type": "string",
+                    "underlyingType": "string",
+                    "argNum": 1,
+                    "expr": "key.ModShortcut.String()"
+                }
+            ]
+        },
+        {
+            "id": "Starting AI Assistant...",
+            "message": "Starting AI Assistant...",
+            "translation": "正在启动 AI 助手..."
+        },
+        {
+            "id": "Sessions",
+            "message": "Sessions",
+            "translation": "会话"
+        },
+        {
+            "id": "Sync Bibliography",
+            "message": "Sync Bibliography",
+            "translation": "同步参考文献"
+        },
+        {
+            "id": "Submit",
+            "message": "Submit",
+            "translation": "提交"
+        },
+        {
+            "id": "Creating managed bibliography error: {Error}",
+            "message": "Creating managed bibliography error: {Error}",
+            "translation": "创建托管参考文献出错: {Error}",
+            "placeholders": [
+                {
+                    "id": "Error",
+                    "string": "%[1]s",
+                    "type": "string",
+                    "underlyingType": "string",
+                    "argNum": 1,
+                    "expr": "err.Error()"
+                }
+            ]
+        },
+        {
+            "id": "Creating managed bibliography succeeded: {Filename}",
+            "message": "Creating managed bibliography succeeded: {Filename}",
+            "translation": "创建托管参考文献成功: {Filename}",
+            "placeholders": [
+                {
+                    "id": "Filename",
+                    "string": "%[1]s",
+                    "type": "string",
+                    "underlyingType": "string",
+                    "argNum": 1,
+                    "expr": "filename"
+                }
+            ]
+        },
+        {
+            "id": "Bibliography File Name",
+            "message": "Bibliography File Name",
+            "translation": "参考文献文件名"
+        },
+        {
+            "id": "The name of the managed bibliography file, such as 'bib-file-name.bib'. You can leave it empty to use a auto generated one.",
+            "message": "The name of the managed bibliography file, such as 'bib-file-name.bib'. You can leave it empty to use a auto generated one.",
+            "translation": "托管参考文献文件名，例如 'bib-file-name.bib'。留空则使用自动生成的名称。"
+        },
+        {
+            "id": "Collections",
+            "message": "Collections",
+            "translation": "集合"
+        },
+        {
+            "id": "Select the collection to sync with. Make sure you or your team have added Zotero API key on TPIX server.",
+            "message": "Select the collection to sync with. Make sure you or your team have added Zotero API key on TPIX server.",
+            "translation": "选择要同步的集合。请确保您或您的团队已在 TPIX 服务器上添加了 Zotero API 密钥。"
+        },
+        {
+            "id": "Loading collecions...",
+            "message": "Loading collecions...",
+            "translation": "正在加载集合..."
+        },
+        {
+            "id": "No collections found",
+            "message": "No collections found",
+            "translation": "未找到集合"
+        },
+        {
+            "id": "View Managed Bibliography",
+            "message": "View Managed Bibliography",
+            "translation": "查看托管参考文献"
+        },
+        {
+            "id": "Unlink",
+            "message": "Unlink",
+            "translation": "取消关联"
+        },
+        {
+            "id": "Unlink managed bibliography error: {Error}",
+            "message": "Unlink managed bibliography error: {Error}",
+            "translation": "取消关联托管参考文献出错: {Error}",
+            "placeholders": [
+                {
+                    "id": "Error",
+                    "string": "%[1]s",
+                    "type": "string",
+                    "underlyingType": "string",
+                    "argNum": 1,
+                    "expr": "err.Error()"
+                }
+            ]
+        },
+        {
+            "id": "Unlink managed bibliography succeeded: {File}",
+            "message": "Unlink managed bibliography succeeded: {File}",
+            "translation": "取消关联托管参考文献成功: {File}",
+            "placeholders": [
+                {
+                    "id": "File",
+                    "string": "%[1]s",
+                    "type": "string",
+                    "underlyingType": "string",
+                    "argNum": 1,
+                    "expr": "d.meta.File"
+                }
+            ]
+        },
+        {
+            "id": "The path of the managed bibliography file. Clicking unlink below will turn it to a regular file, and it will not sync with remote Zotero collection anymore.",
+            "message": "The path of the managed bibliography file. Clicking unlink below will turn it to a regular file, and it will not sync with remote Zotero collection anymore.",
+            "translation": "托管参考文献文件路径。点击下方的取消关联将把它转为普通文件，不再与远程 Zotero 集合同步。"
+        },
+        {
+            "id": "Format:",
+            "message": "Format:",
+            "translation": "格式:"
+        },
+        {
+            "id": "Zotero Collection Info",
+            "message": "Zotero Collection Info",
+            "translation": "Zotero 集合信息"
+        },
+        {
+            "id": "Namespace: {Namespace}",
+            "message": "Namespace: {Namespace}",
+            "translation": "命名空间: {Namespace}",
+            "placeholders": [
+                {
+                    "id": "Namespace",
+                    "string": "%[1]s",
+                    "type": "string",
+                    "underlyingType": "string",
+                    "argNum": 1,
+                    "expr": "d.meta.Meta.Namespace"
+                }
+            ]
+        },
+        {
+            "id": "Library: {Library}",
+            "message": "Library: {Library}",
+            "translation": "文库: {Library}",
+            "placeholders": [
+                {
+                    "id": "Library",
+                    "string": "%[1]s",
+                    "type": "string",
+                    "underlyingType": "string",
+                    "argNum": 1,
+                    "expr": "d.meta.Meta.Library"
+                }
+            ]
+        },
+        {
+            "id": "Collection: {Collection}",
+            "message": "Collection: {Collection}",
+            "translation": "集合: {Collection}",
+            "placeholders": [
+                {
+                    "id": "Collection",
+                    "string": "%[1]s",
+                    "type": "string",
+                    "underlyingType": "string",
+                    "argNum": 1,
+                    "expr": "d.meta.Meta.Collection"
+                }
+            ]
+        },
+        {
+            "id": [
+                "tip2",
+                "Find the desired template in Typst Packages explorer. Both local and remote templates can be used. \nA template name should have the form @namespace/package-name:version, for example: '@preview/aero-check:0.1.1'.\nIf you want to create project without template, just leave it empty."
+            ],
+            "message": "Find the desired template in Typst Packages explorer. Both local and remote templates can be used. \nA template name should have the form @namespace/package-name:version, for example: '@preview/aero-check:0.1.1'.\nIf you want to create project without template, just leave it empty.",
+            "translation": "在 Typst 包资源管理器中找到所需的模板。本地和远程模板均可使用。\n模板名称格式应为 @namespace/package-name:version，例如: '@preview/aero-check:0.1.1'。\n如果要创建不使用模板的项目，请留空。"
+        },
+        {
+            "id": "Create New Project",
+            "message": "Create New Project",
+            "translation": "创建新项目"
+        },
+        {
+            "id": "Create",
+            "message": "Create",
+            "translation": "创建"
+        },
+        {
+            "id": "Please set a name for your project.",
+            "message": "Please set a name for your project.",
+            "translation": "请为项目设置一个名称。"
+        },
+        {
+            "id": "Please open a folder in File Explorer to place the project files.",
+            "message": "Please open a folder in File Explorer to place the project files.",
+            "translation": "请在文件管理器中选择一个文件夹来放置项目文件。"
+        },
+        {
+            "id": "Please input a valid full template name.",
+            "message": "Please input a valid full template name.",
+            "translation": "请输入有效的完整模板名称。"
+        },
+        {
+            "id": "Please set a name for your package/template.",
+            "message": "Please set a name for your package/template.",
+            "translation": "请为您的包/模板设置一个名称。"
+        },
+        {
+            "id": "Create project error: {Error}",
+            "message": "Create project error: {Error}",
+            "translation": "创建项目出错: {Error}",
+            "placeholders": [
+                {
+                    "id": "Error",
+                    "string": "%[1]s",
+                    "type": "string",
+                    "underlyingType": "string",
+                    "argNum": 1,
+                    "expr": "err.Error()"
+                }
+            ]
+        },
+        {
+            "id": "Project Type",
+            "message": "Project Type",
+            "translation": "项目类型"
+        },
+        {
+            "id": "Project Location",
+            "message": "Project Location",
+            "translation": "项目位置"
+        },
+        {
+            "id": "Select the location where the project will be created.",
+            "message": "Select the location where the project will be created.",
+            "translation": "选择项目的创建位置。"
+        },
+        {
+            "id": "Typst Template",
+            "message": "Typst Template",
+            "translation": "Typst 模板"
+        },
+        {
+            "id": "Project Name",
+            "message": "Project Name",
+            "translation": "项目名称"
+        },
+        {
+            "id": "The name of your project. A new folder will be created inside of the directory selected.",
+            "message": "The name of your project. A new folder will be created inside of the directory selected.",
+            "translation": "项目名称。将在所选目录中创建一个新文件夹。"
+        },
+        {
+            "id": "Delete File/Folder",
+            "message": "Delete File/Folder",
+            "translation": "删除文件/文件夹"
+        },
+        {
+            "id": "Confirm",
+            "message": "Confirm",
+            "translation": "确认"
+        },
+        {
+            "id": "Are you sure you want to delete '{Dest}'?",
+            "message": "Are you sure you want to delete '{Dest}'?",
+            "translation": "确定要删除 '{Dest}' 吗?",
+            "placeholders": [
+                {
+                    "id": "Dest",
+                    "string": "%[1]s",
+                    "type": "string",
+                    "underlyingType": "string",
+                    "argNum": 1,
+                    "expr": "d.dest"
+                }
+            ]
+        },
+        {
+            "id": "You can restore this file from the Trash.",
+            "message": "You can restore this file from the Trash.",
+            "translation": "您可以从回收站恢复此文件。"
+        },
+        {
+            "id": "Cancel",
+            "message": "Cancel",
+            "translation": "取消"
+        },
+        {
+            "id": "Move File/Folder",
+            "message": "Move File/Folder",
+            "translation": "移动文件/文件夹"
+        },
+        {
+            "id": "Are you sure you want to move",
+            "message": "Are you sure you want to move",
+            "translation": "确定要移动"
+        },
+        {
+            "id": "'{Src}' into '{Dest}'",
+            "message": "'{Src}' into '{Dest}'",
+            "translation": "'{Src}' 到 '{Dest}' 吗?",
+            "placeholders": [
+                {
+                    "id": "Src",
+                    "string": "%[1]s",
+                    "type": "string",
+                    "underlyingType": "string",
+                    "argNum": 1,
+                    "expr": "d.src"
+                },
+                {
+                    "id": "Dest",
+                    "string": "%[2]s",
+                    "type": "string",
+                    "underlyingType": "string",
+                    "argNum": 2,
+                    "expr": "d.dest"
+                }
+            ]
+        },
+        {
+            "id": [
+                "formatTip",
+                "The format of the output file."
+            ],
+            "message": "The format of the output file.",
+            "translation": "输出文件的格式。"
+        },
+        {
+            "id": "Build And Export",
+            "message": "Build And Export",
+            "translation": "构建并导出"
+        },
+        {
+            "id": "Export",
+            "message": "Export",
+            "translation": "导出"
+        },
+        {
+            "id": "Exporting file...",
+            "message": "Exporting file...",
+            "translation": "正在导出文件..."
+        },
+        {
+            "id": "Exported File Format",
+            "message": "Exported File Format",
+            "translation": "导出文件格式"
+        },
+        {
+            "id": "Pages",
+            "message": "Pages",
+            "translation": "页面"
+        },
+        {
+            "id": "Which pages to export. Valid value can be comma seperated page numbers and page ranges, for example, 1,3,5,6-9. When unspecified, all document pages are exported.",
+            "message": "Which pages to export. Valid value can be comma seperated page numbers and page ranges, for example, 1,3,5,6-9. When unspecified, all document pages are exported.",
+            "translation": "要导出的页面。有效值可以是逗号分隔的页码和页码范围，例如 1,3,5,6-9。未指定时导出所有页面。"
+        },
+        {
+            "id": "File Name",
+            "message": "File Name",
+            "translation": "文件名"
+        },
+        {
+            "id": "This specifies the output file name. If multiple files is generated, the file name will be suffixed with a number. When not specified, the name of the source file is used.",
+            "message": "This specifies the output file name. If multiple files is generated, the file name will be suffixed with a number. When not specified, the name of the source file is used.",
+            "translation": "指定输出文件名。如果生成多个文件，文件名将附带数字后缀。未指定时使用源文件名。"
+        },
+        {
+            "id": "PPI",
+            "message": "PPI",
+            "translation": "PPI"
+        },
+        {
+            "id": "The PPI (pixels per inch) to use for PNG export.",
+            "message": "The PPI (pixels per inch) to use for PNG export.",
+            "translation": "PNG 导出使用的 PPI（每英寸像素数）。"
+        },
+        {
+            "id": "PDF Versions",
+            "message": "PDF Versions",
+            "translation": "PDF 版本"
+        },
+        {
+            "id": "PDF version that Typstify will enforce conformance with.",
+            "message": "PDF version that Typstify will enforce conformance with.",
+            "translation": "Typstify 将强制遵循的 PDF 版本。"
+        },
+        {
+            "id": "PDF Standards",
+            "message": "PDF Standards",
+            "translation": "PDF 标准"
+        },
+        {
+            "id": "PDF standards that Typstify will enforce conformance with.",
+            "message": "PDF standards that Typstify will enforce conformance with.",
+            "translation": "Typstify 将强制遵循的 PDF 标准。"
+        },
+        {
+            "id": "Disable PDF Tags",
+            "message": "Disable PDF Tags",
+            "translation": "禁用 PDF 标签"
+        },
+        {
+            "id": "By default a tagged PDF is generated to provide base accessibility. In some cases this may be not desired. You can check this to disable it.",
+            "message": "By default a tagged PDF is generated to provide base accessibility. In some cases this may be not desired. You can check this to disable it.",
+            "translation": "默认生成带标签的 PDF 以提供基本的可访问性。在某些情况下可能不需要。勾选此选项可禁用它。"
+        },
+        {
+            "id": "No PDF Tags",
+            "message": "No PDF Tags",
+            "translation": "无 PDF 标签"
+        },
+        {
+            "id": "Change File Indentation",
+            "message": "Change File Indentation",
+            "translation": "更改文件缩进"
+        },
+        {
+            "id": "Indent with spaces or tabs",
+            "message": "Indent with spaces or tabs",
+            "translation": "使用空格或制表符缩进"
+        },
+        {
+            "id": "Choose the indentation style for the current file.",
+            "message": "Choose the indentation style for the current file.",
+            "translation": "选择当前文件的缩进样式。"
+        },
+        {
+            "id": "Tab Width",
+            "message": "Tab Width",
+            "translation": "制表符宽度"
+        },
+        {
+            "id": "Change tab display size.",
+            "message": "Change tab display size.",
+            "translation": "更改制表符显示宽度。"
+        },
+        {
+            "id": "Convert the indentation",
+            "message": "Convert the indentation",
+            "translation": "转换缩进"
+        },
+        {
+            "id": "Convert the indentation from spaces to tabs or from tabs to spaces, depending on what you choosed.",
+            "message": "Convert the indentation from spaces to tabs or from tabs to spaces, depending on what you choosed.",
+            "translation": "根据您的选择，将缩进从空格转换为制表符或从制表符转换为空格。"
+        },
+        {
+            "id": "Open File With...",
+            "message": "Open File With...",
+            "translation": "选择打开方式..."
+        },
+        {
+            "id": "Are you sure you want to open file '{TargetFile}'?",
+            "message": "Are you sure you want to open file '{TargetFile}'?",
+            "translation": "确定要打开文件 '{TargetFile}' 吗?",
+            "placeholders": [
+                {
+                    "id": "TargetFile",
+                    "string": "%[1]s",
+                    "type": "string",
+                    "underlyingType": "string",
+                    "argNum": 1,
+                    "expr": "filepath.Base(d.targetFile)"
+                }
+            ]
+        },
+        {
+            "id": "Publish Package",
+            "message": "Publish Package",
+            "translation": "发布包"
+        },
+        {
+            "id": "publish package error: {Error}",
+            "message": "publish package error: {Error}",
+            "translation": "发布包出错: {Error}",
+            "placeholders": [
+                {
+                    "id": "Error",
+                    "string": "%[1]s",
+                    "type": "string",
+                    "underlyingType": "string",
+                    "argNum": 1,
+                    "expr": "err.Error()"
+                }
+            ]
+        },
+        {
+            "id": "publish package succeeded: {BundlePath}",
+            "message": "publish package succeeded: {BundlePath}",
+            "translation": "发布包成功: {BundlePath}",
+            "placeholders": [
+                {
+                    "id": "BundlePath",
+                    "string": "%[1]s",
+                    "type": "string",
+                    "underlyingType": "string",
+                    "argNum": 1,
+                    "expr": "d.bundlePath"
+                }
+            ]
+        },
+        {
+            "id": "Bundle",
+            "message": "Bundle",
+            "translation": "打包"
+        },
+        {
+            "id": "Bundle the project files to a valid Typst package/template.",
+            "message": "Bundle the project files to a valid Typst package/template.",
+            "translation": "将项目文件打包为有效的 Typst 包/模板。"
+        },
+        {
+            "id": "Build",
+            "message": "Build",
+            "translation": "构建"
+        },
+        {
+            "id": "Created Bundle: {BundlePath}",
+            "message": "Created Bundle: {BundlePath}",
+            "translation": "已创建打包文件: {BundlePath}",
+            "placeholders": [
+                {
+                    "id": "BundlePath",
+                    "string": "%[1]s",
+                    "type": "string",
+                    "underlyingType": "string",
+                    "argNum": 1,
+                    "expr": "d.bundlePath"
+                }
+            ]
+        },
+        {
+            "id": "Namespace",
+            "message": "Namespace",
+            "translation": "命名空间"
+        },
+        {
+            "id": "Select the namespace to publish to. Make sure you have logged in TPIX in the app and have accessible namespaces of your TPIX account.",
+            "message": "Select the namespace to publish to. Make sure you have logged in TPIX in the app and have accessible namespaces of your TPIX account.",
+            "translation": "选择要发布到的命名空间。请确保您已在应用中登录 TPIX，并且拥有可访问的命名空间。"
+        },
+        {
+            "id": "Loading namespaces...",
+            "message": "Loading namespaces...",
+            "translation": "正在加载命名空间..."
+        },
+        {
+            "id": "No writable namespaces",
+            "message": "No writable namespaces",
+            "translation": "没有可写的命名空间"
+        },
+        {
+            "id": "No project",
+            "message": "No project",
+            "translation": "无项目"
+        },
+        {
+            "id": "No open project.",
+            "message": "No open project.",
+            "translation": "没有打开的项目。"
+        },
+        {
+            "id": "pull dependencies error: {Error}",
+            "message": "pull dependencies error: {Error}",
+            "translation": "拉取依赖出错: {Error}",
+            "placeholders": [
+                {
+                    "id": "Error",
+                    "string": "%[1]s",
+                    "type": "string",
+                    "underlyingType": "string",
+                    "argNum": 1,
+                    "expr": "err.Error()"
+                }
+            ]
+        },
+        {
+            "id": "pull dependencies succeeded!",
+            "message": "pull dependencies succeeded!",
+            "translation": "拉取依赖成功!"
+        },
+        {
+            "id": "Sync Dependencies",
+            "message": "Sync Dependencies",
+            "translation": "同步依赖"
+        },
+        {
+            "id": "Sync Bibliographies",
+            "message": "Sync Bibliographies",
+            "translation": "同步参考文献"
+        },
+        {
+            "id": "View Bibliography Info",
+            "message": "View Bibliography Info",
+            "translation": "查看参考文献信息"
+        },
+        {
+            "id": "Hide Explorer",
+            "message": "Hide Explorer",
+            "translation": "隐藏资源管理器"
+        },
+        {
+            "id": "Open Folder",
+            "message": "Open Folder",
+            "translation": "打开文件夹"
+        },
+        {
+            "id": "New Project",
+            "message": "New Project",
+            "translation": "新建项目"
+        },
+        {
+            "id": "Typst Package Center",
+            "message": "Typst Package Center",
+            "translation": "Typst 包中心"
+        },
+        {
+            "id": "Settings",
+            "message": "Settings",
+            "translation": "设置"
+        },
+        {
+            "id": "File Explorer",
+            "message": "File Explorer",
+            "translation": "文件资源管理器"
+        },
+        {
+            "id": "Outline",
+            "message": "Outline",
+            "translation": "大纲"
+        },
+        {
+            "id": "A new version is avaliable: {LatestVersion}",
+            "message": "A new version is avaliable: {LatestVersion}",
+            "translation": "有新版本可用: {LatestVersion}",
+            "placeholders": [
+                {
+                    "id": "LatestVersion",
+                    "string": "%[1]s",
+                    "type": "string",
+                    "underlyingType": "string",
+                    "argNum": 1,
+                    "expr": "ut.latestVersion"
+                }
+            ]
+        },
+        {
+            "id": "Later",
+            "message": "Later",
+            "translation": "稍后"
+        },
+        {
+            "id": "Download",
+            "message": "Download",
+            "translation": "下载"
+        },
+        {
+            "id": "Cached",
+            "message": "Cached",
+            "translation": "已缓存"
+        },
+        {
+            "id": "Loading packages...",
+            "message": "Loading packages...",
+            "translation": "正在加载包..."
+        },
+        {
+            "id": "No packages/templates found",
+            "message": "No packages/templates found",
+            "translation": "未找到包/模板"
+        },
+        {
+            "id": "Category",
+            "message": "Category",
+            "translation": "分类"
+        },
+        {
+            "id": "Clear",
+            "message": "Clear",
+            "translation": "清除"
+        },
+        {
+            "id": "Package kind",
+            "message": "Package kind",
+            "translation": "包类型"
+        },
+        {
+            "id": "Search packages/templates on TPIX",
+            "message": "Search packages/templates on TPIX",
+            "translation": "在 TPIX 上搜索包/模板"
+        },
+        {
+            "id": "Browsing thousands of packages and templates on TPIX server, including public namespaces, and private namespaces of your teams.",
+            "message": "Browsing thousands of packages and templates on TPIX server, including public namespaces, and private namespaces of your teams.",
+            "translation": "浏览 TPIX 服务器上的数千个包和模板，包括公共命名空间和您团队的私有命名空间。"
+        },
+        {
+            "id": "Search TPIX...",
+            "message": "Search TPIX...",
+            "translation": "搜索 TPIX..."
+        },
+        {
+            "id": "Query packages...",
+            "message": "Query packages...",
+            "translation": "查询包..."
+        },
+        {
+            "id": "Query packages failed:",
+            "message": "Query packages failed:",
+            "translation": "查询包失败:"
+        },
+        {
+            "id": "Typst packages info loaded.",
+            "message": "Typst packages info loaded.",
+            "translation": "Typst 包信息已加载。"
+        },
+        {
+            "id": "Download package failed:",
+            "message": "Download package failed:",
+            "translation": "下载包失败:"
+        },
+        {
+            "id": "Downloaded package {PkgSpec}.",
+            "message": "Downloaded package {PkgSpec}.",
+            "translation": "已下载包 {PkgSpec}。",
+            "placeholders": [
+                {
+                    "id": "PkgSpec",
+                    "string": "%[1]s",
+                    "type": "string",
+                    "underlyingType": "string",
+                    "argNum": 1,
+                    "expr": "pkgSpec"
+                }
+            ]
+        },
+        {
+            "id": "Downloaded package {PkgSpec} and {Count} transitive dependencies.",
+            "message": "Downloaded package {PkgSpec} and {Count} transitive dependencies.",
+            "translation": "已下载包 {PkgSpec} 及 {Count} 个传递依赖。",
+            "placeholders": [
+                {
+                    "id": "PkgSpec",
+                    "string": "%[1]s",
+                    "type": "string",
+                    "underlyingType": "string",
+                    "argNum": 1,
+                    "expr": "pkgSpec"
+                },
+                {
+                    "id": "Count",
+                    "string": "%[2]d",
+                    "type": "int",
+                    "underlyingType": "int",
+                    "argNum": 2,
+                    "expr": "count"
+                }
+            ]
+        },
+        {
+            "id": "Found {LastFetchedCount} packages.",
+            "message": "Found {LastFetchedCount} packages.",
+            "translation": "找到 {LastFetchedCount} 个包。",
+            "placeholders": [
+                {
+                    "id": "LastFetchedCount",
+                    "string": "%[1]d",
+                    "type": "int",
+                    "underlyingType": "int",
+                    "argNum": 1,
+                    "expr": "vw.lastFetchedCount"
+                }
+            ]
+        },
+        {
+            "id": "Agent",
+            "message": "Agent",
+            "translation": "代理"
+        },
+        {
+            "id": "Configure agent for AI assitant. You can either manually configure your own agent, or select one from the Agent Registry below.",
+            "message": "Configure agent for AI assitant. You can either manually configure your own agent, or select one from the Agent Registry below.",
+            "translation": "为 AI 助手配置代理。您可以手动配置自己的代理，或从下方的代理注册表中选择一个。"
+        },
+        {
+            "id": "Agent Registry",
+            "message": "Agent Registry",
+            "translation": "代理注册表"
+        },
+        {
+            "id": "Select an agent from the registry. Click use to overwrite the above configuration.",
+            "message": "Select an agent from the registry. Click use to overwrite the above configuration.",
+            "translation": "从注册表中选择一个代理。点击使用以覆盖上述配置。"
+        },
+        {
+            "id": "MCP",
+            "message": "MCP",
+            "translation": "MCP"
+        },
+        {
+            "id": "The built-in MCP server use dynamic network port by default, and it registers itself to agent at runtime. \nSome agents does not support runtime registration, you have to fix the MCP server port and register the server manually. When using static port, the server address is 127.0.0.1:5322, transport: http.",
+            "message": "The built-in MCP server use dynamic network port by default, and it registers itself to agent at runtime. \nSome agents does not support runtime registration, you have to fix the MCP server port and register the server manually. When using static port, the server address is 127.0.0.1:5322, transport: http.",
+            "translation": "内置 MCP 服务器默认使用动态网络端口，并在运行时向代理注册。\n某些代理不支持运行时注册，您需要固定 MCP 服务器端口并手动注册。使用静态端口时，服务器地址为 127.0.0.1:5322，传输方式: http。"
+        },
+        {
+            "id": "Use",
+            "message": "Use",
+            "translation": "使用"
+        },
+        {
+            "id": "Refresh",
+            "message": "Refresh",
+            "translation": "刷新"
+        },
+        {
+            "id": "ID:",
+            "message": "ID:",
+            "translation": "ID:"
+        },
+        {
+            "id": "Version:",
+            "message": "Version:",
+            "translation": "版本:"
+        },
+        {
+            "id": "License:",
+            "message": "License:",
+            "translation": "许可:"
+        },
+        {
+            "id": "Authors:",
+            "message": "Authors:",
+            "translation": "作者:"
+        },
+        {
+            "id": "Repository:",
+            "message": "Repository:",
+            "translation": "仓库:"
+        },
+        {
+            "id": "Ready — npx is available on your system.",
+            "message": "Ready — npx is available on your system.",
+            "translation": "就绪 — 系统可用 npx。"
+        },
+        {
+            "id": "Requires Node.js. Install from https://nodejs.org, then restart Typstify.",
+            "message": "Requires Node.js. Install from https://nodejs.org, then restart Typstify.",
+            "translation": "需要 Node.js。请从 https://nodejs.org 安装，然后重启 Typstify。"
+        },
+        {
+            "id": "If the agent fails to start, try installing manually: npm install -g {Package}",
+            "message": "If the agent fails to start, try installing manually: npm install -g {Package}",
+            "translation": "如果代理启动失败，请尝试手动安装: npm install -g {Package}",
+            "placeholders": [
+                {
+                    "id": "Package",
+                    "string": "%[1]s",
+                    "type": "string",
+                    "underlyingType": "string",
+                    "argNum": 1,
+                    "expr": "pkg.Package"
+                }
+            ]
+        },
+        {
+            "id": "Installation (npx)",
+            "message": "Installation (npx)",
+            "translation": "安装方式 (npx)"
+        },
+        {
+            "id": "Ready — uvx is available on your system.",
+            "message": "Ready — uvx is available on your system.",
+            "translation": "就绪 — 系统可用 uvx。"
+        },
+        {
+            "id": "Requires uvx. Install via `pip install uv` or https://docs.astral.sh/uv, then restart Typstify.",
+            "message": "Requires uvx. Install via `pip install uv` or https://docs.astral.sh/uv, then restart Typstify.",
+            "translation": "需要 uvx。请通过 `pip install uv` 或 https://docs.astral.sh/uv 安装，然后重启 Typstify。"
+        },
+        {
+            "id": "If the agent fails to start, try installing manually: uv pip install {Package}",
+            "message": "If the agent fails to start, try installing manually: uv pip install {Package}",
+            "translation": "如果代理启动失败，请尝试手动安装: uv pip install {Package}",
+            "placeholders": [
+                {
+                    "id": "Package",
+                    "string": "%[1]s",
+                    "type": "string",
+                    "underlyingType": "string",
+                    "argNum": 1,
+                    "expr": "pkg.Package"
+                }
+            ]
+        },
+        {
+            "id": "Installation (uvx)",
+            "message": "Installation (uvx)",
+            "translation": "安装方式 (uvx)"
+        },
+        {
+            "id": "Installation (Binary)",
+            "message": "Installation (Binary)",
+            "translation": "安装方式 (二进制)"
+        },
+        {
+            "id": "Download the archive for your platform, extract it, and ensure the binary is on your PATH.",
+            "message": "Download the archive for your platform, extract it, and ensure the binary is on your PATH.",
+            "translation": "下载适用于您平台的压缩包，解压后确保将二进制文件添加到 PATH 中。"
+        },
+        {
+            "id": "Installation",
+            "message": "Installation",
+            "translation": "安装方式"
+        },
+        {
+            "id": "This agent is not directly available for your platform. Visit the ACP registry for more details.",
+            "message": "This agent is not directly available for your platform. Visit the ACP registry for more details.",
+            "translation": "该代理不直接适用于您的平台。请访问 ACP 注册表了解更多详情。"
+        },
+        {
+            "id": "See https://agentclientprotocol.com/get-started/registry",
+            "message": "See https://agentclientprotocol.com/get-started/registry",
+            "translation": "请参见 https://agentclientprotocol.com/get-started/registry"
+        },
+        {
+            "id": "Agent Name",
+            "message": "Agent Name",
+            "translation": "代理名称"
+        },
+        {
+            "id": "Select an agent above or type a name directly.",
+            "message": "Select an agent above or type a name directly.",
+            "translation": "在上方选择代理或直接输入名称。"
+        },
+        {
+            "id": "Command",
+            "message": "Command",
+            "translation": "命令"
+        },
+        {
+            "id": "Select an agent above or edit directly, e.g. npx -y @scope/package",
+            "message": "Select an agent above or edit directly, e.g. npx -y @scope/package",
+            "translation": "在上方选择代理或直接编辑，例如 npx -y @scope/package"
+        },
+        {
+            "id": "npx -y @scope/package",
+            "message": "npx -y @scope/package",
+            "translation": "npx -y @scope/package"
+        },
+        {
+            "id": "Environment",
+            "message": "Environment",
+            "translation": "环境变量"
+        },
+        {
+            "id": "Extra environment variables, space-separated KEY=value pairs, e.g. FOO=bar BAZ=qux",
+            "message": "Extra environment variables, space-separated KEY=value pairs, e.g. FOO=bar BAZ=qux",
+            "translation": "额外的环境变量，空格分隔的 KEY=值 键值对，例如 FOO=bar BAZ=qux"
+        },
+        {
+            "id": "FOO=bar BAZ=qux",
+            "message": "FOO=bar BAZ=qux",
+            "translation": "FOO=bar BAZ=qux"
+        },
+        {
+            "id": "Language",
+            "message": "Language",
+            "translation": "语言"
+        },
+        {
+            "id": "Set the displaying language of the user interface.",
+            "message": "Set the displaying language of the user interface.",
+            "translation": "设置用户界面的显示语言。"
+        },
+        {
+            "id": "UI Text Size",
+            "message": "UI Text Size",
+            "translation": "UI 文字大小"
+        },
+        {
+            "id": "Set font size for the user interface. The unit is in scale-independent pixel (sp).",
+            "message": "Set font size for the user interface. The unit is in scale-independent pixel (sp).",
+            "translation": "设置用户界面的字体大小。单位为缩放无关像素 (sp)。"
+        },
+        {
+            "id": "UI Font Family",
+            "message": "UI Font Family",
+            "translation": "UI 字体"
+        },
+        {
+            "id": "Set the desired fonts for the UI. Use CSS style font family syntax which is a list of comma separated names. You can also leave it empty to let the application choose a fallback.",
+            "message": "Set the desired fonts for the UI. Use CSS style font family syntax which is a list of comma separated names. You can also leave it empty to let the application choose a fallback.",
+            "translation": "设置 UI 所需的字体。使用 CSS 样式的字体族语法，即以逗号分隔的名称列表。您也可以留空让应用程序选择后备字体。"
+        },
+        {
+            "id": "Font Family",
+            "message": "Font Family",
+            "translation": "字体"
+        },
+        {
+            "id": "Theme",
+            "message": "Theme",
+            "translation": "主题"
+        },
+        {
+            "id": "Choose your favorite color theme for the user interface.",
+            "message": "Choose your favorite color theme for the user interface.",
+            "translation": "选择您喜欢的用户界面颜色主题。"
+        },
+        {
+            "id": "Preview",
+            "message": "Preview",
+            "translation": "预览"
+        },
+        {
+            "id": "When checked, document preview will be opening in your default browser. Otherwise the preview will use built-in previewer.",
+            "message": "When checked, document preview will be opening in your default browser. Otherwise the preview will use built-in previewer.",
+            "translation": "勾选后，文档预览将在默认浏览器中打开。否则预览将使用内置预览器。"
+        },
+        {
+            "id": "Debug Log",
+            "message": "Debug Log",
+            "translation": "调试日志"
+        },
+        {
+            "id": "When checked, logs from the built-in LSP (Language Server Procotol) server is written to the console panel. It needs to restart or reload to take effect.",
+            "message": "When checked, logs from the built-in LSP (Language Server Procotol) server is written to the console panel. It needs to restart or reload to take effect.",
+            "translation": "勾选后，内置 LSP（语言服务器协议）服务器的日志将写入控制台面板。需要重启或重新加载才能生效。"
+        },
+        {
+            "id": "Power Saving",
+            "message": "Power Saving",
+            "translation": "省电模式"
+        },
+        {
+            "id": "When checked, LSP server runs in power saving mode, only basic syntax checking and code completion are avaliable, diagnostics and previewing will not work. It needs to restart or reload to take effect.",
+            "message": "When checked, LSP server runs in power saving mode, only basic syntax checking and code completion are avaliable, diagnostics and previewing will not work. It needs to restart or reload to take effect.",
+            "translation": "勾选后，LSP 服务器将运行在省电模式，仅提供基本语法检查和代码补全功能，诊断和预览将无法使用。需要重启或重新加载才能生效。"
+        },
+        {
+            "id": "External Typst Compiler Path",
+            "message": "External Typst Compiler Path",
+            "translation": "外部 Typst 编译器路径"
+        },
+        {
+            "id": "Specifies a path to your own version of Typst compiler. Leave it empty to use the built-in one. Please check the compatibility before you switch. It needs to restart to take effect.",
+            "message": "Specifies a path to your own version of Typst compiler. Leave it empty to use the built-in one. Please check the compatibility before you switch. It needs to restart to take effect.",
+            "translation": "指定您自己的 Typst 编译器版本路径。留空则使用内置版本。切换前请检查兼容性。需要重启才能生效。"
+        },
+        {
+            "id": "External LSP Server(Tinymist) Path",
+            "message": "External LSP Server(Tinymist) Path",
+            "translation": "外部 LSP 服务器(Tinymist) 路径"
+        },
+        {
+            "id": "Specifies a path to your own version of Tinymist. Leave it empty to use the built-in one. Please check the compatibility before you switch. It needs to restart to take effect.",
+            "message": "Specifies a path to your own version of Tinymist. Leave it empty to use the built-in one. Please check the compatibility before you switch. It needs to restart to take effect.",
+            "translation": "指定您自己的 Tinymist 版本路径。留空则使用内置版本。切换前请检查兼容性。需要重启才能生效。"
+        },
+        {
+            "id": "Check Update",
+            "message": "Check Update",
+            "translation": "检查更新"
+        },
+        {
+            "id": "Check for updates on app startup. Please enable it to keep up to date for new features and bugfixes.",
+            "message": "Check for updates on app startup. Please enable it to keep up to date for new features and bugfixes.",
+            "translation": "应用启动时检查更新。请启用以保持获取最新功能和错误修复。"
+        },
+        {
+            "id": "General",
+            "message": "General",
+            "translation": "通用"
+        },
+        {
+            "id": "Auto Save Interval",
+            "message": "Auto Save Interval",
+            "translation": "自动保存间隔"
+        },
+        {
+            "id": "Set the auto save delay (in seconds), cannot be completely disabled.",
+            "message": "Set the auto save delay (in seconds), cannot be completely disabled.",
+            "translation": "设置自动保存延迟（秒），无法完全禁用。"
+        },
+        {
+            "id": "Set the desired fonts for the editor. Use CSS style font family syntax which is a list of comma separated names. You can also leave it empty to let the application choose a fallback.",
+            "message": "Set the desired fonts for the editor. Use CSS style font family syntax which is a list of comma separated names. You can also leave it empty to let the application choose a fallback.",
+            "translation": "设置编辑器所需的字体。使用 CSS 样式的字体族语法，即以逗号分隔的名称列表。您也可以留空让应用程序选择后备字体。"
+        },
+        {
+            "id": "Text Size",
+            "message": "Text Size",
+            "translation": "文字大小"
+        },
+        {
+            "id": "Set font size for the editor. The unit is in scale-independent pixel (sp).",
+            "message": "Set font size for the editor. The unit is in scale-independent pixel (sp).",
+            "translation": "设置编辑器的字体大小。单位为缩放无关像素 (sp)。"
+        },
+        {
+            "id": "Font Weight",
+            "message": "Font Weight",
+            "translation": "字体粗细"
+        },
+        {
+            "id": "Set the expected weight (or boldness) of the text. This is for variable fonts only.",
+            "message": "Set the expected weight (or boldness) of the text. This is for variable fonts only.",
+            "translation": "设置文本的预期粗细（或加粗程度）。仅适用于可变字体。"
+        },
+        {
+            "id": "Line Height Scale",
+            "message": "Line Height Scale",
+            "translation": "行高倍率"
+        },
+        {
+            "id": "Set the line height scale of the lines in editor. Line height scale is multiplied by line height to determine the final gap between lines.",
+            "message": "Set the line height scale of the lines in editor. Line height scale is multiplied by line height to determine the final gap between lines.",
+            "translation": "设置编辑器中行的行高倍率。行高倍率乘以行高以确定行与行之间的最终间距。"
+        },
+        {
+            "id": "Indentation",
+            "message": "Indentation",
+            "translation": "缩进"
+        },
+        {
+            "id": "Set the expected characters to use when pressing the Tab key. Please be noted that this works only for empty file. Indentation for non-empty files are auto detected.",
+            "message": "Set the expected characters to use when pressing the Tab key. Please be noted that this works only for empty file. Indentation for non-empty files are auto detected.",
+            "translation": "设置按 Tab 键时要使用的字符。请注意，这仅适用于空文件。非空文件的缩进将自动检测。"
+        },
+        {
+            "id": "Set how many number of spaces the Tab is equal to. Please be noted that this works only for empty file. Indentation for non-empty files are auto detected.",
+            "message": "Set how many number of spaces the Tab is equal to. Please be noted that this works only for empty file. Indentation for non-empty files are auto detected.",
+            "translation": "设置 Tab 等于多少个空格。请注意，这仅适用于空文件。非空文件的缩进将自动检测。"
+        },
+        {
+            "id": "Editor",
+            "message": "Editor",
+            "translation": "编辑器"
+        },
+        {
+            "id": "Typst",
+            "message": "Typst",
+            "translation": "Typst"
+        },
+        {
+            "id": "Versions",
+            "message": "Versions",
+            "translation": "版本"
+        },
+        {
+            "id": "Package Dir",
+            "message": "Package Dir",
+            "translation": "包目录"
+        },
+        {
+            "id": "Specifies where to store your local Typst packages/templates. Leave it empty to use the default dir.",
+            "message": "Specifies where to store your local Typst packages/templates. Leave it empty to use the default dir.",
+            "translation": "指定存储本地 Typst 包/模板的位置。留空则使用默认目录。"
+        },
+        {
+            "id": "Package Cache Dir",
+            "message": "Package Cache Dir",
+            "translation": "包缓存目录"
+        },
+        {
+            "id": "Specifies where to store your the cached Typst packages/templates retrieved from the network. Leave it empty to use the default dir.",
+            "message": "Specifies where to store your the cached Typst packages/templates retrieved from the network. Leave it empty to use the default dir.",
+            "translation": "指定存储从网络获取的已缓存 Typst 包/模板的位置。留空则使用默认目录。"
+        },
+        {
+            "id": "Extra Font Path",
+            "message": "Extra Font Path",
+            "translation": "额外字体路径"
+        },
+        {
+            "id": "The directory where to search for fonts when exporting, previewing and auto-completing. Be aware that the current project root directory is always searched. Need to restart or reload to take effect.",
+            "message": "The directory where to search for fonts when exporting, previewing and auto-completing. Be aware that the current project root directory is always searched. Need to restart or reload to take effect.",
+            "translation": "导出、预览和自动补全时搜索字体的目录。请注意，当前项目根目录始终会被搜索。需要重启或重新加载才能生效。"
+        },
+        {
+            "id": "Export Dir",
+            "message": "Export Dir",
+            "translation": "导出目录"
+        },
+        {
+            "id": "The directory to save exported files to, including the deps.json. If not set, the exported files will be saved to a 'output' folder beside the source file.",
+            "message": "The directory to save exported files to, including the deps.json. If not set, the exported files will be saved to a 'output' folder beside the source file.",
+            "translation": "保存导出文件的目录，包括 deps.json。如果未设置，导出文件将保存到源文件旁边的 'output' 文件夹中。"
+        },
+        {
+            "id": "Load External Inputs",
+            "message": "Load External Inputs",
+            "translation": "加载外部输入"
+        },
+        {
+            "id": "Load external inputs from a file named sys-inputs.json as sys.inputs. If there is no such one, it is created at the root dir. \nA sys-inputs.json file contains user defined key-value pairs which can be accessed via Typst's sys.inputs. The values should always be string encoded data.\nNeed to restart or reload to take effect for code linter, auto-completion, and preview when changed.",
+            "message": "Load external inputs from a file named sys-inputs.json as sys.inputs. If there is no such one, it is created at the root dir. \nA sys-inputs.json file contains user defined key-value pairs which can be accessed via Typst's sys.inputs. The values should always be string encoded data.\nNeed to restart or reload to take effect for code linter, auto-completion, and preview when changed.",
+            "translation": "从名为 sys-inputs.json 的文件加载外部输入作为 sys.inputs。如果没有此文件，将在根目录创建。\nsys-inputs.json 文件包含用户定义的键值对，可通过 Typst 的 sys.inputs 访问。值应始终为字符串编码数据。\n更改后需要重启或重新加载才能对代码检查器、自动补全和预览生效。"
+        },
+        {
+            "id": "Ignore System Fonts",
+            "message": "Ignore System Fonts",
+            "translation": "忽略系统字体"
+        },
+        {
+            "id": "Ignore system fonts or not. For code linter, auto-completion and previewing, it needs to restart or reload to take effect.",
+            "message": "Ignore system fonts or not. For code linter, auto-completion and previewing, it needs to restart or reload to take effect.",
+            "translation": "是否忽略系统字体。对于代码检查、自动补全和预览，需要重启或重新加载才能生效。"
+        },
+        {
+            "id": "Ignore Compiler Embedded Fonts",
+            "message": "Ignore Compiler Embedded Fonts",
+            "translation": "忽略编译器嵌入字体"
+        },
+        {
+            "id": "Ignore embedded Fonts or not. This only works when exporting files.",
+            "message": "Ignore embedded Fonts or not. This only works when exporting files.",
+            "translation": "是否忽略嵌入字体。仅在导出文件时生效。"
+        },
+        {
+            "id": "Generate Dependencies file",
+            "message": "Generate Dependencies file",
+            "translation": "生成依赖文件"
+        },
+        {
+            "id": "Write dependencies of the file compiled to a file named deps.json in your project directory.",
+            "message": "Write dependencies of the file compiled to a file named deps.json in your project directory.",
+            "translation": "将编译文件的依赖写入项目目录中名为 deps.json 的文件。"
+        },
+        {
+            "id": "TPIX",
+            "message": "TPIX",
+            "translation": "TPIX"
+        },
+        {
+            "id": "You have an active TPIX session",
+            "message": "You have an active TPIX session",
+            "translation": "您有一个活跃的 TPIX 会话"
+        },
+        {
+            "id": "Logout TPIX",
+            "message": "Logout TPIX",
+            "translation": "登出 TPIX"
+        },
+        {
+            "id": "Login TPIX to access all the features of Typstify, including package management, Zotero sync, etc. Some features may need a subscription.",
+            "message": "Login TPIX to access all the features of Typstify, including package management, Zotero sync, etc. Some features may need a subscription.",
+            "translation": "登录 TPIX 以访问 Typstify 的全部功能，包括包管理、Zotero 同步等。部分功能可能需要订阅。"
+        },
+        {
+            "id": "Login TPIX",
+            "message": "Login TPIX",
+            "translation": "登录 TPIX"
+        },
+        {
+            "id": "To learn more about TPIX, go to",
+            "message": "To learn more about TPIX, go to",
+            "translation": "了解更多 TPIX 信息，请访问"
+        },
+        {
+            "id": "To get a subscription of TPIX, click",
+            "message": "To get a subscription of TPIX, click",
+            "translation": "获取 TPIX 订阅，请点击"
+        },
+        {
+            "id": "Check new version",
+            "message": "Check new version",
+            "translation": "检查新版本"
+        },
+        {
+            "id": "Version",
+            "message": "Version",
+            "translation": "版本"
+        },
+        {
+            "id": "Changelog",
+            "message": "Changelog",
+            "translation": "更新日志"
+        },
+        {
+            "id": "Release Time",
+            "message": "Release Time",
+            "translation": "发布时间"
+        },
+        {
+            "id": "Go to download",
+            "message": "Go to download",
+            "translation": "前往下载"
+        },
+        {
+            "id": "About",
+            "message": "About",
+            "translation": "关于"
+        },
+        {
+            "id": "git checkout {Name} failed: {Err}",
+            "message": "git checkout {Name} failed: {Err}",
+            "translation": "git checkout {Name} 失败: {Err}",
+            "placeholders": [
+                {
+                    "id": "Name",
+                    "string": "%[1]s",
+                    "type": "string",
+                    "underlyingType": "string",
+                    "argNum": 1,
+                    "expr": "info.Name"
+                },
+                {
+                    "id": "Err",
+                    "string": "%[2]v",
+                    "type": "error",
+                    "underlyingType": "interface{Error() string}",
+                    "argNum": 2,
+                    "expr": "err"
+                }
+            ]
+        },
+        {
+            "id": "Width: {X}, Height: {Y}",
+            "message": "Width: {X}, Height: {Y}",
+            "translation": "宽度: {X}, 高度: {Y}",
+            "placeholders": [
+                {
+                    "id": "X",
+                    "string": "%[1]d",
+                    "type": "int",
+                    "underlyingType": "int",
+                    "argNum": 1,
+                    "expr": "src.Size().X"
+                },
+                {
+                    "id": "Y",
+                    "string": "%[2]d",
+                    "type": "int",
+                    "underlyingType": "int",
+                    "argNum": 2,
+                    "expr": "src.Size().Y"
+                }
+            ]
+        },
+        {
+            "id": "popup and display the preview in a dedicated window",
+            "message": "popup and display the preview in a dedicated window",
+            "translation": "弹出并在独立窗口中显示预览"
+        },
+        {
+            "id": "Open File Location",
+            "message": "Open File Location",
+            "translation": "打开文件所在位置"
+        },
+        {
+            "id": "Open Folder Location",
+            "message": "Open Folder Location",
+            "translation": "打开文件夹所在位置"
+        }
+    ]
+}

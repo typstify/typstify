@@ -1,0 +1,1769 @@
+{
+    "language": "de-DE",
+    "messages": [
+        {
+            "id": "Please choose a method to authenticate the agent:",
+            "message": "Please choose a method to authenticate the agent:",
+            "translation": "Bitte wählen Sie eine Methode zur Authentifizierung des Agenten:"
+        },
+        {
+            "id": "ID",
+            "message": "ID",
+            "translation": "ID"
+        },
+        {
+            "id": "Name",
+            "message": "Name",
+            "translation": "Name"
+        },
+        {
+            "id": "Description",
+            "message": "Description",
+            "translation": "Beschreibung"
+        },
+        {
+            "id": "Link",
+            "message": "Link",
+            "translation": "Link"
+        },
+        {
+            "id": "Required environment variables:",
+            "message": "Required environment variables:",
+            "translation": "Erforderliche Umgebungsvariablen:"
+        },
+        {
+            "id": "Args",
+            "message": "Args",
+            "translation": "Args"
+        },
+        {
+            "id": "Env",
+            "message": "Env",
+            "translation": "Umgebung"
+        },
+        {
+            "id": "Type to start a conversation, press Shift+Enter to send",
+            "message": "Type to start a conversation, press Shift+Enter to send",
+            "translation": "Tippen Sie, um ein Gespräch zu beginnen. Mit Shift+Enter senden"
+        },
+        {
+            "id": "Send",
+            "message": "Send",
+            "translation": "Senden"
+        },
+        {
+            "id": "Stop",
+            "message": "Stop",
+            "translation": "Stopp"
+        },
+        {
+            "id": "Off",
+            "message": "Off",
+            "translation": "Aus"
+        },
+        {
+            "id": "On",
+            "message": "On",
+            "translation": "An"
+        },
+        {
+            "id": "Options",
+            "message": "Options",
+            "translation": "Optionen"
+        },
+        {
+            "id": "Type @ to include resource, and / to use skills.",
+            "message": "Type @ to include resource, and / to use skills.",
+            "translation": "@ eingeben, um Ressourcen einzubinden, / um Skills zu nutzen"
+        },
+        {
+            "id": "No messages.",
+            "message": "No messages.",
+            "translation": "Keine Nachrichten."
+        },
+        {
+            "id": "Thinking",
+            "message": "Thinking",
+            "translation": "Denkt nach"
+        },
+        {
+            "id": "Plan",
+            "message": "Plan",
+            "translation": "Plan"
+        },
+        {
+            "id": "Raw Input",
+            "message": "Raw Input",
+            "translation": "Roheingabe",
+            "placeholders": [
+                {
+                    "id": "RawInput",
+                    "string": "%[1]v",
+                    "type": "string",
+                    "underlyingType": "string",
+                    "argNum": 1,
+                    "expr": "rawInput"
+                }
+            ]
+        },
+        {
+            "id": "Raw Output",
+            "message": "Raw Output",
+            "translation": "Rohausgabe",
+            "placeholders": [
+                {
+                    "id": "RawOutput",
+                    "string": "%[1]v",
+                    "type": "string",
+                    "underlyingType": "string",
+                    "argNum": 1,
+                    "expr": "rawOutput"
+                }
+            ]
+        },
+        {
+            "id": "Terminal: {TerminalId}",
+            "message": "Terminal: {TerminalId}",
+            "translation": "Terminal: {TerminalId}",
+            "placeholders": [
+                {
+                    "id": "TerminalId",
+                    "string": "%[1]s",
+                    "type": "string",
+                    "underlyingType": "string",
+                    "argNum": 1,
+                    "expr": "content.TerminalId"
+                }
+            ]
+        },
+        {
+            "id": "Copy",
+            "message": "Copy",
+            "translation": "Kopieren"
+        },
+        {
+            "id": "Cut",
+            "message": "Cut",
+            "translation": "Ausschneiden"
+        },
+        {
+            "id": "Paste",
+            "message": "Paste",
+            "translation": "Einfügen"
+        },
+        {
+            "id": "Find \u0026 Replace",
+            "message": "Find \u0026 Replace",
+            "translation": "Suchen \u0026 Ersetzen"
+        },
+        {
+            "id": "Lock",
+            "message": "Lock",
+            "translation": "Sperren"
+        },
+        {
+            "id": "Unlock",
+            "message": "Unlock",
+            "translation": "Entsperren"
+        },
+        {
+            "id": "Unwrap Lines",
+            "message": "Unwrap Lines",
+            "translation": "Zeilenumbruch entfernen"
+        },
+        {
+            "id": "Wrap Lines",
+            "message": "Wrap Lines",
+            "translation": "Zeilenumbruch"
+        },
+        {
+            "id": "Match Case",
+            "message": "Match Case",
+            "translation": "Groß-/Kleinschreibung"
+        },
+        {
+            "id": "Whole Word",
+            "message": "Whole Word",
+            "translation": "Ganzes Wort"
+        },
+        {
+            "id": "Use Regex",
+            "message": "Use Regex",
+            "translation": "Regex verwenden"
+        },
+        {
+            "id": "No results",
+            "message": "No results",
+            "translation": "Keine Ergebnisse"
+        },
+        {
+            "id": "{CurrentMatch__1} of {MatchCount}",
+            "message": "{CurrentMatch__1} of {MatchCount}",
+            "translation": "{CurrentMatch__1} von {MatchCount}",
+            "placeholders": [
+                {
+                    "id": "CurrentMatch__1",
+                    "string": "%[1]d",
+                    "type": "int",
+                    "underlyingType": "int",
+                    "argNum": 1,
+                    "expr": "sb.currentMatch + 1"
+                },
+                {
+                    "id": "MatchCount",
+                    "string": "%[2]d",
+                    "type": "int",
+                    "underlyingType": "int",
+                    "argNum": 2,
+                    "expr": "sb.matchCount"
+                }
+            ]
+        },
+        {
+            "id": "Replace",
+            "message": "Replace",
+            "translation": "Ersetzen"
+        },
+        {
+            "id": "Replace All",
+            "message": "Replace All",
+            "translation": "Alle ersetzen"
+        },
+        {
+            "id": "Ln {Y__1}, Col {X__1}",
+            "message": "Ln {Y__1}, Col {X__1}",
+            "translation": "Z {Y__1}, Sp {X__1}",
+            "placeholders": [
+                {
+                    "id": "Y__1",
+                    "string": "%[1]d",
+                    "type": "int",
+                    "underlyingType": "int",
+                    "argNum": 1,
+                    "expr": "s.Pos.Y + 1"
+                },
+                {
+                    "id": "X__1",
+                    "string": "%[2]d",
+                    "type": "int",
+                    "underlyingType": "int",
+                    "argNum": 2,
+                    "expr": "s.Pos.X + 1"
+                }
+            ]
+        },
+        {
+            "id": "({SelectedChars} selected)",
+            "message": "({SelectedChars} selected)",
+            "translation": "({SelectedChars} ausgewählt)",
+            "placeholders": [
+                {
+                    "id": "SelectedChars",
+                    "string": "%[1]d",
+                    "type": "int",
+                    "underlyingType": "int",
+                    "argNum": 1,
+                    "expr": "s.SelectedChars"
+                }
+            ]
+        },
+        {
+            "id": "Exit",
+            "message": "Exit",
+            "translation": "Beenden"
+        },
+        {
+            "id": "Start",
+            "message": "Start",
+            "translation": "Start"
+        },
+        {
+            "id": "Typstify",
+            "message": "Typstify",
+            "translation": "Typstify"
+        },
+        {
+            "id": "Crafting Typst documents at the speed of thought.",
+            "message": "Crafting Typst documents at the speed of thought.",
+            "translation": "Typst-Dokumente in Gedankenschnelle erstellen."
+        },
+        {
+            "id": "Welcome, {Username}!",
+            "message": "Welcome, {Username}!",
+            "translation": "Willkommen, {Username}!",
+            "placeholders": [
+                {
+                    "id": "Username",
+                    "string": "%[1]s",
+                    "type": "string",
+                    "underlyingType": "string",
+                    "argNum": 1,
+                    "expr": "vw.srv.Settings().Tpix().Username"
+                }
+            ]
+        },
+        {
+            "id": "Getting Started",
+            "message": "Getting Started",
+            "translation": "Erste Schritte"
+        },
+        {
+            "id": "New project...",
+            "message": "New project...",
+            "translation": "Neues Projekt..."
+        },
+        {
+            "id": "Open existing project...",
+            "message": "Open existing project...",
+            "translation": "Bestehendes Projekt öffnen..."
+        },
+        {
+            "id": "Browse Packages/Templates...",
+            "message": "Browse Packages/Templates...",
+            "translation": "Pakete/Vorlagen durchsuchen..."
+        },
+        {
+            "id": "Learn more",
+            "message": "Learn more",
+            "translation": "Mehr erfahren"
+        },
+        {
+            "id": "To learn more about Typstify, go to",
+            "message": "To learn more about Typstify, go to",
+            "translation": "Um mehr über Typstify zu erfahren, besuchen Sie"
+        },
+        {
+            "id": "To learn more about TPIX, click",
+            "message": "To learn more about TPIX, click",
+            "translation": "Um mehr über TPIX zu erfahren, klicken Sie"
+        },
+        {
+            "id": "Open/Hide File Explorer: {String} + D",
+            "message": "Open/Hide File Explorer: {String} + D",
+            "translation": "Datei-Explorer öffnen/ausblenden: {String} + D",
+            "placeholders": [
+                {
+                    "id": "String",
+                    "string": "%[1]s",
+                    "type": "string",
+                    "underlyingType": "string",
+                    "argNum": 1,
+                    "expr": "key.ModShortcut.String()"
+                }
+            ]
+        },
+        {
+            "id": "Open/Hide Console: {String} + K",
+            "message": "Open/Hide Console: {String} + K",
+            "translation": "Konsole öffnen/ausblenden: {String} + K",
+            "placeholders": [
+                {
+                    "id": "String",
+                    "string": "%[1]s",
+                    "type": "string",
+                    "underlyingType": "string",
+                    "argNum": 1,
+                    "expr": "key.ModShortcut.String()"
+                }
+            ]
+        },
+        {
+            "id": "Open/Hide Previewer: {String} + P",
+            "message": "Open/Hide Previewer: {String} + P",
+            "translation": "Vorschau öffnen/ausblenden: {String} + P",
+            "placeholders": [
+                {
+                    "id": "String",
+                    "string": "%[1]s",
+                    "type": "string",
+                    "underlyingType": "string",
+                    "argNum": 1,
+                    "expr": "key.ModShortcut.String()"
+                }
+            ]
+        },
+        {
+            "id": "Open AI Assistant: {String} + L",
+            "message": "Open AI Assistant: {String} + L",
+            "translation": "KI-Assistent öffnen: {String} + L",
+            "placeholders": [
+                {
+                    "id": "String",
+                    "string": "%[1]s",
+                    "type": "string",
+                    "underlyingType": "string",
+                    "argNum": 1,
+                    "expr": "key.ModShortcut.String()"
+                }
+            ]
+        },
+        {
+            "id": "Starting AI Assistant...",
+            "message": "Starting AI Assistant...",
+            "translation": "KI-Assistent wird gestartet..."
+        },
+        {
+            "id": "Sessions",
+            "message": "Sessions",
+            "translation": "Sitzungen"
+        },
+        {
+            "id": "Sync Bibliography",
+            "message": "Sync Bibliography",
+            "translation": "Bibliografie synchronisieren"
+        },
+        {
+            "id": "Submit",
+            "message": "Submit",
+            "translation": "Absenden"
+        },
+        {
+            "id": "Creating managed bibliography error: {Error}",
+            "message": "Creating managed bibliography error: {Error}",
+            "translation": "Fehler beim Erstellen der verwalteten Bibliografie: {Error}",
+            "placeholders": [
+                {
+                    "id": "Error",
+                    "string": "%[1]s",
+                    "type": "string",
+                    "underlyingType": "string",
+                    "argNum": 1,
+                    "expr": "err.Error()"
+                }
+            ]
+        },
+        {
+            "id": "Creating managed bibliography succeeded: {Filename}",
+            "message": "Creating managed bibliography succeeded: {Filename}",
+            "translation": "Verwaltete Bibliografie erfolgreich erstellt: {Filename}",
+            "placeholders": [
+                {
+                    "id": "Filename",
+                    "string": "%[1]s",
+                    "type": "string",
+                    "underlyingType": "string",
+                    "argNum": 1,
+                    "expr": "filename"
+                }
+            ]
+        },
+        {
+            "id": "Bibliography File Name",
+            "message": "Bibliography File Name",
+            "translation": "Bibliografie-Dateiname"
+        },
+        {
+            "id": "The name of the managed bibliography file, such as 'bib-file-name.bib'. You can leave it empty to use a auto generated one.",
+            "message": "The name of the managed bibliography file, such as 'bib-file-name.bib'. You can leave it empty to use a auto generated one.",
+            "translation": "Der Name der verwalteten Bibliografie-Datei, z. B. 'bib-file-name.bib'. Lassen Sie das Feld leer, um einen automatisch generierten Namen zu verwenden."
+        },
+        {
+            "id": "Collections",
+            "message": "Collections",
+            "translation": "Sammlungen"
+        },
+        {
+            "id": "Select the collection to sync with. Make sure you or your team have added Zotero API key on TPIX server.",
+            "message": "Select the collection to sync with. Make sure you or your team have added Zotero API key on TPIX server.",
+            "translation": "Wählen Sie die zu synchronisierende Sammlung aus. Stellen Sie sicher, dass Sie oder Ihr Team den Zotero-API-Schlüssel auf dem TPIX-Server hinzugefügt haben."
+        },
+        {
+            "id": "Loading collecions...",
+            "message": "Loading collecions...",
+            "translation": "Sammlungen werden geladen..."
+        },
+        {
+            "id": "No collections found",
+            "message": "No collections found",
+            "translation": "Keine Sammlungen gefunden"
+        },
+        {
+            "id": "View Managed Bibliography",
+            "message": "View Managed Bibliography",
+            "translation": "Verwaltete Bibliografie anzeigen"
+        },
+        {
+            "id": "Unlink",
+            "message": "Unlink",
+            "translation": "Verknüpfung aufheben"
+        },
+        {
+            "id": "Unlink managed bibliography error: {Error}",
+            "message": "Unlink managed bibliography error: {Error}",
+            "translation": "Fehler beim Aufheben der Bibliografie-Verknüpfung: {Error}",
+            "placeholders": [
+                {
+                    "id": "Error",
+                    "string": "%[1]s",
+                    "type": "string",
+                    "underlyingType": "string",
+                    "argNum": 1,
+                    "expr": "err.Error()"
+                }
+            ]
+        },
+        {
+            "id": "Unlink managed bibliography succeeded: {File}",
+            "message": "Unlink managed bibliography succeeded: {File}",
+            "translation": "Bibliografie-Verknüpfung erfolgreich aufgehoben: {File}",
+            "placeholders": [
+                {
+                    "id": "File",
+                    "string": "%[1]s",
+                    "type": "string",
+                    "underlyingType": "string",
+                    "argNum": 1,
+                    "expr": "d.meta.File"
+                }
+            ]
+        },
+        {
+            "id": "The path of the managed bibliography file. Clicking unlink below will turn it to a regular file, and it will not sync with remote Zotero collection anymore.",
+            "message": "The path of the managed bibliography file. Clicking unlink below will turn it to a regular file, and it will not sync with remote Zotero collection anymore.",
+            "translation": "Der Pfad der verwalteten Bibliografie-Datei. Durch Klicken auf Verknüpfung aufheben wird sie zu einer normalen Datei und nicht mehr mit der entfernten Zotero-Sammlung synchronisiert."
+        },
+        {
+            "id": "Format:",
+            "message": "Format:",
+            "translation": "Format:"
+        },
+        {
+            "id": "Zotero Collection Info",
+            "message": "Zotero Collection Info",
+            "translation": "Zotero-Sammlungsinfo"
+        },
+        {
+            "id": "Namespace: {Namespace}",
+            "message": "Namespace: {Namespace}",
+            "translation": "Namespace: {Namespace}",
+            "placeholders": [
+                {
+                    "id": "Namespace",
+                    "string": "%[1]s",
+                    "type": "string",
+                    "underlyingType": "string",
+                    "argNum": 1,
+                    "expr": "d.meta.Meta.Namespace"
+                }
+            ]
+        },
+        {
+            "id": "Library: {Library}",
+            "message": "Library: {Library}",
+            "translation": "Bibliothek: {Library}",
+            "placeholders": [
+                {
+                    "id": "Library",
+                    "string": "%[1]s",
+                    "type": "string",
+                    "underlyingType": "string",
+                    "argNum": 1,
+                    "expr": "d.meta.Meta.Library"
+                }
+            ]
+        },
+        {
+            "id": "Collection: {Collection}",
+            "message": "Collection: {Collection}",
+            "translation": "Sammlung: {Collection}",
+            "placeholders": [
+                {
+                    "id": "Collection",
+                    "string": "%[1]s",
+                    "type": "string",
+                    "underlyingType": "string",
+                    "argNum": 1,
+                    "expr": "d.meta.Meta.Collection"
+                }
+            ]
+        },
+        {
+            "id": [
+                "tip2",
+                "Find the desired template in Typst Packages explorer. Both local and remote templates can be used. \nA template name should have the form @namespace/package-name:version, for example: '@preview/aero-check:0.1.1'.\nIf you want to create project without template, just leave it empty."
+            ],
+            "message": "Find the desired template in Typst Packages explorer. Both local and remote templates can be used. \nA template name should have the form @namespace/package-name:version, for example: '@preview/aero-check:0.1.1'.\nIf you want to create project without template, just leave it empty.",
+            "translation": "Finden Sie die gewünschte Vorlage im Typst-Paket-Explorer. Es können sowohl lokale als auch entfernte Vorlagen verwendet werden.\nEin Vorlagenname sollte das Format @namespace/package-name:version haben, z. B.: '@preview/aero-check:0.1.1'.\nWenn Sie ein Projekt ohne Vorlage erstellen möchten, lassen Sie das Feld einfach leer."
+        },
+        {
+            "id": "Create New Project",
+            "message": "Create New Project",
+            "translation": "Neues Projekt erstellen"
+        },
+        {
+            "id": "Create",
+            "message": "Create",
+            "translation": "Erstellen"
+        },
+        {
+            "id": "Please set a name for your project.",
+            "message": "Please set a name for your project.",
+            "translation": "Bitte geben Sie einen Namen für Ihr Projekt an."
+        },
+        {
+            "id": "Please open a folder in File Explorer to place the project files.",
+            "message": "Please open a folder in File Explorer to place the project files.",
+            "translation": "Bitte öffnen Sie einen Ordner im Datei-Explorer, um die Projektdateien abzulegen."
+        },
+        {
+            "id": "Please input a valid full template name.",
+            "message": "Please input a valid full template name.",
+            "translation": "Bitte geben Sie einen gültigen vollständigen Vorlagennamen ein."
+        },
+        {
+            "id": "Please set a name for your package/template.",
+            "message": "Please set a name for your package/template.",
+            "translation": "Bitte geben Sie einen Namen für Ihr Paket/Ihre Vorlage an."
+        },
+        {
+            "id": "Create project error: {Error}",
+            "message": "Create project error: {Error}",
+            "translation": "Fehler beim Erstellen des Projekts: {Error}",
+            "placeholders": [
+                {
+                    "id": "Error",
+                    "string": "%[1]s",
+                    "type": "string",
+                    "underlyingType": "string",
+                    "argNum": 1,
+                    "expr": "err.Error()"
+                }
+            ]
+        },
+        {
+            "id": "Project Type",
+            "message": "Project Type",
+            "translation": "Projekttyp"
+        },
+        {
+            "id": "Project Location",
+            "message": "Project Location",
+            "translation": "Projektstandort"
+        },
+        {
+            "id": "Select the location where the project will be created.",
+            "message": "Select the location where the project will be created.",
+            "translation": "Wählen Sie den Speicherort für das Projekt aus."
+        },
+        {
+            "id": "Typst Template",
+            "message": "Typst Template",
+            "translation": "Typst-Vorlage"
+        },
+        {
+            "id": "Project Name",
+            "message": "Project Name",
+            "translation": "Projektname"
+        },
+        {
+            "id": "The name of your project. A new folder will be created inside of the directory selected.",
+            "message": "The name of your project. A new folder will be created inside of the directory selected.",
+            "translation": "Der Name Ihres Projekts. Im ausgewählten Verzeichnis wird ein neuer Ordner erstellt."
+        },
+        {
+            "id": "Delete File/Folder",
+            "message": "Delete File/Folder",
+            "translation": "Datei/Ordner löschen"
+        },
+        {
+            "id": "Confirm",
+            "message": "Confirm",
+            "translation": "Bestätigen"
+        },
+        {
+            "id": "Are you sure you want to delete '{Dest}'?",
+            "message": "Are you sure you want to delete '{Dest}'?",
+            "translation": "Möchten Sie '{Dest}' wirklich löschen?",
+            "placeholders": [
+                {
+                    "id": "Dest",
+                    "string": "%[1]s",
+                    "type": "string",
+                    "underlyingType": "string",
+                    "argNum": 1,
+                    "expr": "d.dest"
+                }
+            ]
+        },
+        {
+            "id": "You can restore this file from the Trash.",
+            "message": "You can restore this file from the Trash.",
+            "translation": "Sie können diese Datei aus dem Papierkorb wiederherstellen."
+        },
+        {
+            "id": "Cancel",
+            "message": "Cancel",
+            "translation": "Abbrechen"
+        },
+        {
+            "id": "Move File/Folder",
+            "message": "Move File/Folder",
+            "translation": "Datei/Ordner verschieben"
+        },
+        {
+            "id": "Are you sure you want to move",
+            "message": "Are you sure you want to move",
+            "translation": "Möchten Sie wirklich"
+        },
+        {
+            "id": "'{Src}' into '{Dest}'",
+            "message": "'{Src}' into '{Dest}'",
+            "translation": "'{Src}' nach '{Dest}' verschieben?",
+            "placeholders": [
+                {
+                    "id": "Src",
+                    "string": "%[1]s",
+                    "type": "string",
+                    "underlyingType": "string",
+                    "argNum": 1,
+                    "expr": "d.src"
+                },
+                {
+                    "id": "Dest",
+                    "string": "%[2]s",
+                    "type": "string",
+                    "underlyingType": "string",
+                    "argNum": 2,
+                    "expr": "d.dest"
+                }
+            ]
+        },
+        {
+            "id": [
+                "formatTip",
+                "The format of the output file."
+            ],
+            "message": "The format of the output file.",
+            "translation": "Das Format der Ausgabedatei."
+        },
+        {
+            "id": "Build And Export",
+            "message": "Build And Export",
+            "translation": "Erstellen und Exportieren"
+        },
+        {
+            "id": "Export",
+            "message": "Export",
+            "translation": "Exportieren"
+        },
+        {
+            "id": "Exporting file...",
+            "message": "Exporting file...",
+            "translation": "Datei wird exportiert..."
+        },
+        {
+            "id": "Exported File Format",
+            "message": "Exported File Format",
+            "translation": "Exportiertes Dateiformat"
+        },
+        {
+            "id": "Pages",
+            "message": "Pages",
+            "translation": "Seiten"
+        },
+        {
+            "id": "Which pages to export. Valid value can be comma seperated page numbers and page ranges, for example, 1,3,5,6-9. When unspecified, all document pages are exported.",
+            "message": "Which pages to export. Valid value can be comma seperated page numbers and page ranges, for example, 1,3,5,6-9. When unspecified, all document pages are exported.",
+            "translation": "Welche Seiten exportiert werden sollen. Gültige Werte sind durch Kommas getrennte Seitenzahlen und Seitenbereiche, z. B. 1,3,5,6-9. Wenn nicht angegeben, werden alle Seiten exportiert."
+        },
+        {
+            "id": "File Name",
+            "message": "File Name",
+            "translation": "Dateiname"
+        },
+        {
+            "id": "This specifies the output file name. If multiple files is generated, the file name will be suffixed with a number. When not specified, the name of the source file is used.",
+            "message": "This specifies the output file name. If multiple files is generated, the file name will be suffixed with a number. When not specified, the name of the source file is used.",
+            "translation": "Gibt den Ausgabedateinamen an. Wenn mehrere Dateien generiert werden, wird der Dateiname mit einer Nummer versehen. Wenn nicht angegeben, wird der Name der Quelldatei verwendet."
+        },
+        {
+            "id": "PPI",
+            "message": "PPI",
+            "translation": "PPI"
+        },
+        {
+            "id": "The PPI (pixels per inch) to use for PNG export.",
+            "message": "The PPI (pixels per inch) to use for PNG export.",
+            "translation": "Die für den PNG-Export zu verwendende PPI (Pixel pro Zoll)."
+        },
+        {
+            "id": "PDF Versions",
+            "message": "PDF Versions",
+            "translation": "PDF-Versionen"
+        },
+        {
+            "id": "PDF version that Typstify will enforce conformance with.",
+            "message": "PDF version that Typstify will enforce conformance with.",
+            "translation": "PDF-Version, deren Konformität Typstify erzwingt."
+        },
+        {
+            "id": "PDF Standards",
+            "message": "PDF Standards",
+            "translation": "PDF-Standards"
+        },
+        {
+            "id": "PDF standards that Typstify will enforce conformance with.",
+            "message": "PDF standards that Typstify will enforce conformance with.",
+            "translation": "PDF-Standards, deren Konformität Typstify erzwingt."
+        },
+        {
+            "id": "Disable PDF Tags",
+            "message": "Disable PDF Tags",
+            "translation": "PDF-Tags deaktivieren"
+        },
+        {
+            "id": "By default a tagged PDF is generated to provide base accessibility. In some cases this may be not desired. You can check this to disable it.",
+            "message": "By default a tagged PDF is generated to provide base accessibility. In some cases this may be not desired. You can check this to disable it.",
+            "translation": "Standardmäßig wird ein getaggtes PDF generiert, um grundlegende Barrierefreiheit zu gewährleisten. In einigen Fällen ist dies möglicherweise nicht erwünscht. Aktivieren Sie diese Option, um es zu deaktivieren."
+        },
+        {
+            "id": "No PDF Tags",
+            "message": "No PDF Tags",
+            "translation": "Keine PDF-Tags"
+        },
+        {
+            "id": "Change File Indentation",
+            "message": "Change File Indentation",
+            "translation": "Dateieinzug ändern"
+        },
+        {
+            "id": "Indent with spaces or tabs",
+            "message": "Indent with spaces or tabs",
+            "translation": "Einzug mit Leerzeichen oder Tabs"
+        },
+        {
+            "id": "Choose the indentation style for the current file.",
+            "message": "Choose the indentation style for the current file.",
+            "translation": "Wählen Sie den Einzugsstil für die aktuelle Datei."
+        },
+        {
+            "id": "Tab Width",
+            "message": "Tab Width",
+            "translation": "Tab-Breite"
+        },
+        {
+            "id": "Change tab display size.",
+            "message": "Change tab display size.",
+            "translation": "Tab-Anzeigegröße ändern."
+        },
+        {
+            "id": "Convert the indentation",
+            "message": "Convert the indentation",
+            "translation": "Einzug konvertieren"
+        },
+        {
+            "id": "Convert the indentation from spaces to tabs or from tabs to spaces, depending on what you choosed.",
+            "message": "Convert the indentation from spaces to tabs or from tabs to spaces, depending on what you choosed.",
+            "translation": "Konvertiert den Einzug je nach Auswahl von Leerzeichen zu Tabs oder von Tabs zu Leerzeichen."
+        },
+        {
+            "id": "Open File With...",
+            "message": "Open File With...",
+            "translation": "Öffnen mit..."
+        },
+        {
+            "id": "Are you sure you want to open file '{TargetFile}'?",
+            "message": "Are you sure you want to open file '{TargetFile}'?",
+            "translation": "Möchten Sie die Datei '{TargetFile}' wirklich öffnen?",
+            "placeholders": [
+                {
+                    "id": "TargetFile",
+                    "string": "%[1]s",
+                    "type": "string",
+                    "underlyingType": "string",
+                    "argNum": 1,
+                    "expr": "filepath.Base(d.targetFile)"
+                }
+            ]
+        },
+        {
+            "id": "Publish Package",
+            "message": "Publish Package",
+            "translation": "Paket veröffentlichen"
+        },
+        {
+            "id": "publish package error: {Error}",
+            "message": "publish package error: {Error}",
+            "translation": "Fehler beim Veröffentlichen des Pakets: {Error}",
+            "placeholders": [
+                {
+                    "id": "Error",
+                    "string": "%[1]s",
+                    "type": "string",
+                    "underlyingType": "string",
+                    "argNum": 1,
+                    "expr": "err.Error()"
+                }
+            ]
+        },
+        {
+            "id": "publish package succeeded: {BundlePath}",
+            "message": "publish package succeeded: {BundlePath}",
+            "translation": "Paket erfolgreich veröffentlicht: {BundlePath}",
+            "placeholders": [
+                {
+                    "id": "BundlePath",
+                    "string": "%[1]s",
+                    "type": "string",
+                    "underlyingType": "string",
+                    "argNum": 1,
+                    "expr": "d.bundlePath"
+                }
+            ]
+        },
+        {
+            "id": "Bundle",
+            "message": "Bundle",
+            "translation": "Bündeln"
+        },
+        {
+            "id": "Bundle the project files to a valid Typst package/template.",
+            "message": "Bundle the project files to a valid Typst package/template.",
+            "translation": "Die Projektdateien zu einem gültigen Typst-Paket/einer Vorlage bündeln."
+        },
+        {
+            "id": "Build",
+            "message": "Build",
+            "translation": "Erstellen"
+        },
+        {
+            "id": "Created Bundle: {BundlePath}",
+            "message": "Created Bundle: {BundlePath}",
+            "translation": "Bündel erstellt: {BundlePath}",
+            "placeholders": [
+                {
+                    "id": "BundlePath",
+                    "string": "%[1]s",
+                    "type": "string",
+                    "underlyingType": "string",
+                    "argNum": 1,
+                    "expr": "d.bundlePath"
+                }
+            ]
+        },
+        {
+            "id": "Namespace",
+            "message": "Namespace",
+            "translation": "Namespace"
+        },
+        {
+            "id": "Select the namespace to publish to. Make sure you have logged in TPIX in the app and have accessible namespaces of your TPIX account.",
+            "message": "Select the namespace to publish to. Make sure you have logged in TPIX in the app and have accessible namespaces of your TPIX account.",
+            "translation": "Wählen Sie den Namespace für die Veröffentlichung. Stellen Sie sicher, dass Sie in der App bei TPIX angemeldet sind und Zugriff auf Namespaces Ihres TPIX-Kontos haben."
+        },
+        {
+            "id": "Loading namespaces...",
+            "message": "Loading namespaces...",
+            "translation": "Namespaces werden geladen..."
+        },
+        {
+            "id": "No writable namespaces",
+            "message": "No writable namespaces",
+            "translation": "Keine beschreibbaren Namespaces"
+        },
+        {
+            "id": "No project",
+            "message": "No project",
+            "translation": "Kein Projekt"
+        },
+        {
+            "id": "No open project.",
+            "message": "No open project.",
+            "translation": "Kein Projekt geöffnet."
+        },
+        {
+            "id": "pull dependencies error: {Error}",
+            "message": "pull dependencies error: {Error}",
+            "translation": "Fehler beim Abrufen der Abhängigkeiten: {Error}",
+            "placeholders": [
+                {
+                    "id": "Error",
+                    "string": "%[1]s",
+                    "type": "string",
+                    "underlyingType": "string",
+                    "argNum": 1,
+                    "expr": "err.Error()"
+                }
+            ]
+        },
+        {
+            "id": "pull dependencies succeeded!",
+            "message": "pull dependencies succeeded!",
+            "translation": "Abhängigkeiten erfolgreich abgerufen!"
+        },
+        {
+            "id": "Sync Dependencies",
+            "message": "Sync Dependencies",
+            "translation": "Abhängigkeiten synchronisieren"
+        },
+        {
+            "id": "Sync Bibliographies",
+            "message": "Sync Bibliographies",
+            "translation": "Bibliografien synchronisieren"
+        },
+        {
+            "id": "View Bibliography Info",
+            "message": "View Bibliography Info",
+            "translation": "Bibliografie-Info anzeigen"
+        },
+        {
+            "id": "Hide Explorer",
+            "message": "Hide Explorer",
+            "translation": "Explorer ausblenden"
+        },
+        {
+            "id": "Open Folder",
+            "message": "Open Folder",
+            "translation": "Ordner öffnen"
+        },
+        {
+            "id": "New Project",
+            "message": "New Project",
+            "translation": "Neues Projekt"
+        },
+        {
+            "id": "Typst Package Center",
+            "message": "Typst Package Center",
+            "translation": "Typst-Paketzentrum"
+        },
+        {
+            "id": "Settings",
+            "message": "Settings",
+            "translation": "Einstellungen"
+        },
+        {
+            "id": "File Explorer",
+            "message": "File Explorer",
+            "translation": "Datei-Explorer"
+        },
+        {
+            "id": "Outline",
+            "message": "Outline",
+            "translation": "Gliederung"
+        },
+        {
+            "id": "A new version is avaliable: {LatestVersion}",
+            "message": "A new version is avaliable: {LatestVersion}",
+            "translation": "Eine neue Version ist verfügbar: {LatestVersion}",
+            "placeholders": [
+                {
+                    "id": "LatestVersion",
+                    "string": "%[1]s",
+                    "type": "string",
+                    "underlyingType": "string",
+                    "argNum": 1,
+                    "expr": "ut.latestVersion"
+                }
+            ]
+        },
+        {
+            "id": "Later",
+            "message": "Later",
+            "translation": "Später"
+        },
+        {
+            "id": "Download",
+            "message": "Download",
+            "translation": "Herunterladen"
+        },
+        {
+            "id": "Cached",
+            "message": "Cached",
+            "translation": "Zwischengespeichert"
+        },
+        {
+            "id": "Loading packages...",
+            "message": "Loading packages...",
+            "translation": "Pakete werden geladen..."
+        },
+        {
+            "id": "No packages/templates found",
+            "message": "No packages/templates found",
+            "translation": "Keine Pakete/Vorlagen gefunden"
+        },
+        {
+            "id": "Category",
+            "message": "Category",
+            "translation": "Kategorie"
+        },
+        {
+            "id": "Clear",
+            "message": "Clear",
+            "translation": "Löschen"
+        },
+        {
+            "id": "Package kind",
+            "message": "Package kind",
+            "translation": "Paketart"
+        },
+        {
+            "id": "Search packages/templates on TPIX",
+            "message": "Search packages/templates on TPIX",
+            "translation": "Pakete/Vorlagen auf TPIX suchen"
+        },
+        {
+            "id": "Browsing thousands of packages and templates on TPIX server, including public namespaces, and private namespaces of your teams.",
+            "message": "Browsing thousands of packages and templates on TPIX server, including public namespaces, and private namespaces of your teams.",
+            "translation": "Durchsuchen Sie Tausende von Paketen und Vorlagen auf dem TPIX-Server, einschließlich öffentlicher Namespaces und privater Namespaces Ihrer Teams."
+        },
+        {
+            "id": "Search TPIX...",
+            "message": "Search TPIX...",
+            "translation": "TPIX durchsuchen..."
+        },
+        {
+            "id": "Query packages...",
+            "message": "Query packages...",
+            "translation": "Pakete abfragen..."
+        },
+        {
+            "id": "Query packages failed:",
+            "message": "Query packages failed:",
+            "translation": "Paketabfrage fehlgeschlagen:"
+        },
+        {
+            "id": "Typst packages info loaded.",
+            "message": "Typst packages info loaded.",
+            "translation": "Typst-Paketinformationen geladen."
+        },
+        {
+            "id": "Download package failed:",
+            "message": "Download package failed:",
+            "translation": "Paket-Download fehlgeschlagen:"
+        },
+        {
+            "id": "Downloaded package {PkgSpec}.",
+            "message": "Downloaded package {PkgSpec}.",
+            "translation": "Paket {PkgSpec} heruntergeladen.",
+            "placeholders": [
+                {
+                    "id": "PkgSpec",
+                    "string": "%[1]s",
+                    "type": "string",
+                    "underlyingType": "string",
+                    "argNum": 1,
+                    "expr": "pkgSpec"
+                }
+            ]
+        },
+        {
+            "id": "Downloaded package {PkgSpec} and {Count} transitive dependencies.",
+            "message": "Downloaded package {PkgSpec} and {Count} transitive dependencies.",
+            "translation": "Paket {PkgSpec} und {Count} transitive Abhängigkeiten heruntergeladen.",
+            "placeholders": [
+                {
+                    "id": "PkgSpec",
+                    "string": "%[1]s",
+                    "type": "string",
+                    "underlyingType": "string",
+                    "argNum": 1,
+                    "expr": "pkgSpec"
+                },
+                {
+                    "id": "Count",
+                    "string": "%[2]d",
+                    "type": "int",
+                    "underlyingType": "int",
+                    "argNum": 2,
+                    "expr": "count"
+                }
+            ]
+        },
+        {
+            "id": "Found {LastFetchedCount} packages.",
+            "message": "Found {LastFetchedCount} packages.",
+            "translation": "{LastFetchedCount} Pakete gefunden.",
+            "placeholders": [
+                {
+                    "id": "LastFetchedCount",
+                    "string": "%[1]d",
+                    "type": "int",
+                    "underlyingType": "int",
+                    "argNum": 1,
+                    "expr": "vw.lastFetchedCount"
+                }
+            ]
+        },
+        {
+            "id": "Agent",
+            "message": "Agent",
+            "translation": "Agent"
+        },
+        {
+            "id": "Configure agent for AI assitant. You can either manually configure your own agent, or select one from the Agent Registry below.",
+            "message": "Configure agent for AI assitant. You can either manually configure your own agent, or select one from the Agent Registry below.",
+            "translation": "Konfigurieren Sie den Agenten für den KI-Assistenten. Sie können entweder Ihren eigenen Agenten manuell konfigurieren oder einen aus der untenstehenden Agenten-Registry auswählen."
+        },
+        {
+            "id": "Agent Registry",
+            "message": "Agent Registry",
+            "translation": "Agenten-Registry"
+        },
+        {
+            "id": "Select an agent from the registry. Click use to overwrite the above configuration.",
+            "message": "Select an agent from the registry. Click use to overwrite the above configuration.",
+            "translation": "Wählen Sie einen Agenten aus der Registry. Klicken Sie auf Verwenden, um die obige Konfiguration zu überschreiben."
+        },
+        {
+            "id": "MCP",
+            "message": "MCP",
+            "translation": "MCP"
+        },
+        {
+            "id": "The built-in MCP server use dynamic network port by default, and it registers itself to agent at runtime. \nSome agents does not support runtime registration, you have to fix the MCP server port and register the server manually. When using static port, the server address is 127.0.0.1:5322, transport: http.",
+            "message": "The built-in MCP server use dynamic network port by default, and it registers itself to agent at runtime. \nSome agents does not support runtime registration, you have to fix the MCP server port and register the server manually. When using static port, the server address is 127.0.0.1:5322, transport: http.",
+            "translation": "Der integrierte MCP-Server verwendet standardmäßig einen dynamischen Netzwerkport und registriert sich zur Laufzeit beim Agenten.\nEinige Agenten unterstützen keine Laufzeitregistrierung. Sie müssen den MCP-Server-Port festlegen und den Server manuell registrieren. Bei Verwendung eines statischen Ports lautet die Serveradresse 127.0.0.1:5322, Transport: http."
+        },
+        {
+            "id": "Use",
+            "message": "Use",
+            "translation": "Verwenden"
+        },
+        {
+            "id": "Refresh",
+            "message": "Refresh",
+            "translation": "Aktualisieren"
+        },
+        {
+            "id": "ID:",
+            "message": "ID:",
+            "translation": "ID:"
+        },
+        {
+            "id": "Version:",
+            "message": "Version:",
+            "translation": "Version:"
+        },
+        {
+            "id": "License:",
+            "message": "License:",
+            "translation": "Lizenz:"
+        },
+        {
+            "id": "Authors:",
+            "message": "Authors:",
+            "translation": "Autoren:"
+        },
+        {
+            "id": "Repository:",
+            "message": "Repository:",
+            "translation": "Repository:"
+        },
+        {
+            "id": "Ready — npx is available on your system.",
+            "message": "Ready — npx is available on your system.",
+            "translation": "Bereit — npx ist auf Ihrem System verfügbar."
+        },
+        {
+            "id": "Requires Node.js. Install from https://nodejs.org, then restart Typstify.",
+            "message": "Requires Node.js. Install from https://nodejs.org, then restart Typstify.",
+            "translation": "Erfordert Node.js. Installieren Sie es von https://nodejs.org und starten Sie dann Typstify neu."
+        },
+        {
+            "id": "If the agent fails to start, try installing manually: npm install -g {Package}",
+            "message": "If the agent fails to start, try installing manually: npm install -g {Package}",
+            "translation": "Wenn der Agent nicht startet, versuchen Sie die manuelle Installation: npm install -g {Package}",
+            "placeholders": [
+                {
+                    "id": "Package",
+                    "string": "%[1]s",
+                    "type": "string",
+                    "underlyingType": "string",
+                    "argNum": 1,
+                    "expr": "pkg.Package"
+                }
+            ]
+        },
+        {
+            "id": "Installation (npx)",
+            "message": "Installation (npx)",
+            "translation": "Installation (npx)"
+        },
+        {
+            "id": "Ready — uvx is available on your system.",
+            "message": "Ready — uvx is available on your system.",
+            "translation": "Bereit — uvx ist auf Ihrem System verfügbar."
+        },
+        {
+            "id": "Requires uvx. Install via `pip install uv` or https://docs.astral.sh/uv, then restart Typstify.",
+            "message": "Requires uvx. Install via `pip install uv` or https://docs.astral.sh/uv, then restart Typstify.",
+            "translation": "Erfordert uvx. Installieren Sie es über `pip install uv` oder https://docs.astral.sh/uv und starten Sie dann Typstify neu."
+        },
+        {
+            "id": "If the agent fails to start, try installing manually: uv pip install {Package}",
+            "message": "If the agent fails to start, try installing manually: uv pip install {Package}",
+            "translation": "Wenn der Agent nicht startet, versuchen Sie die manuelle Installation: uv pip install {Package}",
+            "placeholders": [
+                {
+                    "id": "Package",
+                    "string": "%[1]s",
+                    "type": "string",
+                    "underlyingType": "string",
+                    "argNum": 1,
+                    "expr": "pkg.Package"
+                }
+            ]
+        },
+        {
+            "id": "Installation (uvx)",
+            "message": "Installation (uvx)",
+            "translation": "Installation (uvx)"
+        },
+        {
+            "id": "Installation (Binary)",
+            "message": "Installation (Binary)",
+            "translation": "Installation (Binär)"
+        },
+        {
+            "id": "Download the archive for your platform, extract it, and ensure the binary is on your PATH.",
+            "message": "Download the archive for your platform, extract it, and ensure the binary is on your PATH.",
+            "translation": "Laden Sie das Archiv für Ihre Plattform herunter, entpacken Sie es und stellen Sie sicher, dass die Binärdatei in Ihrem PATH ist."
+        },
+        {
+            "id": "Installation",
+            "message": "Installation",
+            "translation": "Installation"
+        },
+        {
+            "id": "This agent is not directly available for your platform. Visit the ACP registry for more details.",
+            "message": "This agent is not directly available for your platform. Visit the ACP registry for more details.",
+            "translation": "Dieser Agent ist für Ihre Plattform nicht direkt verfügbar. Besuchen Sie die ACP-Registry für weitere Details."
+        },
+        {
+            "id": "See https://agentclientprotocol.com/get-started/registry",
+            "message": "See https://agentclientprotocol.com/get-started/registry",
+            "translation": "Siehe https://agentclientprotocol.com/get-started/registry"
+        },
+        {
+            "id": "Agent Name",
+            "message": "Agent Name",
+            "translation": "Agentenname"
+        },
+        {
+            "id": "Select an agent above or type a name directly.",
+            "message": "Select an agent above or type a name directly.",
+            "translation": "Wählen Sie oben einen Agenten aus oder geben Sie direkt einen Namen ein."
+        },
+        {
+            "id": "Command",
+            "message": "Command",
+            "translation": "Befehl"
+        },
+        {
+            "id": "Select an agent above or edit directly, e.g. npx -y @scope/package",
+            "message": "Select an agent above or edit directly, e.g. npx -y @scope/package",
+            "translation": "Wählen Sie oben einen Agenten aus oder bearbeiten Sie direkt, z. B. npx -y @scope/package"
+        },
+        {
+            "id": "npx -y @scope/package",
+            "message": "npx -y @scope/package",
+            "translation": "npx -y @scope/package"
+        },
+        {
+            "id": "Environment",
+            "message": "Environment",
+            "translation": "Umgebung"
+        },
+        {
+            "id": "Extra environment variables, space-separated KEY=value pairs, e.g. FOO=bar BAZ=qux",
+            "message": "Extra environment variables, space-separated KEY=value pairs, e.g. FOO=bar BAZ=qux",
+            "translation": "Zusätzliche Umgebungsvariablen, durch Leerzeichen getrennte SCHLÜSSEL=Wert-Paare, z. B. FOO=bar BAZ=qux"
+        },
+        {
+            "id": "FOO=bar BAZ=qux",
+            "message": "FOO=bar BAZ=qux",
+            "translation": "FOO=bar BAZ=qux"
+        },
+        {
+            "id": "Language",
+            "message": "Language",
+            "translation": "Sprache"
+        },
+        {
+            "id": "Set the displaying language of the user interface.",
+            "message": "Set the displaying language of the user interface.",
+            "translation": "Legen Sie die Anzeigesprache der Benutzeroberfläche fest."
+        },
+        {
+            "id": "UI Text Size",
+            "message": "UI Text Size",
+            "translation": "UI-Schriftgröße"
+        },
+        {
+            "id": "Set font size for the user interface. The unit is in scale-independent pixel (sp).",
+            "message": "Set font size for the user interface. The unit is in scale-independent pixel (sp).",
+            "translation": "Legen Sie die Schriftgröße für die Benutzeroberfläche fest. Die Einheit ist skalierungsunabhängige Pixel (sp)."
+        },
+        {
+            "id": "UI Font Family",
+            "message": "UI Font Family",
+            "translation": "UI-Schriftfamilie"
+        },
+        {
+            "id": "Set the desired fonts for the UI. Use CSS style font family syntax which is a list of comma separated names. You can also leave it empty to let the application choose a fallback.",
+            "message": "Set the desired fonts for the UI. Use CSS style font family syntax which is a list of comma separated names. You can also leave it empty to let the application choose a fallback.",
+            "translation": "Legen Sie die gewünschten Schriftarten für die UI fest. Verwenden Sie die CSS-Schriftfamilien-Syntax als kommagetrennte Liste. Sie können das Feld auch leer lassen, damit die Anwendung eine Fallback-Schriftart wählt."
+        },
+        {
+            "id": "Font Family",
+            "message": "Font Family",
+            "translation": "Schriftfamilie"
+        },
+        {
+            "id": "Theme",
+            "message": "Theme",
+            "translation": "Design"
+        },
+        {
+            "id": "Choose your favorite color theme for the user interface.",
+            "message": "Choose your favorite color theme for the user interface.",
+            "translation": "Wählen Sie Ihr bevorzugtes Farbdesign für die Benutzeroberfläche."
+        },
+        {
+            "id": "Preview",
+            "message": "Preview",
+            "translation": "Vorschau"
+        },
+        {
+            "id": "When checked, document preview will be opening in your default browser. Otherwise the preview will use built-in previewer.",
+            "message": "When checked, document preview will be opening in your default browser. Otherwise the preview will use built-in previewer.",
+            "translation": "Wenn aktiviert, wird die Dokumentvorschau in Ihrem Standardbrowser geöffnet. Andernfalls wird die integrierte Vorschau verwendet."
+        },
+        {
+            "id": "Debug Log",
+            "message": "Debug Log",
+            "translation": "Debug-Protokoll"
+        },
+        {
+            "id": "When checked, logs from the built-in LSP (Language Server Procotol) server is written to the console panel. It needs to restart or reload to take effect.",
+            "message": "When checked, logs from the built-in LSP (Language Server Procotol) server is written to the console panel. It needs to restart or reload to take effect.",
+            "translation": "Wenn aktiviert, werden Protokolle des integrierten LSP-Servers (Language Server Protocol) im Konsolenbereich ausgegeben. Ein Neustart oder Neuladen ist erforderlich."
+        },
+        {
+            "id": "Power Saving",
+            "message": "Power Saving",
+            "translation": "Energiesparmodus"
+        },
+        {
+            "id": "When checked, LSP server runs in power saving mode, only basic syntax checking and code completion are avaliable, diagnostics and previewing will not work. It needs to restart or reload to take effect.",
+            "message": "When checked, LSP server runs in power saving mode, only basic syntax checking and code completion are avaliable, diagnostics and previewing will not work. It needs to restart or reload to take effect.",
+            "translation": "Wenn aktiviert, läuft der LSP-Server im Energiesparmodus. Nur grundlegende Syntaxprüfung und Codevervollständigung sind verfügbar, Diagnose und Vorschau funktionieren nicht. Ein Neustart oder Neuladen ist erforderlich."
+        },
+        {
+            "id": "External Typst Compiler Path",
+            "message": "External Typst Compiler Path",
+            "translation": "Externer Typst-Compiler-Pfad"
+        },
+        {
+            "id": "Specifies a path to your own version of Typst compiler. Leave it empty to use the built-in one. Please check the compatibility before you switch. It needs to restart to take effect.",
+            "message": "Specifies a path to your own version of Typst compiler. Leave it empty to use the built-in one. Please check the compatibility before you switch. It needs to restart to take effect.",
+            "translation": "Gibt einen Pfad zu Ihrer eigenen Version des Typst-Compilers an. Lassen Sie das Feld leer, um die integrierte Version zu verwenden. Bitte überprüfen Sie die Kompatibilität vor dem Wechsel. Ein Neustart ist erforderlich."
+        },
+        {
+            "id": "External LSP Server(Tinymist) Path",
+            "message": "External LSP Server(Tinymist) Path",
+            "translation": "Externer LSP-Server-Pfad (Tinymist)"
+        },
+        {
+            "id": "Specifies a path to your own version of Tinymist. Leave it empty to use the built-in one. Please check the compatibility before you switch. It needs to restart to take effect.",
+            "message": "Specifies a path to your own version of Tinymist. Leave it empty to use the built-in one. Please check the compatibility before you switch. It needs to restart to take effect.",
+            "translation": "Gibt einen Pfad zu Ihrer eigenen Version von Tinymist an. Lassen Sie das Feld leer, um die integrierte Version zu verwenden. Bitte überprüfen Sie die Kompatibilität vor dem Wechsel. Ein Neustart ist erforderlich."
+        },
+        {
+            "id": "Check Update",
+            "message": "Check Update",
+            "translation": "Update prüfen"
+        },
+        {
+            "id": "Check for updates on app startup. Please enable it to keep up to date for new features and bugfixes.",
+            "message": "Check for updates on app startup. Please enable it to keep up to date for new features and bugfixes.",
+            "translation": "Beim App-Start nach Updates suchen. Bitte aktivieren Sie dies, um über neue Funktionen und Fehlerbehebungen auf dem Laufenden zu bleiben."
+        },
+        {
+            "id": "General",
+            "message": "General",
+            "translation": "Allgemein"
+        },
+        {
+            "id": "Auto Save Interval",
+            "message": "Auto Save Interval",
+            "translation": "Automatisches Speicherintervall"
+        },
+        {
+            "id": "Set the auto save delay (in seconds), cannot be completely disabled.",
+            "message": "Set the auto save delay (in seconds), cannot be completely disabled.",
+            "translation": "Legen Sie die Verzögerung für das automatische Speichern fest (in Sekunden). Kann nicht vollständig deaktiviert werden."
+        },
+        {
+            "id": "Set the desired fonts for the editor. Use CSS style font family syntax which is a list of comma separated names. You can also leave it empty to let the application choose a fallback.",
+            "message": "Set the desired fonts for the editor. Use CSS style font family syntax which is a list of comma separated names. You can also leave it empty to let the application choose a fallback.",
+            "translation": "Legen Sie die gewünschten Schriftarten für den Editor fest. Verwenden Sie die CSS-Schriftfamilien-Syntax als kommagetrennte Liste. Sie können das Feld auch leer lassen, damit die Anwendung eine Fallback-Schriftart wählt."
+        },
+        {
+            "id": "Text Size",
+            "message": "Text Size",
+            "translation": "Schriftgröße"
+        },
+        {
+            "id": "Set font size for the editor. The unit is in scale-independent pixel (sp).",
+            "message": "Set font size for the editor. The unit is in scale-independent pixel (sp).",
+            "translation": "Legen Sie die Schriftgröße für den Editor fest. Die Einheit ist skalierungsunabhängige Pixel (sp)."
+        },
+        {
+            "id": "Font Weight",
+            "message": "Font Weight",
+            "translation": "Schriftstärke"
+        },
+        {
+            "id": "Set the expected weight (or boldness) of the text. This is for variable fonts only.",
+            "message": "Set the expected weight (or boldness) of the text. This is for variable fonts only.",
+            "translation": "Legen Sie die erwartete Stärke (oder Fettung) des Textes fest. Dies gilt nur für variable Schriftarten."
+        },
+        {
+            "id": "Line Height Scale",
+            "message": "Line Height Scale",
+            "translation": "Zeilenhöhenfaktor"
+        },
+        {
+            "id": "Set the line height scale of the lines in editor. Line height scale is multiplied by line height to determine the final gap between lines.",
+            "message": "Set the line height scale of the lines in editor. Line height scale is multiplied by line height to determine the final gap between lines.",
+            "translation": "Legen Sie den Zeilenhöhenfaktor für den Editor fest. Der Zeilenhöhenfaktor wird mit der Zeilenhöhe multipliziert, um den endgültigen Abstand zwischen den Zeilen zu bestimmen."
+        },
+        {
+            "id": "Indentation",
+            "message": "Indentation",
+            "translation": "Einzug"
+        },
+        {
+            "id": "Set the expected characters to use when pressing the Tab key. Please be noted that this works only for empty file. Indentation for non-empty files are auto detected.",
+            "message": "Set the expected characters to use when pressing the Tab key. Please be noted that this works only for empty file. Indentation for non-empty files are auto detected.",
+            "translation": "Legen Sie die erwarteten Zeichen fest, die beim Drücken der Tabulatortaste verwendet werden. Beachten Sie, dass dies nur für leere Dateien gilt. Der Einzug für nicht-leere Dateien wird automatisch erkannt."
+        },
+        {
+            "id": "Set how many number of spaces the Tab is equal to. Please be noted that this works only for empty file. Indentation for non-empty files are auto detected.",
+            "message": "Set how many number of spaces the Tab is equal to. Please be noted that this works only for empty file. Indentation for non-empty files are auto detected.",
+            "translation": "Legen Sie fest, wie vielen Leerzeichen ein Tab entspricht. Beachten Sie, dass dies nur für leere Dateien gilt. Der Einzug für nicht-leere Dateien wird automatisch erkannt."
+        },
+        {
+            "id": "Editor",
+            "message": "Editor",
+            "translation": "Editor"
+        },
+        {
+            "id": "Typst",
+            "message": "Typst",
+            "translation": "Typst"
+        },
+        {
+            "id": "Versions",
+            "message": "Versions",
+            "translation": "Versionen"
+        },
+        {
+            "id": "Package Dir",
+            "message": "Package Dir",
+            "translation": "Paketverzeichnis"
+        },
+        {
+            "id": "Specifies where to store your local Typst packages/templates. Leave it empty to use the default dir.",
+            "message": "Specifies where to store your local Typst packages/templates. Leave it empty to use the default dir.",
+            "translation": "Gibt an, wo Ihre lokalen Typst-Pakete/Vorlagen gespeichert werden. Lassen Sie das Feld leer, um das Standardverzeichnis zu verwenden."
+        },
+        {
+            "id": "Package Cache Dir",
+            "message": "Package Cache Dir",
+            "translation": "Paket-Cache-Verzeichnis"
+        },
+        {
+            "id": "Specifies where to store your the cached Typst packages/templates retrieved from the network. Leave it empty to use the default dir.",
+            "message": "Specifies where to store your the cached Typst packages/templates retrieved from the network. Leave it empty to use the default dir.",
+            "translation": "Gibt an, wo die aus dem Netzwerk abgerufenen zwischengespeicherten Typst-Pakete/Vorlagen gespeichert werden. Lassen Sie das Feld leer, um das Standardverzeichnis zu verwenden."
+        },
+        {
+            "id": "Extra Font Path",
+            "message": "Extra Font Path",
+            "translation": "Zusätzlicher Schriftarten-Pfad"
+        },
+        {
+            "id": "The directory where to search for fonts when exporting, previewing and auto-completing. Be aware that the current project root directory is always searched. Need to restart or reload to take effect.",
+            "message": "The directory where to search for fonts when exporting, previewing and auto-completing. Be aware that the current project root directory is always searched. Need to restart or reload to take effect.",
+            "translation": "Das Verzeichnis, in dem beim Exportieren, Vorschauen und automatischen Vervollständigen nach Schriftarten gesucht wird. Beachten Sie, dass das aktuelle Projektstammverzeichnis immer durchsucht wird. Ein Neustart oder Neuladen ist erforderlich."
+        },
+        {
+            "id": "Export Dir",
+            "message": "Export Dir",
+            "translation": "Exportverzeichnis"
+        },
+        {
+            "id": "The directory to save exported files to, including the deps.json. If not set, the exported files will be saved to a 'output' folder beside the source file.",
+            "message": "The directory to save exported files to, including the deps.json. If not set, the exported files will be saved to a 'output' folder beside the source file.",
+            "translation": "Das Verzeichnis zum Speichern exportierter Dateien, einschließlich deps.json. Wenn nicht festgelegt, werden die exportierten Dateien in einem 'output'-Ordner neben der Quelldatei gespeichert."
+        },
+        {
+            "id": "Load External Inputs",
+            "message": "Load External Inputs",
+            "translation": "Externe Eingaben laden"
+        },
+        {
+            "id": "Load external inputs from a file named sys-inputs.json as sys.inputs. If there is no such one, it is created at the root dir. \nA sys-inputs.json file contains user defined key-value pairs which can be accessed via Typst's sys.inputs. The values should always be string encoded data.\nNeed to restart or reload to take effect for code linter, auto-completion, and preview when changed.",
+            "message": "Load external inputs from a file named sys-inputs.json as sys.inputs. If there is no such one, it is created at the root dir. \nA sys-inputs.json file contains user defined key-value pairs which can be accessed via Typst's sys.inputs. The values should always be string encoded data.\nNeed to restart or reload to take effect for code linter, auto-completion, and preview when changed.",
+            "translation": "Lädt externe Eingaben aus einer Datei namens sys-inputs.json als sys.inputs. Wenn keine vorhanden ist, wird sie im Stammverzeichnis erstellt.\nEine sys-inputs.json-Datei enthält benutzerdefinierte Schlüssel-Wert-Paare, auf die über Typsts sys.inputs zugegriffen werden kann. Die Werte sollten immer als Zeichenkette codierte Daten sein.\nEin Neustart oder Neuladen ist erforderlich, damit Änderungen für Code-Prüfung, Autovervollständigung und Vorschau wirksam werden."
+        },
+        {
+            "id": "Ignore System Fonts",
+            "message": "Ignore System Fonts",
+            "translation": "Systemschriftarten ignorieren"
+        },
+        {
+            "id": "Ignore system fonts or not. For code linter, auto-completion and previewing, it needs to restart or reload to take effect.",
+            "message": "Ignore system fonts or not. For code linter, auto-completion and previewing, it needs to restart or reload to take effect.",
+            "translation": "Systemschriftarten ignorieren oder nicht. Für Code-Prüfung, Autovervollständigung und Vorschau ist ein Neustart oder Neuladen erforderlich."
+        },
+        {
+            "id": "Ignore Compiler Embedded Fonts",
+            "message": "Ignore Compiler Embedded Fonts",
+            "translation": "Eingebettete Compiler-Schriftarten ignorieren"
+        },
+        {
+            "id": "Ignore embedded Fonts or not. This only works when exporting files.",
+            "message": "Ignore embedded Fonts or not. This only works when exporting files.",
+            "translation": "Eingebettete Schriftarten ignorieren oder nicht. Dies funktioniert nur beim Exportieren von Dateien."
+        },
+        {
+            "id": "Generate Dependencies file",
+            "message": "Generate Dependencies file",
+            "translation": "Abhängigkeitsdatei generieren"
+        },
+        {
+            "id": "Write dependencies of the file compiled to a file named deps.json in your project directory.",
+            "message": "Write dependencies of the file compiled to a file named deps.json in your project directory.",
+            "translation": "Schreibt die Abhängigkeiten der kompilierten Datei in eine Datei namens deps.json in Ihrem Projektverzeichnis."
+        },
+        {
+            "id": "TPIX",
+            "message": "TPIX",
+            "translation": "TPIX"
+        },
+        {
+            "id": "You have an active TPIX session",
+            "message": "You have an active TPIX session",
+            "translation": "Sie haben eine aktive TPIX-Sitzung"
+        },
+        {
+            "id": "Logout TPIX",
+            "message": "Logout TPIX",
+            "translation": "TPIX abmelden"
+        },
+        {
+            "id": "Login TPIX to access all the features of Typstify, including package management, Zotero sync, etc. Some features may need a subscription.",
+            "message": "Login TPIX to access all the features of Typstify, including package management, Zotero sync, etc. Some features may need a subscription.",
+            "translation": "Melden Sie sich bei TPIX an, um auf alle Funktionen von Typstify zuzugreifen, einschließlich Paketverwaltung, Zotero-Synchronisation usw. Einige Funktionen erfordern möglicherweise ein Abonnement."
+        },
+        {
+            "id": "Login TPIX",
+            "message": "Login TPIX",
+            "translation": "TPIX anmelden"
+        },
+        {
+            "id": "To learn more about TPIX, go to",
+            "message": "To learn more about TPIX, go to",
+            "translation": "Um mehr über TPIX zu erfahren, besuchen Sie"
+        },
+        {
+            "id": "To get a subscription of TPIX, click",
+            "message": "To get a subscription of TPIX, click",
+            "translation": "Um ein TPIX-Abonnement zu erhalten, klicken Sie"
+        },
+        {
+            "id": "Check new version",
+            "message": "Check new version",
+            "translation": "Neue Version prüfen"
+        },
+        {
+            "id": "Version",
+            "message": "Version",
+            "translation": "Version"
+        },
+        {
+            "id": "Changelog",
+            "message": "Changelog",
+            "translation": "Änderungsprotokoll"
+        },
+        {
+            "id": "Release Time",
+            "message": "Release Time",
+            "translation": "Veröffentlichungszeit"
+        },
+        {
+            "id": "Go to download",
+            "message": "Go to download",
+            "translation": "Zum Download"
+        },
+        {
+            "id": "About",
+            "message": "About",
+            "translation": "Über"
+        },
+        {
+            "id": "git checkout {Name} failed: {Err}",
+            "message": "git checkout {Name} failed: {Err}",
+            "translation": "git checkout {Name} fehlgeschlagen: {Err}",
+            "placeholders": [
+                {
+                    "id": "Name",
+                    "string": "%[1]s",
+                    "type": "string",
+                    "underlyingType": "string",
+                    "argNum": 1,
+                    "expr": "info.Name"
+                },
+                {
+                    "id": "Err",
+                    "string": "%[2]v",
+                    "type": "error",
+                    "underlyingType": "interface{Error() string}",
+                    "argNum": 2,
+                    "expr": "err"
+                }
+            ]
+        },
+        {
+            "id": "Width: {X}, Height: {Y}",
+            "message": "Width: {X}, Height: {Y}",
+            "translation": "Breite: {X}, Höhe: {Y}",
+            "placeholders": [
+                {
+                    "id": "X",
+                    "string": "%[1]d",
+                    "type": "int",
+                    "underlyingType": "int",
+                    "argNum": 1,
+                    "expr": "src.Size().X"
+                },
+                {
+                    "id": "Y",
+                    "string": "%[2]d",
+                    "type": "int",
+                    "underlyingType": "int",
+                    "argNum": 2,
+                    "expr": "src.Size().Y"
+                }
+            ]
+        },
+        {
+            "id": "popup and display the preview in a dedicated window",
+            "message": "popup and display the preview in a dedicated window",
+            "translation": "Vorschau in einem separaten Fenster anzeigen"
+        },
+        {
+            "id": "Open File Location",
+            "message": "Open File Location",
+            "translation": "Dateispeicherort öffnen"
+        },
+        {
+            "id": "Open Folder Location",
+            "message": "Open Folder Location",
+            "translation": "Ordnerspeicherort öffnen"
+        }
+    ]
+}

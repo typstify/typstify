@@ -21,6 +21,13 @@ type Localizer struct {
 // each of our supported locales.
 var Locales = []Localizer{
 	{
+		// United States
+		ID:      "en-us",
+		Name:    "English",
+		printer: message.NewPrinter(language.MustParse("en-US")),
+	},
+
+	{
 		// Chinese
 		ID:      "zh-cn",
 		Name:    "中文",
@@ -28,10 +35,10 @@ var Locales = []Localizer{
 	},
 
 	{
-		// United States
-		ID:      "en-us",
-		Name:    "English",
-		printer: message.NewPrinter(language.MustParse("en-US")),
+		// Germany
+		ID:      "de",
+		Name:    "Deutschland",
+		printer: message.NewPrinter(language.MustParse("de-DE")),
 	},
 }
 
