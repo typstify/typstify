@@ -48,10 +48,9 @@ type (
 var (
 	TypstEditorViewID = view.NewViewID("TypstEditor")
 	searchIcon        = appIcons.NewSvgIcon(appIcons.Search)
-	previewIcon       = appIcons.NewSvgIcon(appIcons.ScanSearch)
-	exportIcon        = appIcons.NewSvgIcon(appIcons.ArrowRightFromLine)
+	previewIcon       = appIcons.NewSvgIcon(appIcons.Columns2)
+	exportIcon        = appIcons.NewSvgIcon(appIcons.FileDown)
 	presentationIcon  = appIcons.NewSvgIcon(appIcons.Presentation)
-	tocIcon           = appIcons.NewSvgIcon(appIcons.TableOfContents)
 	chatIcon          = appIcons.NewSvgIcon(appIcons.Sparkles)
 )
 

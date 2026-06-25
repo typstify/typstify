@@ -73,14 +73,14 @@ var TriangleAlert []byte
 //go:embed lucide/info.svg
 var Info []byte
 
-//go:embed lucide/scan-search.svg
-var ScanSearch []byte
+//go:embed lucide/columns-2.svg
+var Columns2 []byte
+
+//go:embed lucide/file-down.svg
+var FileDown []byte
 
 //go:embed lucide/arrow-left-right.svg
 var ArrowLeftRight []byte
-
-//go:embed lucide/arrow-right-from-line.svg
-var ArrowRightFromLine []byte
 
 //go:embed lucide/folder-open.svg
 var FolderOpen []byte
