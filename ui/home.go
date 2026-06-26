@@ -1,12 +1,16 @@
 package ui
 
 import (
+	"fmt"
+
 	"github.com/oligo/gioview/theme"
 	"github.com/oligo/gioview/view"
+	"looz.ws/typstify/i18n"
 	"looz.ws/typstify/service"
 	"looz.ws/typstify/ui/assistant"
 	"looz.ws/typstify/ui/navpanel"
 	"looz.ws/typstify/ui/preview"
+	"looz.ws/typstify/ui/settings"
 	"looz.ws/typstify/ui/statusbar"
 	"looz.ws/typstify/widgets"
 	"looz.ws/typstify/widgets/console"
@@ -19,6 +23,7 @@ import (
 	"gioui.org/op/paint"
 	"gioui.org/unit"
 	"gioui.org/widget"
+	"gioui.org/widget/material"
 )
 
 // previewable is implemented by views that support an inline preview panel.
@@ -53,7 +58,8 @@ type HomeView struct {
 	previewBar     *widgets.ResizeBar
 	previewer      *preview.Previewer
 
-	welcome WelcomeView
+	welcome      WelcomeView
+	accountClick widget.Clickable
 }
 
 func (hv *HomeView) ID() string {
@@ -125,6 +131,15 @@ func (hv *HomeView) update(gtx C) {
 				hv.toggleChat()
 			}
 		}
+	}
+
+	if hv.accountClick.Clicked(gtx) {
+		hv.RequestSwitch(view.Intent{
+			Target: settings.SettingViewID,
+			Params: map[string]any{
+				"tabIdx": 3, // hardcoded tpix tab index in setting page.
+			},
+		})
 	}
 }
 
@@ -261,7 +276,20 @@ func (hv *HomeView) layoutMain(gtx C, th *theme.Theme) D {
 	}.Layout(gtx,
 		// horizontal navbar
 		layout.Rigid(func(gtx C) D {
-			return hv.tabbar.Layout(gtx, th)
+			return layout.Flex{
+				Axis:      layout.Horizontal,
+				Spacing:   layout.SpaceBetween,
+				Alignment: layout.Middle,
+				Gap:       gtx.Dp(unit.Dp(4)),
+			}.Layout(gtx,
+				layout.Flexed(1, func(gtx C) D {
+					return hv.tabbar.Layout(gtx, th)
+				}),
+
+				layout.Rigid(func(gtx C) D {
+					return hv.layoutAccountInfo(gtx, th)
+				}),
+			)
 		}),
 		layout.Rigid(func(gtx C) D {
 			return layout.Spacer{Height: unit.Dp(1)}.Layout(gtx)
@@ -330,6 +358,53 @@ func (hv *HomeView) layoutView(gtx C, th *theme.Theme) D {
 			return hv.previewBar.Layout(gtx, th)
 		},
 	)
+}
+
+func (hv *HomeView) layoutAccountInfo(gtx C, th *theme.Theme) D {
+	authInfo := hv.srv.TpixSessionService().Session()
+	userAuthed := hv.srv.TpixSessionService().Authenticated()
+
+	return hv.accountClick.Layout(gtx, func(gtx C) D {
+		paintColor := th.Fg
+		if hv.accountClick.Hovered() {
+			paintColor = th.ContrastBg
+		}
+
+		return layout.Inset{
+			Top:    unit.Dp(2),
+			Bottom: unit.Dp(2),
+			Left:   unit.Dp(4),
+			Right:  unit.Dp(12),
+		}.Layout(gtx, func(gtx C) D {
+			return layout.Flex{
+				Axis:      layout.Horizontal,
+				Alignment: layout.Middle,
+				Gap:       gtx.Dp(unit.Dp(4)),
+			}.Layout(gtx,
+				layout.Rigid(func(gtx C) D {
+					return userIcon.Layout(gtx, paintColor, th.TextSize*0.8)
+				}),
+				layout.Rigid(func(gtx C) D {
+					if userAuthed {
+						name := authInfo.Username
+						// if user is not subscribed, show the state and prompt he/her to upgrade.
+						if !authInfo.Subscribed {
+							name = fmt.Sprintf("%s (unsubscribed)", name)
+						}
+						lb := material.Label(th.Theme, th.TextSize, name)
+						lb.Color = paintColor
+						return lb.Layout(gtx)
+					}
+
+					lb := material.Label(th.Theme, th.TextSize, i18n.Translate("Sign In"))
+					lb.Color = paintColor
+					return lb.Layout(gtx)
+
+				}),
+			)
+		})
+	})
+
 }
 
 func (hv *HomeView) OnClose() {

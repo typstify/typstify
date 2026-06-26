@@ -47,6 +47,8 @@ type ServiceFacade struct {
 	acpMu              sync.Mutex
 	mcpServer          *agent.McpServer // the built-in mcp server
 
+	tpixSessionSrv *TpixSessionService
+
 	currentProjectDir string
 
 	// Window layout metrics for native webview positioning.
@@ -58,14 +60,16 @@ type ServiceFacade struct {
 func NewService(ctx context.Context) *ServiceFacade {
 	eventbus := bus.NewEventBus(ctx, false)
 	st := settings.NewSettings(eventbus)
+	tpixSessionSrv := &TpixSessionService{setting: st.Tpix()}
 
 	s := &ServiceFacade{
-		eventbus:     eventbus,
-		settings:     st,
-		pkgService:   pkg.NewTypstPkgService(st.Typst(), st.Tpix()),
-		workspaceSrv: NewWorkspaceService(st.General().RootDir, eventbus),
-		windowSrv:    NewWindowService(ctx, st),
-		consoleState: console.NewConsoleState(1000),
+		eventbus:       eventbus,
+		settings:       st,
+		pkgService:     pkg.NewTypstPkgService(st.Typst(), st.Tpix()),
+		workspaceSrv:   NewWorkspaceService(st.General().RootDir, eventbus),
+		windowSrv:      NewWindowService(ctx, st),
+		consoleState:   console.NewConsoleState(1000),
+		tpixSessionSrv: tpixSessionSrv,
 	}
 
 	eventbus.Subscribe(s, "service.onSettingUpdate", bus.TopicSettingsUpdated, func(topic string, data interface{}) {
@@ -268,7 +272,7 @@ func (s *ServiceFacade) Console() *console.ConsoleState {
 }
 
 func (s *ServiceFacade) initMcpServer(ctx context.Context) {
-	if s.settings.Tpix().LoginAt <= 0 {
+	if !s.tpixSessionSrv.Authenticated() {
 		return
 	}
 	if s.mcpServer != nil {
@@ -313,7 +317,7 @@ func (s *ServiceFacade) initMcpServer(ctx context.Context) {
 func (s *ServiceFacade) listMcpServer() []acp.McpServer {
 	mcpServers := make([]acp.McpServer, 0)
 
-	if s.settings.Tpix().LoginAt > 0 {
+	if s.tpixSessionSrv.Authenticated() {
 		// built-in mcp server
 		ip, port := s.mcpServer.Addr()
 		mcpServers = append(mcpServers, acp.McpServer{
@@ -449,4 +453,8 @@ func (s *ServiceFacade) AcpSessionManager() *agent.SessionManager {
 	}
 
 	return s.acpSessionManager
+}
+
+func (s *ServiceFacade) TpixSessionService() *TpixSessionService {
+	return s.tpixSessionSrv
 }

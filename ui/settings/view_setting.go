@@ -38,6 +38,21 @@ func (sv *SettingsView) Title() string {
 	return i18n.Translate("Settings")
 }
 
+func (sv *SettingsView) OnNavTo(intent view.Intent) error {
+	sv.BaseView.OnNavTo(intent)
+
+	tabIdx := 0
+	if val, hasVal := intent.Params["tabIdx"]; hasVal {
+		tabIdx = val.(int)
+	}
+
+	if sv.tabView != nil {
+		sv.tabView.SetCurrentTab(tabIdx)
+	}
+
+	return nil
+}
+
 func (sv *SettingsView) Layout(gtx layout.Context, th *theme.Theme) layout.Dimensions {
 	sv.PageStyle.Padding = unit.Dp(30)
 	sv.MaxWidth = unit.Dp(960)
@@ -62,7 +77,7 @@ func NewSettingsView(srv *service.ServiceFacade) *SettingsView {
 		&GeneralView{setting: general},
 		&EditorView{setting: editor},
 		&TypstSettingsView{setting: srv.Settings().Typst()},
-		&TpixSettingsView{setting: srv.Settings().Tpix()},
+		&TpixSettingsView{srv: srv.TpixSessionService()},
 		&AgentView{setting: srv.Settings().AcpAgent()},
 		&HelpView{updateCheck: &UpdateCheck{srv: srv}},
 	}

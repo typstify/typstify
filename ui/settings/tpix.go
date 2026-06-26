@@ -3,9 +3,6 @@ package settings
 import (
 	"fmt"
 	"log"
-	"sync"
-	"sync/atomic"
-	"time"
 
 	"gioui.org/layout"
 	"gioui.org/unit"
@@ -14,10 +11,8 @@ import (
 	"github.com/inkeliz/giohyperlink"
 	"github.com/oligo/gioview/misc"
 	"github.com/oligo/gioview/theme"
-	cli "github.com/typstify/tpix-cli"
-	tpix "github.com/typstify/tpix-cli"
 	"looz.ws/typstify/i18n"
-	"looz.ws/typstify/service/settings"
+	"looz.ws/typstify/service"
 	"looz.ws/typstify/widgets/icons"
 )
 
@@ -28,25 +23,14 @@ const (
 
 var userIcon = icons.NewSvgIcon(icons.User)
 
-type tpixSession struct {
-	Username     string
-	Email        string
-	LastLoginAt  string
-	AccessToken  string
-	RefreshToken string
-	Subscribed   bool
-}
-
 type TpixSettingsView struct {
-	setting          *settings.TpixSettings
-	session          atomic.Pointer[tpixSession]
+	srv              *service.TpixSessionService
 	loginBtn         widget.Clickable
 	logoutBtn        widget.Clickable
 	tpixWebsiteLink  widget.Clickable
 	subscriptionLink widget.Clickable
 
-	initOnce sync.Once
-	lastErr  error
+	lastErr error
 }
 
 func (t *TpixSettingsView) Title() string {
@@ -54,20 +38,12 @@ func (t *TpixSettingsView) Title() string {
 }
 
 func (t *TpixSettingsView) update(gtx C) {
-	t.initOnce.Do(func() {
-		if t.setting.LoginAt > 0 {
-			go t.updateState()
-		}
-	})
-
 	if t.loginBtn.Clicked(gtx) {
-		go t.login()
-
+		go t.srv.Login()
 	}
 
 	if t.logoutBtn.Clicked(gtx) {
-		t.setting.Clear()
-		t.session.Store(nil)
+		t.srv.Logout()
 	}
 
 	if t.tpixWebsiteLink.Clicked(gtx) {
@@ -81,71 +57,6 @@ func (t *TpixSettingsView) update(gtx C) {
 			log.Printf("error: opening hyperlink: %v", err)
 		}
 	}
-}
-
-func (t *TpixSettingsView) login() {
-	resp, err := tpix.StartLogin()
-	if err != nil {
-		t.lastErr = err
-		return
-	}
-	tokenResp, err := cli.PollLoginResult(resp.DeviceCode, resp.ExpiresIn, nil)
-	if err != nil {
-		log.Printf("Login failed: %v", err)
-		t.lastErr = err
-		return
-	}
-
-	t.setting.AccessToken = tokenResp.AccessToken
-	t.setting.RefreshToken = tokenResp.RefreshToken
-	t.setting.LoginAt = time.Now().UnixMilli()
-	t.setting.Save()
-
-	profile, err := cli.GetUserProfile()
-	if err != nil {
-		log.Printf("Login failed: %v", err)
-		t.lastErr = err
-		return
-	}
-
-	session := tpixSession{
-		Username:     profile.Username,
-		Email:        profile.Email,
-		AccessToken:  tokenResp.AccessToken,
-		RefreshToken: tokenResp.RefreshToken,
-		LastLoginAt:  time.Now().Format(time.DateTime),
-		Subscribed:   profile.Subscribed,
-	}
-
-	t.setting.Username = profile.Username
-	t.setting.Email = profile.Email
-	t.setting.Save()
-
-	t.session.Store(&session)
-	t.lastErr = nil
-}
-
-func (t *TpixSettingsView) updateState() {
-	profile, err := cli.GetUserProfile()
-	if err != nil {
-		log.Printf("Login failed: %v", err)
-		t.lastErr = err
-		return
-	}
-
-	loginAt := time.UnixMilli(t.setting.LoginAt)
-
-	session := tpixSession{
-		Username:     profile.Username,
-		Email:        profile.Email,
-		AccessToken:  t.setting.AccessToken,
-		RefreshToken: t.setting.RefreshToken,
-		LastLoginAt:  loginAt.Format(time.DateTime),
-		Subscribed:   profile.Subscribed,
-	}
-
-	t.session.Store(&session)
-	t.lastErr = nil
 }
 
 func (t *TpixSettingsView) Layout(gtx C, th *theme.Theme) D {
@@ -164,11 +75,14 @@ func (t *TpixSettingsView) Layout(gtx C, th *theme.Theme) D {
 		}),
 
 		layout.Rigid(func(gtx C) D {
-			if t.session.Load() == nil {
+			if !t.srv.Authenticated() {
 				return layout.Dimensions{}
 			}
 
-			session := t.session.Load()
+			session := t.srv.Session()
+			if session == nil {
+				return material.Label(th.Theme, th.TextSize, i18n.Translate("Loading...")).Layout(gtx)
+			}
 
 			return settingItem{}.Layout(gtx, th, i18n.Translate("You have an active TPIX session"),
 				"",
@@ -211,7 +125,7 @@ func (t *TpixSettingsView) Layout(gtx C, th *theme.Theme) D {
 		}),
 
 		layout.Rigid(func(gtx C) D {
-			if t.session.Load() != nil {
+			if t.srv.Authenticated() {
 				return layout.Dimensions{}
 			}
 
@@ -220,7 +134,7 @@ func (t *TpixSettingsView) Layout(gtx C, th *theme.Theme) D {
 				Alignment: layout.Start,
 			}.Layout(gtx,
 				layout.Rigid(func(gtx C) D {
-					label := material.Label(th.Theme, th.TextSize, i18n.Translate("Login TPIX to access all the features of Typstify, including package management, Zotero sync, etc. Some features may need a subscription."))
+					label := material.Label(th.Theme, th.TextSize, i18n.Translate("Login TPIX to access all the features of Typstify, including package management, Zotero sync, MCP tools for AI assistant etc. Some features may need a subscription."))
 					label.LineHeightScale = 1.5
 					return label.Layout(gtx)
 				}),

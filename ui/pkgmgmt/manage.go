@@ -1,6 +1,7 @@
 package pkgmgmt
 
 import (
+	"errors"
 	"sync/atomic"
 
 	"gioui.org/font"
@@ -12,6 +13,7 @@ import (
 	"github.com/oligo/gioview/theme"
 	"github.com/oligo/gioview/view"
 	gvwidget "github.com/oligo/gioview/widget"
+	"github.com/typstify/tpix-cli/api"
 
 	// gvwiget "github.com/oligo/gioview/widget"
 	"golang.org/x/exp/shiny/materialdesign/icons"
@@ -44,6 +46,7 @@ type PkgListView struct {
 	cards            []*PkgCard
 	lastFetched      atomic.Pointer[[]*PkgCard]
 	lastFetchedCount int
+	lastFetchErr     error
 }
 
 func (vw *PkgListView) ID() view.ViewID {
@@ -159,6 +162,12 @@ func (vw *PkgListView) Layout(gtx C, th *theme.Theme) D {
 					layout.Rigid(func(gtx C) D {
 						gtx.Constraints.Min.X = gtx.Constraints.Max.X
 
+						var reqErr *api.RequestError
+						if errors.As(vw.lastFetchErr, &reqErr) {
+							return layout.Center.Layout(gtx, func(gtx C) D {
+								return material.Label(th.Theme, th.TextSize, reqErr.Error()).Layout(gtx)
+							})
+						}
 						return vw.packageList.Layout(gtx, th)
 					}),
 				)
@@ -206,11 +215,13 @@ func (vw *PkgListView) loadData(kind string, category string, query string) {
 		results, count, err := vw.srv.PkgService().SearchPkgs("", kind, category, query)
 		if err != nil {
 			vw.lastFetchedCount = 0
+			vw.lastFetchErr = err
 			vw.lastFetched.Store(&cards)
 			vw.srv.EventBus().Emit(bus.TopicStatusbarNotifyEvent, statusbar.Notification{Content: i18n.Translate("Query packages failed: ") + err.Error()})
 			return
 		}
 
+		vw.lastFetchErr = nil
 		for _, p := range results {
 			card := newPkgCard(p,
 				func(pkgInfo *pkg.TypstPkg) {

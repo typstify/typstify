@@ -356,7 +356,7 @@ func (tn *FileTreeNav) nodeMarker(nodePath string) *filetree.NodeMarker {
 
 func (tn *FileTreeNav) extraMenuOptions(node *filetree.FileNode) [][]menu.MenuOption {
 	isPackage := isPackageProject(tn.tree.Root())
-	isTpixLoggedIn := tn.srv.Settings().Tpix().LoginAt > 0
+	isTpixLoggedIn := tn.srv.TpixSessionService().Authenticated()
 	publishPackageOpt := menu.MenuOption{
 		OnClicked: func(gtx layout.Context) error {
 			if !isPackage || !isTpixLoggedIn {
