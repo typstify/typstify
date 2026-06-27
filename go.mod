@@ -18,14 +18,14 @@ require (
 	github.com/inkeliz/giosvg v0.0.0-20240821232107-3208d4350d55
 	github.com/modelcontextprotocol/go-sdk v1.6.1
 	github.com/mustafaturan/bus/v3 v3.0.3
-	github.com/oligo/gioview v0.9.0
+	github.com/oligo/gioview v0.9.1
 	github.com/oligo/gvcode v0.7.1-0.20260516161226-1f442d428ec2
 	github.com/pkg/errors v0.8.1
 	github.com/rivo/uniseg v0.4.7
 	github.com/rogpeppe/go-internal v1.14.1
 	github.com/sahilm/fuzzy v0.1.1
 	github.com/saintfish/chardet v0.0.0-20230101081208-5e3ef4b5456d
-	github.com/typstify/tpix-cli v0.9.0
+	github.com/typstify/tpix-cli v0.9.2
 	go.etcd.io/bbolt v1.3.11
 	golang.org/x/exp/jsonrpc2 v0.0.0-20250911091902-df9299821621
 	golang.org/x/exp/shiny v0.0.0-20250408133849-7e4ce0ab07d0
