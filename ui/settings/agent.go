@@ -55,7 +55,7 @@ type AgentView struct {
 }
 
 func (v *AgentView) Title() string {
-	return i18n.Translate("Agent")
+	return i18n.Translate("AI Assistant")
 }
 
 func (v *AgentView) checkRuntimes() {
@@ -513,7 +513,7 @@ func (v *AgentView) layoutCommandForm(gtx C, th *theme.Theme) D {
 		layout.Rigid(func(gtx C) D {
 			return settingItem{}.Layout(gtx, th,
 				i18n.Translate("Agent Name"),
-				i18n.Translate("Select an agent above or type a name directly."),
+				i18n.Translate("Select an agent below or type a name directly."),
 				func(gtx C) D {
 					gtx.Constraints.Min.X = gtx.Dp(unit.Dp(300))
 					return v.agentNameField.Layout(gtx, th, i18n.Translate("Name"))
@@ -524,7 +524,7 @@ func (v *AgentView) layoutCommandForm(gtx C, th *theme.Theme) D {
 		layout.Rigid(func(gtx C) D {
 			return settingItem{}.Layout(gtx, th,
 				i18n.Translate("Command"),
-				i18n.Translate("Select an agent above or edit directly, e.g. npx -y @scope/package"),
+				i18n.Translate("Select an agent below or edit directly, e.g. npx -y @scope/package"),
 				func(gtx C) D {
 					gtx.Constraints.Min.X = gtx.Dp(unit.Dp(300))
 					return v.agentCmdField.Layout(gtx, th, i18n.Translate("npx -y @scope/package"))

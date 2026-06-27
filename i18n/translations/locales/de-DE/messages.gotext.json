@@ -273,6 +273,11 @@
             "translation": "Beenden"
         },
         {
+            "id": "Sign In",
+            "message": "Sign In",
+            "translation": "Anmelden"
+        },
+        {
             "id": "Start",
             "message": "Start",
             "translation": "Start"
@@ -1185,6 +1190,11 @@
             ]
         },
         {
+            "id": "AI Assistant",
+            "message": "AI Assistant",
+            "translation": "KI-Assistent"
+        },
+        {
             "id": "Agent",
             "message": "Agent",
             "translation": "Agent"
@@ -1340,9 +1350,9 @@
             "translation": "Agentenname"
         },
         {
-            "id": "Select an agent above or type a name directly.",
-            "message": "Select an agent above or type a name directly.",
-            "translation": "Wählen Sie oben einen Agenten aus oder geben Sie direkt einen Namen ein."
+            "id": "Select an agent below or type a name directly.",
+            "message": "Select an agent below or type a name directly.",
+            "translation": "Wählen Sie unten einen Agenten aus oder geben Sie direkt einen Namen ein."
         },
         {
             "id": "Command",
@@ -1350,9 +1360,9 @@
             "translation": "Befehl"
         },
         {
-            "id": "Select an agent above or edit directly, e.g. npx -y @scope/package",
-            "message": "Select an agent above or edit directly, e.g. npx -y @scope/package",
-            "translation": "Wählen Sie oben einen Agenten aus oder bearbeiten Sie direkt, z. B. npx -y @scope/package"
+            "id": "Select an agent below or edit directly, e.g. npx -y @scope/package",
+            "message": "Select an agent below or edit directly, e.g. npx -y @scope/package",
+            "translation": "Wählen Sie unten einen Agenten aus oder bearbeiten Sie direkt, z. B. npx -y @scope/package"
         },
         {
             "id": "npx -y @scope/package",
@@ -1645,6 +1655,11 @@
             "translation": "TPIX"
         },
         {
+            "id": "Loading...",
+            "message": "Loading...",
+            "translation": "Wird geladen..."
+        },
+        {
             "id": "You have an active TPIX session",
             "message": "You have an active TPIX session",
             "translation": "Sie haben eine aktive TPIX-Sitzung"
@@ -1655,9 +1670,9 @@
             "translation": "TPIX abmelden"
         },
         {
-            "id": "Login TPIX to access all the features of Typstify, including package management, Zotero sync, etc. Some features may need a subscription.",
-            "message": "Login TPIX to access all the features of Typstify, including package management, Zotero sync, etc. Some features may need a subscription.",
-            "translation": "Melden Sie sich bei TPIX an, um auf alle Funktionen von Typstify zuzugreifen, einschließlich Paketverwaltung, Zotero-Synchronisation usw. Einige Funktionen erfordern möglicherweise ein Abonnement."
+            "id": "Login TPIX to access all the features of Typstify, including package management, Zotero sync, MCP tools for AI assistant etc. Some features may need a subscription.",
+            "message": "Login TPIX to access all the features of Typstify, including package management, Zotero sync, MCP tools for AI assistant etc. Some features may need a subscription.",
+            "translation": "Melden Sie sich bei TPIX an, um auf alle Funktionen von Typstify zuzugreifen, einschließlich Paketverwaltung, Zotero-Synchronisierung, MCP-Tools für den KI-Assistenten usw. Einige Funktionen erfordern möglicherweise ein Abonnement."
         },
         {
             "id": "Login TPIX",

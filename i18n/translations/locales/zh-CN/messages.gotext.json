@@ -273,6 +273,11 @@
             "translation": "退出"
         },
         {
+            "id": "Sign In",
+            "message": "Sign In",
+            "translation": "登陆"
+        },
+        {
             "id": "Start",
             "message": "Start",
             "translation": "开始"
@@ -1185,9 +1190,14 @@
             ]
         },
         {
+            "id": "AI Assistant",
+            "message": "AI Assistant",
+            "translation": "AI助手"
+        },
+        {
             "id": "Agent",
             "message": "Agent",
-            "translation": "代理"
+            "translation": "Agent"
         },
         {
             "id": "Configure agent for AI assitant. You can either manually configure your own agent, or select one from the Agent Registry below.",
@@ -1340,9 +1350,9 @@
             "translation": "代理名称"
         },
         {
-            "id": "Select an agent above or type a name directly.",
-            "message": "Select an agent above or type a name directly.",
-            "translation": "在上方选择代理或直接输入名称。"
+            "id": "Select an agent below or type a name directly.",
+            "message": "Select an agent below or type a name directly.",
+            "translation": "从下面选择一个Agent或者直接输入一个名字"
         },
         {
             "id": "Command",
@@ -1350,9 +1360,9 @@
             "translation": "命令"
         },
         {
-            "id": "Select an agent above or edit directly, e.g. npx -y @scope/package",
-            "message": "Select an agent above or edit directly, e.g. npx -y @scope/package",
-            "translation": "在上方选择代理或直接编辑，例如 npx -y @scope/package"
+            "id": "Select an agent below or edit directly, e.g. npx -y @scope/package",
+            "message": "Select an agent below or edit directly, e.g. npx -y @scope/package",
+            "translation": "从下面选择一个Agent或者直接输入，例如：npx -y @scope/package"
         },
         {
             "id": "npx -y @scope/package",
@@ -1645,6 +1655,11 @@
             "translation": "TPIX"
         },
         {
+            "id": "Loading...",
+            "message": "Loading...",
+            "translation": "加载中..."
+        },
+        {
             "id": "You have an active TPIX session",
             "message": "You have an active TPIX session",
             "translation": "您有一个活跃的 TPIX 会话"
@@ -1655,9 +1670,9 @@
             "translation": "登出 TPIX"
         },
         {
-            "id": "Login TPIX to access all the features of Typstify, including package management, Zotero sync, etc. Some features may need a subscription.",
-            "message": "Login TPIX to access all the features of Typstify, including package management, Zotero sync, etc. Some features may need a subscription.",
-            "translation": "登录 TPIX 以访问 Typstify 的全部功能，包括包管理、Zotero 同步等。部分功能可能需要订阅。"
+            "id": "Login TPIX to access all the features of Typstify, including package management, Zotero sync, MCP tools for AI assistant etc. Some features may need a subscription.",
+            "message": "Login TPIX to access all the features of Typstify, including package management, Zotero sync, MCP tools for AI assistant etc. Some features may need a subscription.",
+            "translation": "登录 TPIX 以访问 Typstify 的所有功能，包括包管理、Zotero 同步、AI 助手的 MCP 工具等。部分功能可能需要订阅。"
         },
         {
             "id": "Login TPIX",
