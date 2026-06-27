@@ -4,16 +4,12 @@ import (
 	"log"
 	"os"
 	"path/filepath"
-	"time"
-
-	bolt "go.etcd.io/bbolt"
 
 	"looz.ws/typstify/service/bus"
-	"looz.ws/typstify/utils"
 )
 
 type Settings struct {
-	db       *bolt.DB
+	store    *settingsStore
 	eventbus *bus.EventBus
 
 	general  *GeneralSettings
@@ -47,16 +43,13 @@ func NewSettings(bus *bus.EventBus) *Settings {
 }
 
 func newSettings(rootDir string, bus *bus.EventBus) *Settings {
-	db := openDB(filepath.Join(rootDir, "settings.db"))
-
 	return &Settings{
-		db:       db,
+		store:    newSettingsStore(rootDir),
 		eventbus: bus,
 	}
 }
 
 func (s *Settings) Close() {
-	s.db.Close()
 }
 
 func (s *Settings) General() *GeneralSettings {
@@ -116,27 +109,9 @@ func (s *Settings) AcpAgent() *AcpAgentSettings {
 }
 
 func (s *Settings) initModel(name string) baseModel {
-	bkt := utils.NewBucket[utils.SKey](name, s.db, &utils.BinaryEncoder[any]{})
-	return baseModel{bucket: bkt, onSave: func(model Model) {
+	return baseModel{name: name, store: s.store, onSave: func(model Model) {
 		if s.eventbus != nil {
 			s.eventbus.Emit(bus.TopicSettingsUpdated, model)
 		}
 	}}
-}
-
-func openDB(dbFile string) *bolt.DB {
-	baseDir := filepath.Dir(dbFile)
-	err := os.MkdirAll(baseDir, 0700)
-	if err != nil {
-		log.Fatal(err)
-	}
-
-	// It will be created if it doesn't exist.
-	db, err := bolt.Open(dbFile, 0600, &bolt.Options{Timeout: 1 * time.Second})
-	if err != nil {
-		log.Fatal(err)
-	}
-
-	// don't forget to close it if needed
-	return db
 }

@@ -3,14 +3,13 @@ package settings
 import (
 	"errors"
 	"reflect"
-
-	"looz.ws/typstify/utils"
 )
 
 type baseModel struct {
 	// isDirty bool
 	loaded bool
-	bucket *utils.Bucket[utils.SKey, any]
+	name   string
+	store  *settingsStore
 	onSave func(model Model)
 }
 
@@ -19,26 +18,12 @@ func (m *baseModel) save(model Model) error {
 	// 	return nil
 	// }
 
-	if m.bucket == nil {
+	if m.store == nil {
 		return errors.New("model is detached")
 	}
 
-	t := reflect.ValueOf(model).Elem()
-
-	for i := 0; i < t.NumField(); i++ {
-		field := t.Field(i)
-		if !field.CanSet() {
-			continue
-		}
-
-		fieldVal := field.Interface()
-
-		typeField := t.Type().Field(i)
-		keyName := typeField.Tag.Get("key")
-		err := m.bucket.Save(utils.SKey(keyName), &fieldVal)
-		if err != nil {
-			return err
-		}
+	if err := m.store.save(m.name, model); err != nil {
+		return err
 	}
 
 	// m.isDirty = false
@@ -52,35 +37,24 @@ func (m *baseModel) save(model Model) error {
 // loadPersisted loads only persisted values from storage without merging defaults.
 // Used by Validate() to compare current values against persisted ones.
 func (m *baseModel) loadPersisted(model Model) error {
-	m.load(model, nil)
-	return nil
+	return m.load(model, nil)
 }
 
 func (m *baseModel) load(model Model, defaultVal Model) error {
-	if m.bucket == nil {
+	if m.store == nil {
 		return errors.New("model is detached")
 	}
 
-	t := reflect.ValueOf(model).Elem()
-
-	for i := 0; i < t.NumField(); i++ {
-		field := t.Field(i)
-		if !field.CanSet() {
-			continue
-		}
-
-		typeField := t.Type().Field(i)
-		keyName := typeField.Tag.Get("key")
-
-		val, err := m.bucket.Get(utils.SKey(keyName))
-		if err == nil {
-			setFieldValue(field, val)
-			m.loaded = true
-		}
+	loaded, err := m.store.load(m.name, model)
+	if err != nil {
+		return err
 	}
+	m.loaded = loaded
 
 	if defaultVal != nil {
-		mergeModel(defaultVal, model)
+		if err := mergeModel(defaultVal, model); err != nil {
+			return err
+		}
 	}
 
 	// m.isDirty = false
@@ -109,7 +83,9 @@ func mergeModel(src, dest Model) error {
 		if reflect.Zero(field.Type()).Interface() == field.Interface() {
 			srcField := srcVal.Field(i)
 			fieldVal := srcField.Interface()
-			setFieldValue(field, fieldVal)
+			if err := setFieldValue(field, fieldVal); err != nil {
+				return err
+			}
 		}
 	}
 
@@ -139,38 +115,64 @@ func modelEqual(model1, model2 Model) bool {
 }
 
 // only some primitive types are supported
-func setFieldValue(field reflect.Value, val any) {
+func setFieldValue(field reflect.Value, val any) error {
 	if !field.CanSet() || val == nil {
-		return
+		return nil
 	}
 
 	v := reflect.ValueOf(val)
 	for v.Kind() == reflect.Ptr || v.Kind() == reflect.Interface {
 		if v.IsNil() {
 			// Stop if we hit a nil pointer/interface
-			return
+			return nil
 		}
 		v = v.Elem()
 	}
 	// Check if we ended up with a valid, concrete value.
 	if !v.IsValid() {
-		return
+		return nil
+	}
+
+	if v.Type().AssignableTo(field.Type()) {
+		field.Set(v)
+		return nil
+	}
+
+	if v.Type().ConvertibleTo(field.Type()) {
+		field.Set(v.Convert(field.Type()))
+		return nil
 	}
 
 	switch field.Kind() {
 	case reflect.Int, reflect.Int8, reflect.Int16, reflect.Int32, reflect.Int64:
+		if v.Kind() < reflect.Int || v.Kind() > reflect.Int64 {
+			return errors.New("value is not an int")
+		}
 		field.SetInt(v.Int())
 	case reflect.Uint, reflect.Uint8, reflect.Uint16, reflect.Uint32, reflect.Uint64:
+		if v.Kind() < reflect.Uint || v.Kind() > reflect.Uint64 {
+			return errors.New("value is not a uint")
+		}
 		field.SetUint(v.Uint())
 	case reflect.Float32, reflect.Float64:
+		if v.Kind() != reflect.Float32 && v.Kind() != reflect.Float64 {
+			return errors.New("value is not a float")
+		}
 		field.SetFloat(v.Float())
 	case reflect.String:
+		if v.Kind() != reflect.String {
+			return errors.New("value is not a string")
+		}
 		field.SetString(v.String())
 	case reflect.Bool:
+		if v.Kind() != reflect.Bool {
+			return errors.New("value is not a bool")
+		}
 		field.SetBool(v.Bool())
 	default:
-		panic("Can not set value of kind: " + field.Kind().String())
+		return errors.New("can not set value of kind: " + field.Kind().String())
 	}
+	return nil
 }
 
 // convert to base type

@@ -70,12 +70,8 @@ type JsonEncoder[T any] struct {
 type StringEncoder struct{}
 
 type BinaryEncoder[T any] struct {
-	rlock   sync.Mutex
-	wlock   sync.Mutex
-	encoder *gob.Encoder
-	decoder *gob.Decoder
-	encBuf  bytes.Buffer
-	decBuf  bytes.Buffer
+	rlock sync.Mutex
+	wlock sync.Mutex
 }
 
 func (enc *JsonEncoder[T]) Encode(v *T) ([]byte, error) {
@@ -99,31 +95,25 @@ func (enc *BinaryEncoder[T]) Encode(v *T) ([]byte, error) {
 	enc.rlock.Lock()
 	defer enc.rlock.Unlock()
 
-	if enc.encoder == nil {
-		gob.Register(v)
-		enc.encoder = gob.NewEncoder(&enc.encBuf)
-	}
+	var buf bytes.Buffer
+	gob.Register(v)
+	encoder := gob.NewEncoder(&buf)
 
-	err := enc.encoder.Encode(v)
+	err := encoder.Encode(v)
 	if err != nil {
 		return nil, err
 	}
-	defer enc.encBuf.Reset()
-	return enc.encBuf.Bytes(), nil
+	return buf.Bytes(), nil
 }
 
 func (enc *BinaryEncoder[T]) Decode(data []byte, v *T) error {
 	enc.wlock.Lock()
 	defer enc.wlock.Unlock()
 
-	if enc.decoder == nil {
-		gob.Register(v)
-		enc.decoder = gob.NewDecoder(&enc.decBuf)
-	}
+	gob.Register(v)
+	decoder := gob.NewDecoder(bytes.NewReader(data))
 
-	enc.decBuf.Write(data)
-	defer enc.decBuf.Reset()
-	return enc.decoder.Decode(v)
+	return decoder.Decode(v)
 }
 
 type Bucket[K Key, T Entity] struct {

@@ -33,68 +33,68 @@ type GeneralSettings struct {
 	baseModel
 
 	// root dir for user data
-	RootDir     string  `key:"rootDir"`
-	Language    string  `key:"language"`
-	TextSize    float32 `key:"textSize"`
-	TypeFace    string  `key:"fontType"`
-	Theme       string  `key:"theme"`
-	CheckUpdate string  `key:"checkUpdate"`
-	DeviceID    string  `key:"deviceId"`
+	RootDir     string  `key:"rootDir" json:"rootDir"`
+	Language    string  `key:"language" json:"language"`
+	TextSize    float32 `key:"textSize" json:"textSize"`
+	TypeFace    string  `key:"fontType" json:"fontType"`
+	Theme       string  `key:"theme" json:"theme"`
+	CheckUpdate string  `key:"checkUpdate" json:"checkUpdate"`
+	DeviceID    string  `key:"deviceId" json:"deviceId"`
 
-	EnableLSPLogs        int    `key:"enableLspLogs"`
-	EnablePowerSaving    int    `key:"enablePowerSaving"`
-	ExternalTypst        string `key:"externalTypst"`    // typst executable path
-	ExternalTinymist     string `key:"externalTinymist"` // tinymist executable path
-	OpenPreviewInBrowser int    `key:"openPreviewInBrowser"`
+	EnableLSPLogs        int    `key:"enableLspLogs" json:"enableLspLogs"`
+	EnablePowerSaving    int    `key:"enablePowerSaving" json:"enablePowerSaving"`
+	ExternalTypst        string `key:"externalTypst" json:"externalTypst"`       // typst executable path
+	ExternalTinymist     string `key:"externalTinymist" json:"externalTinymist"` // tinymist executable path
+	OpenPreviewInBrowser int    `key:"openPreviewInBrowser" json:"openPreviewInBrowser"`
 }
 
 type EditorSettings struct {
 	baseModel
 	// typeface for editing
-	TypeFace         string  `key:"fontType"`
-	TextSize         float32 `key:"fontSize"`
-	Weight           int     `key:"fontWeight"`
-	LineHeightScale  float32 `key:"lineHeightScale"`
-	TabSize          int     `key:"tabSize"`
-	UseSoftTab       string  `key:"softTab"`
-	WrapLine         string  `key:"wrapLine"`
-	AutoSaveInterval int     `key:"autoSaveInterval"`
+	TypeFace         string  `key:"fontType" json:"fontType"`
+	TextSize         float32 `key:"fontSize" json:"fontSize"`
+	Weight           int     `key:"fontWeight" json:"fontWeight"`
+	LineHeightScale  float32 `key:"lineHeightScale" json:"lineHeightScale"`
+	TabSize          int     `key:"tabSize" json:"tabSize"`
+	UseSoftTab       string  `key:"softTab" json:"softTab"`
+	WrapLine         string  `key:"wrapLine" json:"wrapLine"`
+	AutoSaveInterval int     `key:"autoSaveInterval" json:"autoSaveInterval"`
 }
 
 type TypstSettings struct {
 	baseModel
-	Version             string `key:"version"`
-	PackageCacheDir     string `key:"cacheDir"`
-	PackageDir          string `key:"localPkgDir"`
-	ExtraFontPath       string `key:"extraFontPath"`
-	UseSysInputs        int    `key:"useSysInputs"`
-	IgnoreSystemFonts   int    `key:"ignoreSystemFonts"`
-	IgnoreEmbeddedFonts int    `key:"ignoreEmbeddedFonts"`
-	BuildDeps           int    `key:"buildDeps"`
-	OutputDir           string `key:"outputDir"`
+	Version             string `key:"version" json:"version"`
+	PackageCacheDir     string `key:"cacheDir" json:"cacheDir"`
+	PackageDir          string `key:"localPkgDir" json:"localPkgDir"`
+	ExtraFontPath       string `key:"extraFontPath" json:"extraFontPath"`
+	UseSysInputs        int    `key:"useSysInputs" json:"useSysInputs"`
+	IgnoreSystemFonts   int    `key:"ignoreSystemFonts" json:"ignoreSystemFonts"`
+	IgnoreEmbeddedFonts int    `key:"ignoreEmbeddedFonts" json:"ignoreEmbeddedFonts"`
+	BuildDeps           int    `key:"buildDeps" json:"buildDeps"`
+	OutputDir           string `key:"outputDir" json:"outputDir"`
 }
 
 type TpixSettings struct {
 	baseModel
 
-	Username     string `key:"username"`
-	Email        string `key:"email"`
-	AccessToken  string `key:"accessToken"`
-	RefreshToken string `key:"refreshToken"`
-	LoginAt      int64  `key:"loginAt"`
+	Username     string `key:"username" json:"username"`
+	Email        string `key:"email" json:"email"`
+	AccessToken  string `key:"accessToken" json:"accessToken"`
+	RefreshToken string `key:"refreshToken" json:"refreshToken"`
+	LoginAt      int64  `key:"loginAt" json:"loginAt"`
 }
 
 type AcpAgentSettings struct {
 	baseModel
 
-	AgentID   string `key:"agentId"`   // registry ID, or empty for custom
-	AgentName string `key:"agentName"` // display name
-	Cmd       string `key:"cmd"`       // resolved command, e.g. "npx"
-	Args      string `key:"args"`      // resolved args, space-separated
-	Env       string `key:"env"`       // extra env vars, space-separated KEY=value pairs
+	AgentID   string `key:"agentId" json:"agentId"`     // registry ID, or empty for custom
+	AgentName string `key:"agentName" json:"agentName"` // display name
+	Cmd       string `key:"cmd" json:"cmd"`             // resolved command, e.g. "npx"
+	Args      string `key:"args" json:"args"`           // resolved args, space-separated
+	Env       string `key:"env" json:"env"`             // extra env vars, space-separated KEY=value pairs
 
 	// MCP server
-	UseStaticMcpPort int `key:"useStaticMcpPort"` // use fixed port when starting MCP server.
+	UseStaticMcpPort int `key:"useStaticMcpPort" json:"useStaticMcpPort"` // use fixed port when starting MCP server.
 }
 
 func (s *AcpAgentSettings) Validate() error { return nil }
