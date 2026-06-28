@@ -3,6 +3,7 @@ package service
 import (
 	"io"
 	"log"
+	"sync"
 	"sync/atomic"
 	"time"
 
@@ -55,6 +56,8 @@ type TpixSessionService struct {
 	setting        *settings.TpixSettings
 	session        atomic.Pointer[TpixSession]
 	lastUpdateTime time.Time
+	updating       atomic.Bool
+	mu             sync.Mutex
 }
 
 func (t *TpixSessionService) Authenticated() bool {
@@ -68,7 +71,11 @@ func (t *TpixSessionService) Session() *TpixSession {
 	}
 
 	sn := t.session.Load()
-	if sn == nil || time.Since(t.lastUpdateTime) > profileUpdateInterval {
+
+	t.mu.Lock()
+	lastUpdateTime := t.lastUpdateTime
+	t.mu.Unlock()
+	if sn == nil || time.Since(lastUpdateTime) > profileUpdateInterval {
 		go t.updateSession()
 	}
 
@@ -120,8 +127,14 @@ func (t *TpixSessionService) login() error {
 }
 
 func (t *TpixSessionService) updateSession() error {
+	if !t.updating.CompareAndSwap(false, true) {
+		return nil
+	}
+	defer t.updating.Store(false)
+
 	profile, err := cli.GetUserProfile()
 	if err != nil {
+		log.Printf("update session error: %s", err)
 		return err
 	}
 
@@ -139,7 +152,9 @@ func (t *TpixSessionService) updateSession() error {
 	t.setting.Save()
 
 	t.session.Store(&session)
+	t.mu.Lock()
 	t.lastUpdateTime = time.Now()
+	t.mu.Unlock()
 
 	return nil
 }
