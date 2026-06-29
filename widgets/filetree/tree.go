@@ -244,8 +244,7 @@ func (t *TreeView) layout(gtx layout.Context, th *theme.Theme, dropTarget *FileN
 	return list.Layout(gtx, len(t.visibleNodes), func(gtx layout.Context, index int) layout.Dimensions {
 		flatNode := t.visibleNodes[index]
 		state := t.GetState(flatNode.Node.Path)
-		state.Editable.OnChanged = func(text string) {
-			t.isEditingNode = false
+		state.Editable.OnChanged = func(text string) error {
 			oldPath := flatNode.Node.Path
 			err := flatNode.Node.UpdateName(text)
 			if err != nil {
@@ -253,12 +252,31 @@ func (t *TreeView) layout(gtx layout.Context, th *theme.Theme, dropTarget *FileN
 				if t.OnErrorFunc != nil {
 					t.OnErrorFunc(err)
 				}
-				return
+				return err
 			}
+			// Only when rename of node succeededs do we update the editing status.
+			t.isEditingNode = false
+			// path changed, so we also need to delete the stale node state.
+			t.deleteState(oldPath)
+			// Re-register state under the new path, so the state survives the rebuild after we make
+			// it the selectedNode.
+			t.statesLock.Lock()
+			t.states[flatNode.Node.Path] = state
+			t.statesLock.Unlock()
+			t.pendingRebuild = true
+
+			// Update tree selection to track the renamed node.
+			if t.selectedNode != nil && t.selectedNode != flatNode.Node {
+				prevState := t.GetState(t.selectedNode.Path)
+				prevState.Label.Unselect()
+			}
+			t.selectedNode = flatNode.Node
+			state.Label.Select()
 
 			if t.OnFileUpdatedFunc != nil {
 				t.OnFileUpdatedFunc(flatNode.Node, oldPath)
 			}
+			return nil
 		}
 		state.Editable.Color = th.Fg
 		state.Editable.TextSize = th.TextSize
@@ -730,6 +748,9 @@ func (t *TreeView) findVisibleNode(path string) *FlatNode {
 // StartEditing turn the node into a editable state to edit its name.
 func (t *TreeView) StartEditing(gtx layout.Context, node *FileNode) {
 	nodeState := t.GetState(node.Path)
+	nodeState.Editable.OnCancel = func() {
+		t.isEditingNode = false
+	}
 	nodeState.Editable.SetEditing(true)
 	t.isEditingNode = true
 	gtx.Execute(op.InvalidateCmd{})

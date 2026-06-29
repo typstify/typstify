@@ -64,8 +64,8 @@ github.com/modelcontextprotocol/go-sdk v1.6.1 h1:0zOSupjKUxPKSocPT1Wtago+mUHU2/u
 github.com/modelcontextprotocol/go-sdk v1.6.1/go.mod h1:kzm3kzFL1/+AziGOE0nUs3gvPoNxMCvkxokMkuFapXQ=
 github.com/mustafaturan/bus/v3 v3.0.3 h1:PMEUVKpfI9FOUw32o3wAHRaBS1XGxh6cFCy/VHktPfo=
 github.com/mustafaturan/bus/v3 v3.0.3/go.mod h1:JVCyq6Pb6S/IGI6LrzKH5vlBZ9ifsd1Js+wd4Y2+7Xg=
-github.com/oligo/gioview v0.9.1 h1:pR0RLO3cr6eYAD4QVewGlSSjadQNAB/4lA90Q67IHV8=
-github.com/oligo/gioview v0.9.1/go.mod h1:fJoQwIDtW4jVD/5x31Hqo1eQGrqnTbB6LQ7pbygz5zw=
+github.com/oligo/gioview v0.9.2 h1:cy0JC4TrFXAvHsoZXFKIPBlP+bJvaLV+NgkJTxRqGqY=
+github.com/oligo/gioview v0.9.2/go.mod h1:fJoQwIDtW4jVD/5x31Hqo1eQGrqnTbB6LQ7pbygz5zw=
 github.com/oligo/gvcode v0.7.1-0.20260516161226-1f442d428ec2 h1:/xiBY4OykG2hCDXnqIGm/k721mKRGCxQvicS1jeGF2o=
 github.com/oligo/gvcode v0.7.1-0.20260516161226-1f442d428ec2/go.mod h1:Qo0e/5meJuHTX3Sy632x76ANINdk5WYZ6tFxLzEF9gY=
 github.com/pelletier/go-toml/v2 v2.2.4 h1:mye9XuhQ6gvn5h28+VilKrrPoQVanw5PMw/TB0t5Ec4=

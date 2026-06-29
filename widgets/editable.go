@@ -22,7 +22,9 @@ type Editable struct {
 	Color    color.NRGBA
 
 	//The callback to be called when Text is changed.
-	OnChanged func(text string)
+	OnChanged func(text string) error
+	// OnCancel is called when editing is cancelled (Escape or focus loss).
+	OnCancel func()
 
 	editor        wg.Editor
 	hovering      bool
@@ -88,10 +90,15 @@ func (e *Editable) Update(gtx C) {
 	// handle editor events:
 	if ev, ok := e.editor.Update(gtx); ok {
 		if _, ok := ev.(wg.SubmitEvent); ok {
-			e.editing = false
-			e.Text = e.editor.Text()
+			text := e.editor.Text()
 			if e.OnChanged != nil {
-				e.OnChanged(e.Text)
+				if err := e.OnChanged(text); err == nil {
+					e.editing = false
+					e.Text = text
+				}
+			} else {
+				e.editing = false
+				e.Text = text
 			}
 		}
 	}
@@ -100,6 +107,9 @@ func (e *Editable) Update(gtx C) {
 func (e *Editable) quit() {
 	e.editing = false
 	e.editorFocused = false
+	if e.OnCancel != nil {
+		e.OnCancel()
+	}
 }
 
 func (e *Editable) Layout(gtx C, th *material.Theme) D {
