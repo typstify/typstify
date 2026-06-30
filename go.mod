@@ -3,8 +3,8 @@ module looz.ws/typstify
 go 1.25.5
 
 require (
-	gioui.org v0.9.1-0.20251215212054-7bcb315ee174
-	gioui.org/x v0.9.0
+	gioui.org v0.10.0
+	gioui.org/x v0.10.0
 	github.com/alecthomas/chroma/v2 v2.15.0
 	github.com/apstndb/go-lsp-export v0.0.0-20250111110713-da502b65ef68
 	github.com/coder/acp-go-sdk v0.13.5
@@ -36,8 +36,9 @@ require (
 )
 
 // use a local patch to fix the focus switching issue between the native webview and GioView
-// Remove this if https://github.com/gioui/gio/pull/165 is accepted.
-replace gioui.org => ../gio
+// Remove this if https://github.com/gioui/gio/pull/165 is accepted. 
+// ONLY MacOS version needs to be patched, so we comment this for now.
+// replace gioui.org => ../gio-project/gio
 
 require (
 	gioui.org/shader v1.0.8 // indirect
@@ -47,7 +48,7 @@ require (
 	github.com/dlclark/regexp2 v1.11.4 // indirect
 	github.com/ebitengine/purego v0.8.0 // indirect
 	github.com/go-ole/go-ole v1.2.6 // indirect
-	github.com/go-text/typesetting v0.3.0 // indirect
+	github.com/go-text/typesetting v0.3.4 // indirect
 	github.com/google/jsonschema-go v0.4.3 // indirect
 	github.com/inkeliz/go_inkwasm v0.1.23-0.20240519174017-989fbe5b10f6 // indirect
 	github.com/kylelemons/godebug v1.1.0 // indirect
