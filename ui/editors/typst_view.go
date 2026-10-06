@@ -61,6 +61,7 @@ type TypstEditor struct {
 	targetFile string
 	header     *editorHeader
 	lspReady   bool
+	lspClient  *lsp.Client
 
 	// Preview
 	uiPreviewer    *uipreview.Previewer
@@ -195,6 +196,7 @@ func (te *TypstEditor) setupLsp(gtx layout.Context) {
 		return
 	}
 
+	te.lspClient = client
 	te.srcEditor.SetupLsp(gtx, client)
 }
 
@@ -450,6 +452,20 @@ func (te *TypstEditor) toggleChat() {
 
 // Implements StatusIndicator to let statusbar render it.
 func (te *TypstEditor) LayoutStatus(gtx C, th *theme.Theme) D {
+	return layout.Flex{
+		Axis:      layout.Horizontal,
+		Alignment: layout.Middle,
+	}.Layout(gtx,
+		layout.Rigid(func(gtx C) D {
+			return te.layoutCompileStatus(gtx, th)
+		}),
+		layout.Rigid(func(gtx C) D {
+			return te.layoutEditorStatus(gtx, th)
+		}),
+	)
+}
+
+func (te *TypstEditor) layoutEditorStatus(gtx C, th *theme.Theme) D {
 	if !te.previewVisible {
 		return te.srcEditor.LayoutStatus(gtx, th, te.srv)
 	}

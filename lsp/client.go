@@ -38,6 +38,9 @@ type Client struct {
 	docCache *documentCache
 	// Messages: they should be reset whenever they have been consumed.
 	diagnostics []*DocDiagnostics
+
+	compileStatus   atomic.Pointer[CompileStatus]
+	onCompileStatus atomic.Pointer[func()]
 }
 
 func newClient(server *Server) *Client {
@@ -152,6 +155,7 @@ func (c *Client) buildInitOptions(setting *settings.Settings) map[string]any {
 			"enabled": false,
 			"when":    "onType",
 		},
+		"compileStatus":  "enable",
 		"rootPath":       c.server.Workspace(),
 		"fontPaths":      fontPaths,
 		"systemFonts":    typstSettings.IgnoreSystemFonts == 0,
@@ -348,6 +352,21 @@ func (c *Client) Handle(ctx context.Context, req *jsonrpc2.Request) (interface{}
 		}
 		docDiagnostics := DocDiagnostics{URI: params.URI, Diagnostics: params.Diagnostics, refreshed: true}
 		c.updateDiagnostics(docDiagnostics)
+	case rpcMethodCompileStatus:
+		var status CompileStatus
+		err := json.Unmarshal(req.Params, &status)
+		if err != nil {
+			c.logger.Error("Failed to parse CompileStatus", "error", err)
+			return nil, err
+		}
+		// Only keep finished compilations, so the status does not flicker while typing.
+		if status.Status == CompileStateCompiling {
+			break
+		}
+		c.compileStatus.Store(&status)
+		if fn := c.onCompileStatus.Load(); fn != nil {
+			(*fn)()
+		}
 	default:
 		c.logger.Debug("LSP notification not handled", "method", req.Method)
 	}
