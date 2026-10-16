@@ -215,7 +215,6 @@ func (s *ServiceFacade) SetProjectDir(dir string) {
 	} else {
 		client.SetServreLogStreamer(io.Discard)
 	}
-	client.OnCompileStatusChanged(s.RefreshWindow)
 
 	previewMode := lsp.PreviewMode(s.Workspace().LoadWorkspaceSettings().PreviewMode)
 	if previewMode == "" {
