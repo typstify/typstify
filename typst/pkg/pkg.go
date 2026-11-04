@@ -3,6 +3,7 @@ package pkg
 
 import (
 	"fmt"
+	"io"
 	"os"
 	"path/filepath"
 	"sync/atomic"
@@ -10,6 +11,7 @@ import (
 	tpix "github.com/typstify/tpix-cli"
 	"github.com/typstify/tpix-cli/api"
 	"github.com/typstify/tpix-cli/deps"
+	"github.com/typstify/tpix-cli/storage"
 	"looz.ws/typstify/service/settings"
 )
 
@@ -25,7 +27,8 @@ func (p *TypstPkg) ImportPath() string {
 }
 
 type TypstPkgService struct {
-	cacheDir    string
+	//	cacheDir    string
+	pkgCache    storage.Store
 	tpixConfig  *settings.TpixSettings
 	tpixClient  *tpix.TpixSdk
 	searchState searchState
@@ -61,17 +64,26 @@ func DefaultCacheDir() string {
 	return filepath.Join(dir, "typst", "packages")
 }
 
-func NewTypstPkgService(config *settings.TypstSettings, tpixConfig *settings.TpixSettings, tpixClient *tpix.TpixSdk) *TypstPkgService {
+func NewTypstPkgService(config *settings.TypstSettings, tpixConfig *settings.TpixSettings, reporterWriter io.Writer) *TypstPkgService {
 	cacheDir := config.PackageCacheDir
 
 	if cacheDir == "" {
 		cacheDir = DefaultCacheDir()
 	}
 
+	store, err := storage.NewFsPackageStore(cacheDir)
+	if err != nil {
+		panic("Cannot build Typst package cache: " + cacheDir)
+	}
+
+	httpClient := api.NewHttpClient(&tpixApiKeyProvider{setting: tpixConfig})
+	client := tpix.NewTpixSdk(httpClient, store)
+	client.WithReporter(tpixCliReporter{w: reporterWriter}.Report)
+
 	return &TypstPkgService{
-		cacheDir:   cacheDir,
+		pkgCache:   store,
 		tpixConfig: tpixConfig,
-		tpixClient: tpixClient,
+		tpixClient: client,
 	}
 }
 
@@ -88,27 +100,16 @@ func (s *TypstPkgService) CreateSampleDocument(projectDir string, name string) (
 }
 
 func (s *TypstPkgService) CachedPkgs() ([]TypstPkg, error) {
-	pkgMap, err := scanPackages(s.cacheDir)
+	pkgMap, err := scanPackages(s.pkgCache)
 	if err != nil {
 		return nil, err
 	}
 
 	list := make([]TypstPkg, 0)
 	for _, p := range pkgMap {
-		for _, v := range p {
-			list = append(list, v)
-		}
+		list = append(list, p)
 	}
 	return list, nil
-}
-
-func (s *TypstPkgService) GetLocalPackagePath(pkgSpec string) string {
-	dep := deps.ParseDependency(pkgSpec)
-	return filepath.Join(s.cacheDir, dep.RelPath())
-}
-
-func (s *TypstPkgService) CacheDir() string {
-	return s.cacheDir
 }
 
 func (s *TypstPkgService) Download(namespace string, name string, version string) (string, int, error) {
@@ -117,27 +118,34 @@ func (s *TypstPkgService) Download(namespace string, name string, version string
 		spec += ":" + version
 	}
 
-	deps, err := s.tpixClient.DownloadPackage(spec, s.cacheDir, false)
+	deps, err := s.tpixClient.DownloadPackage(spec, false)
 	if err != nil {
 		return "", 0, err
 	}
 
-	path := filepath.Join(s.cacheDir, deps[0].RelPath())
+	path, err := s.pkgCache.Path(deps[0].Package)
+	if err != nil {
+		return "", 0, err
+	}
 	return path, len(deps), nil
 }
 
 func (s *TypstPkgService) DownloadWithSpec(spec string) (string, int, error) {
-	deps, err := s.tpixClient.DownloadPackage(spec, s.cacheDir, false)
+	deps, err := s.tpixClient.DownloadPackage(spec, false)
 	if err != nil {
 		return "", 0, err
 	}
 
-	path := filepath.Join(s.cacheDir, deps[0].RelPath())
+	path, err := s.pkgCache.Path(deps[0].Package)
+	if err != nil {
+		return "", 0, err
+	}
 	return path, len(deps), nil
 }
 
 func (s *TypstPkgService) PullDependencies(projectDir string) error {
-	return s.tpixClient.DownloadProjectDependencies(projectDir, s.cacheDir, false)
+	_, err := s.tpixClient.DownloadProjectDependencies(projectDir, false)
+	return err
 }
 
 func (s *TypstPkgService) Bundle(projectDir string, outputDir string) (string, error) {
@@ -147,7 +155,8 @@ func (s *TypstPkgService) Bundle(projectDir string, outputDir string) (string, e
 }
 
 func (s *TypstPkgService) Push(packagePath string, namespace string) error {
-	return s.tpixClient.PushPackage(packagePath, namespace)
+	_, err := s.tpixClient.PushPackage(packagePath, namespace)
+	return err
 }
 
 func (s *TypstPkgService) AccessibleNamesapces() ([]api.UserNamespace, error) {
@@ -170,9 +179,7 @@ func (s *TypstPkgService) GetPkgDetail(pkgSpec string) (TypstPkg, error) {
 		latestVersion = resp.Versions[0].Version
 	}
 
-	cachePath := filepath.Join(s.cacheDir, resp.Namespace, resp.Name, latestVersion)
-	_, statErr := os.Stat(cachePath)
-	isCached := statErr == nil
+	exists, err := s.pkgCache.Has(deps.Dependency{Namespace: resp.Namespace, Name: resp.Name, Version: latestVersion})
 
 	return TypstPkg{
 		SearchResult: api.SearchResult{
@@ -185,11 +192,15 @@ func (s *TypstPkgService) GetPkgDetail(pkgSpec string) (TypstPkg, error) {
 			IsTemplate:    resp.IsTemplate,
 			CreatedAt:     resp.CreatedAt,
 		},
-		IsCached: isCached,
+		IsCached: err == nil && exists,
 		Versions: resp.Versions,
 	}, nil
 }
 
 func (s *TypstPkgService) PkgIndexForLLM() (string, error) {
 	return s.tpixClient.GetPackageIndex()
+}
+
+func (s *TypstPkgService) TpixClient() *tpix.TpixSdk {
+	return s.tpixClient
 }

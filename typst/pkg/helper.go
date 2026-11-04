@@ -12,6 +12,7 @@ import (
 
 	"github.com/typstify/tpix-cli/api"
 	"github.com/typstify/tpix-cli/bundler"
+	"github.com/typstify/tpix-cli/storage"
 	"looz.ws/typstify/typst"
 )
 
@@ -30,98 +31,72 @@ const (
 // 1. namespace folders
 // 2. package folders
 // 3. version folders
-// The returned data holds the same 3 layer mapping.
-func scanPackages(pkgDir string) (map[string]map[string]TypstPkg, error) {
-	pkgMap := make(map[string]map[string]TypstPkg)
+// The returned data holds all found packages with their metadata.
+func scanPackages(store storage.Store) (map[string]TypstPkg, error) {
+	pkgMap := make(map[string]TypstPkg)
 
 	// Read namespaces.
-	entries, err := os.ReadDir(pkgDir)
+	entries, err := store.List(nil)
 	if err != nil {
 		return pkgMap, err
 	}
 
 	for _, entry := range entries {
-		if !entry.IsDir() {
-			// Not a namespace dir
-			continue
-		}
-		namespace := entry.Name()
-		if _, ok := pkgMap[namespace]; !ok {
-			pkgMap[namespace] = make(map[string]TypstPkg)
+		version_view, err := store.View(entry)
+		if err != nil {
+			return nil, err
 		}
 
-		// read packages
-		pkgEntries, err := os.ReadDir(filepath.Join(pkgDir, namespace))
+		metaFile, err := version_view.Open("typst.toml")
 		if err != nil {
 			log.Println("scan package error: ", err)
+			version_view.Close()
 			continue
 		}
 
-		for _, pkgEntry := range pkgEntries {
-			if !pkgEntry.IsDir() {
-				// Not a package dir
-				continue
-			}
-			packageName := pkgEntry.Name()
-			// read versions
-			verEntries, err := os.ReadDir(filepath.Join(pkgDir, namespace, packageName))
-			if err != nil {
-				log.Println("scan package error: ", err)
-				continue
-			}
+		metadata, err := io.ReadAll(metaFile)
+		if err != nil {
+			log.Println("read package metadata error: ", err)
+			metaFile.Close()
+			version_view.Close()
+			continue
+		}
 
-			for _, verEntry := range verEntries {
-				if !verEntry.IsDir() {
-					// not a version dir
-					continue
-				}
-				version := verEntry.Name()
-				metaFile, err := os.Open(filepath.Join(pkgDir, namespace, packageName, version, "typst.toml"))
-				if err != nil {
-					log.Println("scan package error: ", err)
-					continue
-				}
+		var pkgInfo bundler.Manifest
+		err = bundler.DecodeBytes(metadata, &pkgInfo)
+		if err != nil {
+			log.Printf("scan package %s error: %v", entry, err)
+			metaFile.Close()
+			version_view.Close()
+			continue
+		}
 
-				metadata, err := io.ReadAll(metaFile)
-				if err != nil {
-					log.Println("read package metadata error: ", err)
-					continue
-				}
-
-				var pkgInfo bundler.Manifest
-				err = bundler.DecodeBytes(metadata, &pkgInfo)
-				if err != nil {
-					log.Printf("scan package %s error: %v", filepath.Join(pkgDir, namespace, packageName, version), err)
-					continue
-				}
-
-				// add to the final pkgMap
-				p, ok := pkgMap[namespace][packageName]
-				if !ok {
-					p = TypstPkg{
-						IsCached: true,
-						SearchResult: api.SearchResult{
-							Namespace:   namespace,
-							Name:        pkgInfo.Package.Name,
-							Description: pkgInfo.Package.Description,
-							License:     pkgInfo.Package.License,
-							IsTemplate:  pkgInfo.Template != nil,
-							Authors:     pkgInfo.Package.Authors,
-							Categories:  pkgInfo.Package.Categories,
-							Disciplines: pkgInfo.Package.Disciplines,
-						},
-					}
-				}
-
-				p.Versions = append(p.Versions, api.PackageVersionInfo{
-					Version: pkgInfo.Package.Version,
-					Meta:    pkgInfo,
-				})
-
-				pkgMap[namespace][packageName] = p
-
+		// add to the final pkgMap
+		p, ok := pkgMap[entry.Name]
+		if !ok {
+			p = TypstPkg{
+				IsCached: true,
+				SearchResult: api.SearchResult{
+					Namespace:   entry.Namespace,
+					Name:        pkgInfo.Package.Name,
+					Description: pkgInfo.Package.Description,
+					License:     pkgInfo.Package.License,
+					IsTemplate:  pkgInfo.Template != nil,
+					Authors:     pkgInfo.Package.Authors,
+					Categories:  pkgInfo.Package.Categories,
+					Disciplines: pkgInfo.Package.Disciplines,
+				},
 			}
 		}
+
+		p.Versions = append(p.Versions, api.PackageVersionInfo{
+			Version:        pkgInfo.Package.Version,
+			MinCompilerVer: pkgInfo.Package.Compiler,
+		})
+
+		pkgMap[entry.Name] = p
+		metaFile.Close()
+		version_view.Close()
 	}
 
 	return pkgMap, nil

@@ -321,15 +321,15 @@ func (tn *FileTreeNav) onFileDeleted(node *filetree.FileNode) {
 
 func (tn *FileTreeNav) nodeMarker(nodePath string) *filetree.NodeMarker {
 	// First check if it's managed bibliography file.
-	settings := tn.srv.Workspace().LoadWorkspaceSettings()
-	if len(settings.BibFiles) > 0 {
+	managedBibs := tn.srv.Bibliography().LoadBibliographies()
+	if len(managedBibs) > 0 {
 		relPath, err := filepath.Rel(tn.tree.Root(), nodePath)
 		if err != nil {
 			log.Println("get relative path error: ", err)
 			return nil
 		}
 
-		idx := slices.IndexFunc(settings.BibFiles, func(bib service.ManagedBibliography) bool {
+		idx := slices.IndexFunc(managedBibs, func(bib service.ManagedBibliography) bool {
 			return bib.File == relPath
 		})
 		if idx >= 0 {
@@ -337,7 +337,7 @@ func (tn *FileTreeNav) nodeMarker(nodePath string) *filetree.NodeMarker {
 				Kind:  "bib",
 				Color: func(baseColor color.NRGBA) color.NRGBA { return utils.DisableColor(baseColor) },
 				Meta: map[string]any{
-					"meta": settings.BibFiles[idx],
+					"meta": managedBibs[idx],
 				},
 			}
 		}

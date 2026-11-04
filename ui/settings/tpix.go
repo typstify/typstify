@@ -87,7 +87,7 @@ func (t *TpixSettingsView) updateProfile() error {
 		return nil
 	}
 
-	profile, err := t.srv.TpixClient().GetUserProfile()
+	profile, err := t.srv.PkgService().TpixClient().GetUserProfile()
 	if err != nil {
 		log.Printf("update profile error: %s", err)
 		return err

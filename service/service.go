@@ -15,8 +15,6 @@ import (
 	"github.com/oligo/gioview/explorer"
 	"github.com/oligo/gioview/image"
 	"github.com/oligo/gioview/view"
-	"github.com/typstify/tpix-cli"
-	"github.com/typstify/tpix-cli/api"
 	"looz.ws/typstify/agent"
 	"looz.ws/typstify/lsp"
 	"looz.ws/typstify/service/bus"
@@ -39,6 +37,7 @@ type ServiceFacade struct {
 	settings           *settings.Settings
 	eventbus           *bus.EventBus
 	workspaceSrv       *WorkspaceService
+	bibliographySrv    *BibliographyService
 	pkgService         *pkg.TypstPkgService
 	windowSrv          *WindowService
 	previewSrv         *lsp.PreviewService
@@ -67,14 +66,14 @@ func NewService(ctx context.Context) *ServiceFacade {
 		consoleState: console.NewConsoleState(1000),
 	}
 
-	pkgSrv := pkg.NewTypstPkgService(st.Typst(), st.Tpix(), s.TpixClient())
+	pkgSrv := pkg.NewTypstPkgService(st.Typst(), st.Tpix(), s.consoleState)
 	s.pkgService = pkgSrv
 
 	eventbus.Subscribe(s, "service.onSettingUpdate", bus.TopicSettingsUpdated, func(topic string, data interface{}) {
-		s.pkgService = pkg.NewTypstPkgService(st.Typst(), st.Tpix(), s.TpixClient())
+		s.pkgService = pkg.NewTypstPkgService(st.Typst(), st.Tpix(), s.consoleState)
 	})
 
-	s.workspaceSrv = NewWorkspaceService(st.General().RootDir, eventbus, s.TpixClient())
+	s.workspaceSrv = NewWorkspaceService(st.General().RootDir, eventbus)
 
 	// init executable lookup path.
 	lsp.SetupCmdBuilder(s.settings.General().ExternalTinymist)
@@ -99,6 +98,10 @@ func (s *ServiceFacade) PkgService() *pkg.TypstPkgService {
 
 func (s *ServiceFacade) Workspace() *WorkspaceService {
 	return s.workspaceSrv
+}
+
+func (s *ServiceFacade) Bibliography() *BibliographyService {
+	return s.bibliographySrv
 }
 
 func (s *ServiceFacade) WindowService() *WindowService {
@@ -130,6 +133,11 @@ func (s *ServiceFacade) Close(ctx context.Context) {
 	s.workspaceSrv.Close()
 	s.windowSrv.Shutdown()
 	s.windowSrv.Wait()
+
+	if s.bibliographySrv != nil {
+		s.bibliographySrv.Close()
+	}
+
 	lsp.StopLsp()
 	if s.previewSrv != nil {
 		s.previewSrv.Destroy(ctx)
@@ -203,6 +211,10 @@ func (s *ServiceFacade) SetProjectDir(dir string) {
 	s.currentProjectDir = dir
 
 	s.Workspace().SwitchWorkspace(s.currentProjectDir)
+	if s.bibliographySrv != nil {
+		s.bibliographySrv.Close()
+	}
+	s.bibliographySrv = NewBibliographyService(s.currentProjectDir, s.pkgService.TpixClient())
 
 	// init executable lookup path.
 	lsp.SetupCmdBuilder(s.settings.General().ExternalTinymist)
@@ -302,7 +314,7 @@ func (s *ServiceFacade) initMcpServer(ctx context.Context) {
 	editorToolSrv := mcp.NewEditorMcpService(s.currentProjectDir, s.settings, client, s.previewSrv, s.eventbus, activeDocQuerier)
 	s.mcpServer.RegisterToolProvider(editorToolSrv)
 
-	pkgToolSrv := mcp.NewPackageMcpService(s.currentProjectDir, s.TpixClient(), s.PkgService())
+	pkgToolSrv := mcp.NewPackageMcpService(s.currentProjectDir, s.PkgService().TpixClient(), s.PkgService())
 	s.mcpServer.RegisterToolProvider(pkgToolSrv)
 	s.mcpServer.RegisterResourceProvider(pkgToolSrv)
 
@@ -446,14 +458,6 @@ func (s *ServiceFacade) AcpSessionManager() *agent.SessionManager {
 	}
 
 	return s.acpSessionManager
-}
-
-func (s *ServiceFacade) TpixClient() *tpix.TpixSdk {
-	httpClient := api.NewHttpClient(&tpixApiKeyProvider{setting: s.settings.Tpix()})
-	client := tpix.NewTpixSdk(httpClient)
-	client.WithReporter(tpixCliReporter{w: s.consoleState}.Report)
-
-	return client
 }
 
 func (s *ServiceFacade) Authenticated() bool {

@@ -25,7 +25,7 @@ require (
 	github.com/rogpeppe/go-internal v1.14.1
 	github.com/sahilm/fuzzy v0.1.3
 	github.com/saintfish/chardet v0.0.0-20230101081208-5e3ef4b5456d
-	github.com/typstify/tpix-cli v0.12.0
+	github.com/typstify/tpix-cli v0.15.1
 	go.etcd.io/bbolt v1.3.11
 	golang.org/x/exp/jsonrpc2 v0.0.0-20250911091902-df9299821621
 	golang.org/x/exp/shiny v0.0.0-20261014143641-f0251eb4aa3e
