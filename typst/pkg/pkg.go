@@ -6,7 +6,7 @@ import (
 	"io"
 	"os"
 	"path/filepath"
-	"sync/atomic"
+	"sync"
 
 	tpix "github.com/typstify/tpix-cli"
 	"github.com/typstify/tpix-cli/api"
@@ -34,10 +34,12 @@ type TypstPkgService struct {
 	searchState searchState
 }
 
+// searchState caches the latest TPIX search response. Searches are issued from
+// background goroutines, so the cache is guarded by a mutex.
 type searchState struct {
-	loading   atomic.Bool
-	data      atomic.Pointer[api.SearchResponse]
-	searchKey string
+	mu   sync.Mutex
+	key  string
+	data *api.SearchResponse
 }
 
 func (p *TypstPkg) ThumbUrl(size string) string {

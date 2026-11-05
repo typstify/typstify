@@ -1,48 +1,54 @@
 package pkg
 
 import (
+	"errors"
 	"fmt"
 
 	"github.com/typstify/tpix-cli/api"
 )
 
-// ListPkgs queries packages/templates from TPIX package index, this includes
+// searchResultLimit caps the number of packages fetched from TPIX.
+const searchResultLimit = 100
+
+// SearchPkgs queries packages/templates from TPIX package index, this includes
 // public and private namespaces the user have access permissions.
 func (s *TypstPkgService) SearchPkgs(namespace string, kind string, category string, query string) ([]TypstPkg, int, error) {
-	if s.searchState.searchKey != "" && s.searchState.searchKey == fmt.Sprintf("%s:%s:%s", namespace, kind, query) {
-		cachedData := s.searchState.data.Load()
-		if cachedData != nil {
-			pkgs := convertToPkg(cachedData)
-			return pkgs, cachedData.Total, nil
-		}
+	key := fmt.Sprintf("%s:%s:%s:%s", namespace, kind, category, query)
+
+	if resp := s.cachedSearch(key); resp != nil {
+		return convertToPkg(resp), resp.Total, nil
 	}
 
-	if s.searchState.loading.Load() {
-		return nil, 0, nil
-	}
-
-	resp, err := s.search(namespace, kind, category, query)
+	resp, err := s.tpixClient.SearchPackages(namespace, query, kind, category, "", searchResultLimit)
 	if err != nil {
 		return nil, 0, err
 	}
-
-	pkgs := convertToPkg(resp)
-	s.searchState.data.Store(resp)
-
-	return pkgs, resp.Total, nil
-}
-
-func (s *TypstPkgService) search(namespace string, kind string, category string, query string) (*api.SearchResponse, error) {
-	if !s.searchState.loading.CompareAndSwap(false, true) {
-		return nil, nil
+	if resp == nil {
+		return nil, 0, errors.New("empty search response")
 	}
 
-	defer func() {
-		s.searchState.loading.CompareAndSwap(true, false)
-	}()
+	s.cacheSearch(key, resp)
 
-	return s.tpixClient.SearchPackages(namespace, query, kind, category, "", 100)
+	return convertToPkg(resp), resp.Total, nil
+}
 
+func (s *TypstPkgService) cachedSearch(key string) *api.SearchResponse {
+	s.searchState.mu.Lock()
+	defer s.searchState.mu.Unlock()
+
+	if s.searchState.key != key {
+		return nil
+	}
+
+	return s.searchState.data
+}
+
+func (s *TypstPkgService) cacheSearch(key string, resp *api.SearchResponse) {
+	s.searchState.mu.Lock()
+	defer s.searchState.mu.Unlock()
+
+	s.searchState.key = key
+	s.searchState.data = resp
 }
 
 func convertToPkg(resp *api.SearchResponse) []TypstPkg {

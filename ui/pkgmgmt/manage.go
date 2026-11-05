@@ -3,6 +3,7 @@ package pkgmgmt
 import (
 	"errors"
 	"sync/atomic"
+	"time"
 
 	"gioui.org/font"
 	"gioui.org/layout"
@@ -22,6 +23,7 @@ import (
 	"looz.ws/typstify/service/bus"
 	"looz.ws/typstify/typst/pkg"
 	"looz.ws/typstify/ui/statusbar"
+	"looz.ws/typstify/utils"
 	"looz.ws/typstify/widgets"
 )
 
@@ -44,9 +46,22 @@ type PkgListView struct {
 	categoryList     *CategoryList
 	packageList      *PkgList
 	cards            []*PkgCard
-	lastFetched      atomic.Pointer[[]*PkgCard]
+	lastFetched      atomic.Pointer[pkgFetchResult]
 	lastFetchedCount int
 	lastFetchErr     error
+
+	// searchSeq identifies the latest search, so the results of a slow, stale
+	// search can be discarded.
+	searchSeq       atomic.Uint64
+	searchDebouncer *utils.Debouncer
+}
+
+// pkgFetchResult is the result of a package search. It is published atomically
+// because the search runs on a background goroutine.
+type pkgFetchResult struct {
+	cards []*PkgCard
+	count int
+	err   error
 }
 
 func (vw *PkgListView) ID() view.ViewID {
@@ -60,9 +75,7 @@ func (vw *PkgListView) Title() string {
 func (vw *PkgListView) OnNavTo(intent view.Intent) error {
 	vw.BaseView.OnNavTo(intent)
 
-	go func() {
-		vw.loadData(vw.kindSelect.Value(), vw.categoryList.GetChecked(), vw.searchInput.Text())
-	}()
+	vw.search(vw.kindSelect.Value(), vw.categoryList.GetChecked(), vw.searchInput.Text())
 
 	return nil
 }
@@ -179,62 +192,73 @@ func (vw *PkgListView) Layout(gtx C, th *theme.Theme) D {
 }
 
 func (vw *PkgListView) update(gtx C) {
-	reload := false
-	if vw.searchInput.Changed() || vw.searchInput.Submitted() {
-		reload = true
-	}
+	filtersChanged := vw.kindSelect.Update(gtx)
 	if vw.categoryList.Update(gtx) {
-		reload = true
+		filtersChanged = true
 	}
-	if vw.kindSelect.Update(gtx) {
-		reload = true
-	}
+	typed := vw.searchInput.Changed() || vw.searchInput.Submitted()
 
-	if reload {
+	if filtersChanged || typed {
+		kind := vw.kindSelect.Value()
+		category := vw.categoryList.GetChecked()
+		query := vw.searchInput.Text()
+
 		// Show loading immediately while data loads in background
 		vw.packageList = newPkgList(nil, true)
 
-		go func() {
-			vw.loadData(vw.kindSelect.Value(), vw.categoryList.GetChecked(), vw.searchInput.Text())
-		}()
+		if typed {
+			// Debounce typing so we do not send a request for every keystroke.
+			vw.searchDebouncer.Run(func() {
+				vw.search(kind, category, query)
+			})
+		} else {
+			vw.search(kind, category, query)
+		}
 	}
 
-	if old := vw.lastFetched.Swap(nil); old != nil {
-		vw.cards = *old
+	if result := vw.lastFetched.Swap(nil); result != nil {
+		vw.cards = result.cards
+		vw.lastFetchedCount = result.count
+		vw.lastFetchErr = result.err
 		vw.packageList = newPkgList(vw.cards, false)
 	}
 
 }
 
-func (vw *PkgListView) loadData(kind string, category string, query string) {
-	go func() {
-		vw.srv.EventBus().Emit(bus.TopicStatusbarNotifyEvent, statusbar.Notification{Content: i18n.Translate("Query packages...")})
+// search fetches packages in the background. Only the result of the latest
+// search is published, so the response of a slower, older query can not
+// overwrite the results of a newer one.
+func (vw *PkgListView) search(kind string, category string, query string) {
+	seq := vw.searchSeq.Add(1)
 
-		cards := make([]*PkgCard, 0)
+	vw.srv.EventBus().Emit(bus.TopicStatusbarNotifyEvent, statusbar.Notification{Content: i18n.Translate("Query packages...")})
+
+	go func() {
+		result := &pkgFetchResult{}
 
 		results, count, err := vw.srv.PkgService().SearchPkgs("", kind, category, query)
 		if err != nil {
-			vw.lastFetchedCount = 0
-			vw.lastFetchErr = err
-			vw.lastFetched.Store(&cards)
+			result.err = err
 			vw.srv.EventBus().Emit(bus.TopicStatusbarNotifyEvent, statusbar.Notification{Content: i18n.Translate("Query packages failed: ") + err.Error()})
+		} else {
+			result.count = count
+			result.cards = make([]*PkgCard, 0, len(results))
+			for _, p := range results {
+				result.cards = append(result.cards, newPkgCard(p, func(pkgInfo *pkg.TypstPkg) {
+					vw.downloadPkg(pkgInfo)
+				}))
+			}
+
+			vw.srv.EventBus().Emit(bus.TopicStatusbarNotifyEvent, statusbar.Notification{Content: i18n.Translate("Typst packages info loaded."), Level: 0})
+		}
+
+		// A newer search has been started in the meantime, drop this result.
+		if vw.searchSeq.Load() != seq {
 			return
 		}
 
-		vw.lastFetchErr = nil
-		for _, p := range results {
-			card := newPkgCard(p,
-				func(pkgInfo *pkg.TypstPkg) {
-					vw.downloadPkg(pkgInfo)
-				})
-
-			cards = append(cards, card)
-		}
-
-		vw.lastFetched.Store(&cards)
-		vw.lastFetchedCount = count
-
-		vw.srv.EventBus().Emit(bus.TopicStatusbarNotifyEvent, statusbar.Notification{Content: i18n.Translate("Typst packages info loaded."), Level: 0})
+		vw.lastFetched.Store(result)
+		vw.srv.RefreshWindow()
 	}()
 }
 
@@ -262,12 +286,19 @@ func (vw *PkgListView) LayoutStatus(gtx C, th *theme.Theme) D {
 }
 
 func NewPkgListView(srv *service.ServiceFacade, vm view.ViewManager) view.View {
+	kindSelect := widgets.NewDropDown(map[string]any{"all": "All", "pkg": "Package", "template": "Template"})
+	// TPIX searches all kinds by default, the same as the tpix CLI.
+	kindSelect.SetSelected("all")
+
 	return &PkgListView{
 		BaseView:     &view.BaseView{},
 		srv:          srv,
 		vm:           vm,
 		categoryList: newCategoryList(),
-		kindSelect:   widgets.NewDropDown(map[string]any{"all": "All", "pkg": "Package", "template": "Template"}),
-		packageList:  newPkgList(nil, false),
+		kindSelect:   kindSelect,
+		packageList:  newPkgList(nil, true),
+		searchDebouncer: &utils.Debouncer{
+			Debounce: time.Millisecond * 300,
+		},
 	}
 }

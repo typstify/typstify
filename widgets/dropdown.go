@@ -53,9 +53,14 @@ type Dropdown struct {
 }
 
 func NewDropDown(optionLabels map[string]any) *Dropdown {
+	// Sort the keys so the displayed order, and hence the initial selection, is
+	// deterministic instead of depending on the map iteration order.
+	labelIdx := slices.Collect(maps.Keys(optionLabels))
+	slices.Sort(labelIdx)
+
 	return &Dropdown{
 		labels:      optionLabels,
-		labelIdx:    slices.Collect(maps.Keys(optionLabels)),
+		labelIdx:    labelIdx,
 		BorderRadus: unit.Dp(4),
 		Inset:       layout.UniformInset(unit.Dp(8)),
 		MaxHeight:   unit.Dp(100),

@@ -262,7 +262,7 @@ func (t *TpixSettingsView) layoutAPIKeyInput(gtx C, th *theme.Theme) D {
 
 		layout.Rigid(func(gtx C) D {
 			return layout.Flex{
-				Axis: layout.Horizontal,
+				Axis:      layout.Horizontal,
 				Alignment: layout.Middle,
 			}.Layout(gtx,
 				layout.Flexed(1, func(gtx C) D {
