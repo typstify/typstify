@@ -285,6 +285,26 @@ func (s *ServiceFacade) EntryFile() string {
 	return s.Workspace().EntryFile()
 }
 
+// ActiveDocumentFile returns the file edited by the current view, or an empty
+// string when the current view is not an editor.
+func (s *ServiceFacade) ActiveDocumentFile() string {
+	if s.vm == nil {
+		return ""
+	}
+
+	cv := s.vm.CurrentView()
+	if cv == nil {
+		return ""
+	}
+
+	provider, ok := cv.(mcp.ActiveDocProvider)
+	if !ok {
+		return ""
+	}
+
+	return provider.GetActiveDocument().File
+}
+
 // SetEntryFile pins relPath, a file path relative to the project root, as the
 // entry file used by preview and export. An empty path unpins the entry file.
 func (s *ServiceFacade) SetEntryFile(relPath string) error {

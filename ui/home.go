@@ -6,12 +6,14 @@ import (
 	"looz.ws/typstify/i18n"
 	"looz.ws/typstify/service"
 	"looz.ws/typstify/ui/assistant"
+	"looz.ws/typstify/ui/dialog"
 	"looz.ws/typstify/ui/navpanel"
 	"looz.ws/typstify/ui/preview"
 	"looz.ws/typstify/ui/settings"
 	"looz.ws/typstify/ui/statusbar"
 	"looz.ws/typstify/widgets"
 	"looz.ws/typstify/widgets/console"
+	appIcons "looz.ws/typstify/widgets/icons"
 
 	"gioui.org/app"
 	"gioui.org/io/key"
@@ -24,11 +26,16 @@ import (
 	"gioui.org/widget/material"
 )
 
-// previewable is implemented by views that support an inline preview panel.
+var (
+	previewIcon = appIcons.NewSvgIcon(appIcons.Columns2)
+	exportIcon  = appIcons.NewSvgIcon(appIcons.FileDown)
+)
+
+// previewable is implemented by views that render preview related controls in
+// their own chrome, e.g. the preview mode toggle in the status bar. The preview
+// panel itself is project level and drawn by the home view.
 type previewable interface {
-	IsVisible() bool
 	SetPreviewer(previewer *preview.Previewer)
-	LayoutPreview(gtx C, th *theme.Theme) D
 }
 
 type HomeView struct {
@@ -55,6 +62,10 @@ type HomeView struct {
 	previewResizer *widgets.Resize
 	previewBar     *widgets.ResizeBar
 	previewer      *preview.Previewer
+
+	// project level actions rendered in the tab line.
+	previewBtn widget.Clickable
+	exportBtn  widget.Clickable
 
 	welcome      WelcomeView
 	accountClick widget.Clickable
@@ -284,8 +295,22 @@ func (hv *HomeView) layoutMain(gtx C, th *theme.Theme) D {
 					return hv.tabbar.Layout(gtx, th)
 				}),
 
+				// The project actions are grouped with the account button so that
+				// they stay next to it instead of spreading across the spare space
+				// of the tab line.
 				layout.Rigid(func(gtx C) D {
-					return hv.layoutAccountInfo(gtx, th)
+					return layout.Flex{
+						Axis:      layout.Horizontal,
+						Alignment: layout.Middle,
+						Gap:       gtx.Dp(unit.Dp(6)),
+					}.Layout(gtx,
+						layout.Rigid(func(gtx C) D {
+							return hv.layoutTopActions(gtx, th)
+						}),
+						layout.Rigid(func(gtx C) D {
+							return hv.layoutAccountInfo(gtx, th)
+						}),
+					)
 				}),
 			)
 		}),
@@ -326,18 +351,16 @@ func (hv *HomeView) layoutView(gtx C, th *theme.Theme) D {
 		return hv.welcome.Layout(gtx, th)
 	}
 
-	pv, ok := cv.(previewable)
-	if ok {
+	if pv, ok := cv.(previewable); ok {
 		pv.SetPreviewer(hv.previewer)
 	}
 
-	showPreview := ok && pv.IsVisible()
-
-	if !showPreview {
+	// The preview panel belongs to the project instead of the active view, so it
+	// stays visible while switching tabs.
+	if !hv.previewer.IsVisible() {
 		return cv.Layout(gtx, th)
 	}
 
-	// Preview is visible.
 	if hv.previewResizer == nil {
 		hv.previewResizer = &widgets.Resize{Axis: layout.Horizontal, Ratio: 0.7}
 	}
@@ -347,7 +370,7 @@ func (hv *HomeView) layoutView(gtx C, th *theme.Theme) D {
 			return cv.Layout(gtx, th)
 		},
 		func(gtx C) D {
-			return pv.LayoutPreview(gtx, th)
+			return hv.previewer.Layout(gtx, th)
 		},
 		func(gtx C) D {
 			if hv.previewBar == nil {
@@ -356,6 +379,55 @@ func (hv *HomeView) layoutView(gtx C, th *theme.Theme) D {
 			return hv.previewBar.Layout(gtx, th)
 		},
 	)
+}
+
+// layoutTopActions renders the project level actions, e.g. the preview toggle
+// and the export dialog. They live in the tab line because they do not belong
+// to any particular editor.
+func (hv *HomeView) layoutTopActions(gtx C, th *theme.Theme) D {
+	previewVisible := hv.previewer.IsVisible()
+
+	return layout.Flex{
+		Axis:      layout.Horizontal,
+		Alignment: layout.Middle,
+		Gap:       gtx.Dp(unit.Dp(8)),
+	}.Layout(gtx,
+		layout.Rigid(func(gtx C) D {
+			if hv.previewBtn.Clicked(gtx) {
+				hv.previewer.Toggle()
+				gtx.Execute(op.InvalidateCmd{})
+			}
+
+			return layoutActionIcon(gtx, th, &hv.previewBtn, previewIcon, previewVisible)
+		}),
+		layout.Rigid(func(gtx C) D {
+			if hv.exportBtn.Clicked(gtx) {
+				// The export dialog resolves the pinned entry file or the active
+				// document by itself.
+				hv.RequestSwitch(view.Intent{
+					Target:      dialog.ExportDialogViewID,
+					ShowAsModal: true,
+				})
+			}
+
+			return layoutActionIcon(gtx, th, &hv.exportBtn, exportIcon, false)
+		}),
+	)
+}
+
+// layoutActionIcon renders an icon button used in the tab line. An active
+// button is drawn with the accent color to reflect a toggled state.
+func layoutActionIcon(gtx C, th *theme.Theme, btn *widget.Clickable, icon *appIcons.SvgIcon, active bool) D {
+	return layout.UniformInset(unit.Dp(2)).Layout(gtx, func(gtx C) D {
+		return btn.Layout(gtx, func(gtx C) D {
+			iconColor := th.Fg
+			if btn.Hovered() || active {
+				iconColor = th.ContrastBg
+			}
+
+			return icon.Layout(gtx, iconColor, th.TextSize)
+		})
+	})
 }
 
 func (hv *HomeView) layoutAccountInfo(gtx C, th *theme.Theme) D {

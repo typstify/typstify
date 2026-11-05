@@ -7,7 +7,6 @@ import (
 	"log"
 	"os"
 	"path/filepath"
-	"runtime"
 	"sync"
 	"sync/atomic"
 
@@ -26,7 +25,6 @@ import (
 	"looz.ws/typstify/service/bus"
 	"looz.ws/typstify/service/mcp"
 	"looz.ws/typstify/ui/preview"
-	"looz.ws/typstify/utils"
 	appIcons "looz.ws/typstify/widgets/icons"
 )
 
@@ -51,11 +49,10 @@ type AgentChatView struct {
 	chatErr            error
 	pendingLoadSession *agent.ACPSession
 
-	lspClient      *lsp.Client
-	previewVisible bool
-	previewer      *preview.Previewer
-	previewFile    string
-	mu             sync.Mutex
+	lspClient   *lsp.Client
+	previewer   *preview.Previewer
+	previewFile string
+	mu          sync.Mutex
 }
 
 func (cv *AgentChatView) ID() view.ViewID {
@@ -96,20 +93,12 @@ func (cv *AgentChatView) OnResume() {
 		return
 	}
 
-	openInBrowser := cv.srv.Settings().Lsp().OpenPreviewInBrowser != 0
-	var isLinux = runtime.GOOS == "linux"
-	if openInBrowser || isLinux {
+	if cv.previewer == nil || !cv.previewer.IsVisible() || cv.previewFile == "" {
 		return
 	}
 
-	if !cv.previewVisible || cv.previewFile == "" {
-		return
-	}
-
-	if cv.previewer != nil {
-		cv.makeFileFocused(cv.previewFile)
-		cv.previewer.Navigate(serverAddr)
-	}
+	cv.makeFileFocused(cv.previewFile)
+	cv.previewer.Navigate(serverAddr)
 }
 
 func (cv *AgentChatView) init() {
@@ -248,48 +237,30 @@ func (cv *AgentChatView) SetPreviewer(previewer *preview.Previewer) {
 	cv.previewer = previewer
 }
 
-// IsPreviewVisible returns whether the inline preview panel should be shown.
-func (cv *AgentChatView) IsVisible() bool {
-	return cv.previewVisible
-}
-
-// LayoutPreview renders the preview panel. Called by home.go when preview is active.
-func (cv *AgentChatView) LayoutPreview(gtx C, th *theme.Theme) D {
-	return cv.previewer.Layout(gtx, th)
-}
-
 func (cv *AgentChatView) togglePreview(previewFile string) error {
 	previewSrv := cv.srv.PreviewService()
 	if previewSrv == nil {
 		return errors.New("no preview service")
 	}
 
-	serverAddr := previewSrv.Address()
-	if serverAddr == "" {
+	if previewSrv.Address() == "" {
 		log.Println("preview ERR: no preview server address")
 		return errors.New("no preview server address")
 	}
 
+	if cv.previewer == nil {
+		return errors.New("previewer is not initialized")
+	}
+
 	// focus LSP triggers a refresh of the preview server.
-	err := cv.makeFileFocused(previewFile)
-	if err != nil {
+	if err := cv.makeFileFocused(previewFile); err != nil {
 		return err
 	}
-	cv.previewVisible = true
 	cv.previewFile = previewFile
 
-	openInBrowser := cv.srv.Settings().Lsp().OpenPreviewInBrowser != 0
-	var isLinux = runtime.GOOS == "linux"
-	if openInBrowser || isLinux {
-		utils.OpenInExternalApp(serverAddr)
-		return nil
-	}
+	cv.previewer.Show()
+	log.Printf("refreshing preview at %s: %s", previewSrv.Address(), cv.previewFile)
 
-	// built-in previewer
-	if cv.previewer != nil {
-		cv.previewer.Navigate(serverAddr)
-		log.Printf("refreshing preview at %s: %s", serverAddr, cv.previewFile)
-	}
 	return nil
 }
 
@@ -358,9 +329,8 @@ func (cv *AgentChatView) OnFinish() {
 
 func NewAgentChatView(srv *service.ServiceFacade) *AgentChatView {
 	cv := &AgentChatView{
-		BaseView:  &view.BaseView{},
-		srv:       srv,
-		previewer: preview.NewPreviewer(srv),
+		BaseView: &view.BaseView{},
+		srv:      srv,
 	}
 
 	srv.EventBus().Subscribe(cv, "agentChatView", `preview\.toggle`, func(topic string, data interface{}) {
@@ -380,7 +350,9 @@ func NewAgentChatView(srv *service.ServiceFacade) *AgentChatView {
 		}
 
 		if previewParams.Action == "close" {
-			cv.previewVisible = false
+			if cv.previewer != nil {
+				cv.previewer.Hide()
+			}
 			cv.previewFile = ""
 		}
 

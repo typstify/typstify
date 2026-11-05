@@ -8,7 +8,6 @@ import (
 	"log"
 	"path/filepath"
 	"regexp"
-	"runtime"
 	"strings"
 	"sync/atomic"
 	"time"
@@ -25,16 +24,13 @@ import (
 	lspProtocol "looz.ws/typstify/lsp/protocol"
 	"looz.ws/typstify/service"
 	"looz.ws/typstify/service/mcp"
-	"looz.ws/typstify/ui/dialog"
 	uipreview "looz.ws/typstify/ui/preview"
 	"looz.ws/typstify/ui/viewer"
 	"looz.ws/typstify/utils"
 	"looz.ws/typstify/widgets"
 	appIcons "looz.ws/typstify/widgets/icons"
 
-	"gioui.org/io/key"
 	"gioui.org/layout"
-	"gioui.org/op"
 	"gioui.org/unit"
 	"gioui.org/widget"
 	"gioui.org/widget/material"
@@ -48,8 +44,6 @@ type (
 var (
 	TypstEditorViewID = view.NewViewID("TypstEditor")
 	searchIcon        = appIcons.NewSvgIcon(appIcons.Search)
-	previewIcon       = appIcons.NewSvgIcon(appIcons.Columns2)
-	exportIcon        = appIcons.NewSvgIcon(appIcons.FileDown)
 	presentationIcon  = appIcons.NewSvgIcon(appIcons.Presentation)
 	chatIcon          = appIcons.NewSvgIcon(appIcons.Sparkles)
 )
@@ -63,10 +57,10 @@ type TypstEditor struct {
 	lspReady   bool
 	lspClient  *lsp.Client
 
-	// Preview
-	uiPreviewer    *uipreview.Previewer
-	previewVisible bool
-	toggleModeBtn  widget.Clickable
+	// Preview. The visibility state is owned by the shared previewer, the
+	// previewer itself is used to render the preview mode toggle.
+	uiPreviewer   *uipreview.Previewer
+	toggleModeBtn widget.Clickable
 
 	// Outline
 	cachedSymbols   atomic.Pointer[[]lspProtocol.DocumentSymbol]
@@ -135,20 +129,12 @@ func (te *TypstEditor) OnResume() {
 		return
 	}
 
-	openInBrowser := te.srv.Settings().Lsp().OpenPreviewInBrowser != 0
-	var isLinux = runtime.GOOS == "linux"
-	if openInBrowser || isLinux {
+	if te.uiPreviewer == nil || !te.uiPreviewer.IsVisible() {
 		return
 	}
 
-	if !te.previewVisible {
-		return
-	}
-
-	if serverAddr != "" && te.uiPreviewer != nil {
-		te.srcEditor.FocusLsp()
-		te.uiPreviewer.Navigate(serverAddr)
-	}
+	te.srcEditor.FocusLsp()
+	te.uiPreviewer.Navigate(serverAddr)
 }
 
 func (te *TypstEditor) setupEditor(path string) error {
@@ -202,30 +188,6 @@ func (te *TypstEditor) setupLsp(gtx layout.Context) {
 
 func (te *TypstEditor) headerActions() []editorHeaderAction {
 	return []editorHeaderAction{
-
-		{
-			Name: "Preview",
-			Icon: previewIcon,
-			OnClicked: func(gtx C) {
-				te.togglePreview(gtx)
-			},
-		},
-		{
-			Name: "Export",
-			Icon: exportIcon,
-			OnClicked: func(gtx C) {
-				if te.previewVisible {
-					te.togglePreview(gtx)
-				}
-				te.srv.RequestSwitch(view.Intent{
-					Target:      dialog.ExportDialogViewID,
-					ShowAsModal: true,
-					Params: map[string]interface{}{
-						"targetFile": te.targetFile,
-					},
-				})
-			},
-		},
 		{
 			Name: "AI Assistant",
 			Icon: chatIcon,
@@ -245,28 +207,6 @@ func (te *TypstEditor) headerActions() []editorHeaderAction {
 
 func (te *TypstEditor) update(gtx C) {
 	te.setupLsp(gtx)
-
-	// global key handler.
-	for {
-		e, ok := gtx.Event(
-			key.Filter{Name: "P", Required: key.ModShortcut}, // toggle hide/show of previewer.
-		)
-		if !ok {
-			break
-		}
-
-		switch event := e.(type) {
-		case key.Event:
-			if event.State != key.Press {
-				continue
-			}
-
-			if event.Name == "P" && event.Modifiers.Contain(key.ModShortcut) {
-				te.togglePreview(gtx)
-				gtx.Execute(op.InvalidateCmd{})
-			}
-		}
-	}
 }
 
 func (te *TypstEditor) Layout(gtx layout.Context, th *theme.Theme) layout.Dimensions {
@@ -355,53 +295,10 @@ func (te *TypstEditor) layoutAuthView(gtx layout.Context, th *theme.Theme) layou
 	return te.authView.Layout(gtx, th)
 }
 
+// SetPreviewer implements the previewable interface, so the status bar can
+// render the preview mode toggle.
 func (te *TypstEditor) SetPreviewer(previewer *uipreview.Previewer) {
 	te.uiPreviewer = previewer
-}
-
-// IsPreviewVisible returns whether the inline preview panel should be shown.
-func (te *TypstEditor) IsVisible() bool {
-	return te.previewVisible
-}
-
-// LayoutPreview renders the preview panel. Called by home.go when preview is active.
-func (te *TypstEditor) LayoutPreview(gtx C, th *theme.Theme) D {
-	return te.uiPreviewer.Layout(gtx, th)
-}
-
-func (te *TypstEditor) togglePreview(gtx C) {
-	previewSrv := te.srv.PreviewService()
-	if previewSrv == nil {
-		return
-	}
-
-	serverAddr := previewSrv.Address()
-	if serverAddr == "" {
-		log.Println("preview ERR: no preview server address")
-		return
-	}
-
-	// focus LSP triggers a refresh of the preview server.
-	te.srcEditor.FocusLsp()
-
-	openInBrowser := te.srv.Settings().Lsp().OpenPreviewInBrowser != 0
-	var isLinux = runtime.GOOS == "linux"
-	if (openInBrowser || isLinux) && serverAddr != "" {
-		utils.OpenInExternalApp(serverAddr)
-		te.previewVisible = false
-		return
-	}
-
-	// built-in previewer
-	te.previewVisible = !te.previewVisible
-
-	if !te.previewVisible {
-		return
-	}
-
-	if serverAddr != "" && te.uiPreviewer != nil {
-		te.uiPreviewer.Navigate(serverAddr)
-	}
 }
 
 func (te *TypstEditor) toggleChat() {
@@ -466,7 +363,7 @@ func (te *TypstEditor) LayoutStatus(gtx C, th *theme.Theme) D {
 }
 
 func (te *TypstEditor) layoutEditorStatus(gtx C, th *theme.Theme) D {
-	if !te.previewVisible {
+	if te.uiPreviewer == nil || !te.uiPreviewer.IsVisible() {
 		return te.srcEditor.LayoutStatus(gtx, th, te.srv)
 	}
 

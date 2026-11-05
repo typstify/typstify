@@ -1,6 +1,7 @@
 package dialog
 
 import (
+	"errors"
 	"fmt"
 	"io"
 	"path/filepath"
@@ -63,19 +64,29 @@ func NewExportDialog(srv *service.ServiceFacade) view.View {
 }
 
 func (d *ExportDialog) OnInit(intent view.Intent) error {
-	targetFile := intent.Params["targetFile"]
-	if targetFile == nil {
-		panic("no targetFile provided!")
-	}
-
-	d.targetFile = targetFile.(string)
+	targetFile, _ := intent.Params["targetFile"].(string)
 
 	// A pinned entry file takes precedence over the file that was requested, so
 	// that exporting from any chapter still builds the whole document.
 	if entryFile := d.srv.EntryFile(); entryFile != "" {
-		d.targetFile = entryFile
+		targetFile = entryFile
 	}
 
+	// Export is a project level action, so fall back to the document being
+	// edited when no entry file is pinned.
+	if targetFile == "" {
+		targetFile = d.srv.ActiveDocumentFile()
+	}
+
+	if targetFile == "" {
+		d.srv.EventBus().Emit(bus.TopicStatusbarNotifyEvent, statusbar.Notification{
+			Content: i18n.Translate("No document to export."),
+			Level:   2,
+		})
+		return errors.New("no document to export")
+	}
+
+	d.targetFile = targetFile
 	d.formatEnum.Value = string(typst.PDF)
 	d.pdfVersion.Value = string(typst.PDF1_7)
 
