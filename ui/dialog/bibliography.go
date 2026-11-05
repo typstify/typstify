@@ -50,12 +50,12 @@ func NewSyncBibDialog(srv *service.ServiceFacade) view.View {
 }
 
 func (d *SyncBibDialog) OnInit(intent view.Intent) error {
-	val, ok := intent.Params["parentDir"]
+	parentDir, ok := intent.Params["parentDir"].(string)
 	if !ok {
-		return nil
+		return errors.New("missing parent directory")
 	}
 
-	d.parentDir = val.(string)
+	d.parentDir = parentDir
 	go func() {
 		d.isLoading.Store(true)
 		defer d.isLoading.Store(false)
@@ -212,12 +212,12 @@ func NewBibInfoDialog(srv *service.ServiceFacade) view.View {
 }
 
 func (d *BibInfoDialog) OnInit(intent view.Intent) error {
-	metaVal, ok := intent.Params["meta"]
+	meta, ok := intent.Params["meta"].(service.ManagedBibliography)
 	if !ok {
-		return nil
+		return errors.New("missing bibliography info")
 	}
 
-	d.meta = metaVal.(service.ManagedBibliography)
+	d.meta = meta
 	d.pathInput.SetText(d.meta.File)
 
 	return nil

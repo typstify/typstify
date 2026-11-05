@@ -49,9 +49,13 @@ type TreeState struct {
 // NodeMarker decorate the file node and also can change
 // its behavior based on its kind and meta data.
 type NodeMarker struct {
-	Kind  string
+	Kind string
+	// Color overrides the color of the node icon and label. It is optional.
 	Color func(baseColor color.NRGBA) color.NRGBA
 	Meta  map[string]any
+	// Emphasize renders the node name in bold to make the node stand out, e.g.
+	// the entry file pinned for preview and export.
+	Emphasize bool
 }
 
 func isAncestor(ancestor, childNode *FileNode) bool {

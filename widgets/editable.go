@@ -4,6 +4,7 @@ import (
 	"image"
 	"image/color"
 
+	"gioui.org/font"
 	"gioui.org/io/event"
 	"gioui.org/io/key"
 	"gioui.org/io/pointer"
@@ -20,6 +21,8 @@ type Editable struct {
 	Text     string
 	TextSize unit.Sp
 	Color    color.NRGBA
+	// Bold renders the text in bold.
+	Bold bool
 
 	//The callback to be called when Text is changed.
 	OnChanged func(text string) error
@@ -130,6 +133,9 @@ func (e *Editable) Layout(gtx C, th *material.Theme) D {
 				editor := material.Editor(th, &e.editor, "")
 				editor.TextSize = textSize
 				editor.Color = e.Color
+				if e.Bold {
+					editor.Font.Weight = font.Bold
+				}
 				return editor.Layout(gtx)
 			})
 		})
@@ -139,6 +145,9 @@ func (e *Editable) Layout(gtx C, th *material.Theme) D {
 	dims := func() D {
 		lb := material.Label(th, textSize, e.Text)
 		lb.Color = e.Color
+		if e.Bold {
+			lb.Font.Weight = font.Bold
+		}
 		return lb.Layout(gtx)
 	}()
 	callOp := macro.Stop()

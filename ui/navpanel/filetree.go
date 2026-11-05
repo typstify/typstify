@@ -263,6 +263,15 @@ func (tn *FileTreeNav) onFileUpdated(node *filetree.FileNode, oldPath string) {
 		return
 	}
 
+	// Keep the pin in sync when the pinned entry file is renamed.
+	if entryFile := tn.srv.EntryFile(); entryFile != "" && filepath.Clean(entryFile) == filepath.Clean(oldPath) {
+		if relPath, err := filepath.Rel(tn.tree.Root(), node.Path); err == nil {
+			if err := tn.srv.SetEntryFile(relPath); err != nil {
+				log.Printf("update entry file to %s failed: %v", relPath, err)
+			}
+		}
+	}
+
 	views := tn.vm.OpenedViews()
 	for idx, vw := range views {
 		location := vw.Location()
@@ -314,6 +323,13 @@ func (tn *FileTreeNav) onFileDeleted(node *filetree.FileNode) {
 		}
 
 		if result.Params {
+			// The pinned entry file is gone, so unpin it.
+			if entryFile := tn.srv.EntryFile(); entryFile != "" && filepath.Clean(entryFile) == filepath.Clean(node.Path) {
+				if err := tn.srv.SetEntryFile(""); err != nil {
+					log.Printf("unpin deleted entry file failed: %v", err)
+				}
+			}
+
 			tn.tree.Remove(node)
 		}
 	}()
@@ -340,6 +356,14 @@ func (tn *FileTreeNav) nodeMarker(nodePath string) *filetree.NodeMarker {
 					"meta": managedBibs[idx],
 				},
 			}
+		}
+	}
+
+	// Then mark the entry file pinned for preview and export.
+	if entryFile := tn.srv.EntryFile(); entryFile != "" && filepath.Clean(entryFile) == filepath.Clean(nodePath) {
+		return &filetree.NodeMarker{
+			Kind:      "entry",
+			Emphasize: true,
 		}
 	}
 
@@ -483,9 +507,63 @@ func (tn *FileTreeNav) extraMenuOptions(node *filetree.FileNode) [][]menu.MenuOp
 		if state.Marker != nil && state.Marker.Kind == "bib" {
 			options = append(options, []menu.MenuOption{bibInfoOpt})
 		}
+
+		if node.FileType() == ".typ" {
+			options = append(options, []menu.MenuOption{tn.entryFileOption(node)})
+		}
 	}
 
 	return options
+}
+
+// entryFileOption builds the menu option that pins or unpins node as the entry
+// file for preview and export.
+func (tn *FileTreeNav) entryFileOption(node *filetree.FileNode) menu.MenuOption {
+	isEntryFile := tn.srv.EntryFile() == filepath.Clean(node.Path)
+
+	return menu.MenuOption{
+		OnClicked: func(gtx layout.Context) error {
+			var relPath string
+			if !isEntryFile {
+				rel, err := filepath.Rel(tn.tree.Root(), node.Path)
+				if err != nil {
+					tn.notify(i18n.Translate("Set entry file failed: %s", err.Error()), 2)
+					return err
+				}
+				relPath = rel
+			}
+
+			err := tn.srv.SetEntryFile(relPath)
+			if err != nil {
+				tn.notify(i18n.Translate("Set entry file failed: %s", err.Error()), 2)
+				return err
+			}
+
+			if relPath == "" {
+				tn.notify(i18n.Translate("Entry file unpinned, preview and export follow the focused document."), 0)
+			} else {
+				tn.notify(i18n.Translate("Entry file pinned to %s", relPath), 0)
+			}
+
+			return nil
+		},
+
+		Layout: func(gtx layout.Context, th *theme.Theme) layout.Dimensions {
+			name := i18n.Translate("Pin as Entry File")
+			if isEntryFile {
+				name = i18n.Translate("Unpin Entry File")
+			}
+
+			return material.Label(th.Theme, th.TextSize, name).Layout(gtx)
+		},
+	}
+}
+
+func (tn *FileTreeNav) notify(content string, level int) {
+	tn.srv.EventBus().Emit(bus.TopicStatusbarNotifyEvent, statusbar.Notification{
+		Content: content,
+		Level:   level,
+	})
 }
 
 func isPackageProject(projectDir string) bool {

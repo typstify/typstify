@@ -235,6 +235,8 @@ func (s *ServiceFacade) SetProjectDir(dir string) {
 	}
 
 	s.previewSrv = lsp.NewPreviwService(client)
+	// The preview always compiles the entry file pinned by the user, if any.
+	s.previewSrv.SetPinnedMainFileProvider(s.Workspace().EntryFile)
 	go func() {
 		s.previewSrv.Start(context.Background(),
 			lsp.PreviewOptions{
@@ -275,6 +277,35 @@ func (s *ServiceFacade) PreviewService() *lsp.PreviewService {
 
 func (s *ServiceFacade) CurrentProjectDir() string {
 	return s.currentProjectDir
+}
+
+// EntryFile returns the absolute path of the entry file pinned for preview and
+// export, or an empty string if no entry file is pinned.
+func (s *ServiceFacade) EntryFile() string {
+	return s.Workspace().EntryFile()
+}
+
+// SetEntryFile pins relPath, a file path relative to the project root, as the
+// entry file used by preview and export. An empty path unpins the entry file.
+func (s *ServiceFacade) SetEntryFile(relPath string) error {
+	err := s.Workspace().SetEntryFile(relPath)
+	if err != nil {
+		return err
+	}
+
+	// Tell the language server to compile the pinned entry file from now on.
+	// Pinning makes tinymist ignore the focused document, and unpinning makes it
+	// follow the focused document again.
+	if s.previewSrv != nil {
+		entryFile := s.Workspace().EntryFile()
+		go func() {
+			if err := s.previewSrv.PinMain(context.Background(), entryFile); err != nil {
+				log.Println(err)
+			}
+		}()
+	}
+
+	return nil
 }
 
 func (s *ServiceFacade) Console() *console.ConsoleState {

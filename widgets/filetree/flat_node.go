@@ -88,7 +88,7 @@ func (fn *FlatNode) layout(gtx layout.Context, th *theme.Theme) layout.Dimension
 					}
 
 					iconColor := th.ContrastBg
-					if fn.State.Marker != nil {
+					if fn.State.Marker != nil && fn.State.Marker.Color != nil {
 						iconColor = fn.State.Marker.Color(iconColor)
 					}
 
@@ -98,8 +98,15 @@ func (fn *FlatNode) layout(gtx layout.Context, th *theme.Theme) layout.Dimension
 				}),
 				layout.Flexed(1, func(gtx layout.Context) layout.Dimensions {
 					gtx.Constraints.Min.X = gtx.Constraints.Max.X
-					if fn.State.Marker != nil {
-						fn.State.Editable.Color = fn.State.Marker.Color(th.Fg)
+
+					// The marker is recomputed every frame, so the emphasis is reset
+					// before applying it.
+					fn.State.Editable.Bold = false
+					if marker := fn.State.Marker; marker != nil {
+						fn.State.Editable.Bold = marker.Emphasize
+						if marker.Color != nil {
+							fn.State.Editable.Color = marker.Color(th.Fg)
+						}
 					}
 
 					return fn.State.Editable.Layout(gtx, th.Theme)

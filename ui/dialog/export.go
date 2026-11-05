@@ -3,6 +3,7 @@ package dialog
 import (
 	"fmt"
 	"io"
+	"path/filepath"
 	"strings"
 
 	"gioui.org/layout"
@@ -11,6 +12,7 @@ import (
 	"gioui.org/widget"
 	"gioui.org/widget/material"
 	"gioui.org/x/outlay"
+	"github.com/oligo/gioview/misc"
 	"github.com/oligo/gioview/theme"
 	"github.com/oligo/gioview/view"
 	gw "github.com/oligo/gioview/widget"
@@ -67,6 +69,13 @@ func (d *ExportDialog) OnInit(intent view.Intent) error {
 	}
 
 	d.targetFile = targetFile.(string)
+
+	// A pinned entry file takes precedence over the file that was requested, so
+	// that exporting from any chapter still builds the whole document.
+	if entryFile := d.srv.EntryFile(); entryFile != "" {
+		d.targetFile = entryFile
+	}
+
 	d.formatEnum.Value = string(typst.PDF)
 	d.pdfVersion.Value = string(typst.PDF1_7)
 
@@ -134,6 +143,23 @@ func (d *ExportDialog) LayoutBody(gtx C, th *theme.Theme) D {
 	return layout.Flex{
 		Axis: layout.Vertical,
 	}.Layout(gtx,
+		layout.Rigid(func(gtx C) D {
+			return formItem{Axis: layout.Vertical}.Layout(gtx, th, i18n.Translate("Entry File"),
+				i18n.Translate("The file to be exported. When an entry file is pinned in the file tree, the pinned file is used no matter which document is open."),
+				func(gtx C) D {
+					relPath := d.targetFile
+					if rootDir := d.srv.CurrentProjectDir(); rootDir != "" {
+						if rel, err := filepath.Rel(rootDir, d.targetFile); err == nil {
+							relPath = rel
+						}
+					}
+
+					label := material.Label(th.Theme, th.TextSize, relPath)
+					label.Color = misc.WithAlpha(th.Fg, 0xb6)
+					return label.Layout(gtx)
+				})
+		}),
+
 		layout.Rigid(func(gtx C) D {
 			return formItem{Axis: layout.Vertical}.Layout(gtx, th, i18n.Translate("Exported File Format"), i18n.Translate(formatTip),
 				func(gtx C) D {

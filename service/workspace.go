@@ -3,6 +3,7 @@ package service
 import (
 	"encoding/json"
 	"errors"
+	"fmt"
 	"log"
 	"os"
 	"path/filepath"
@@ -22,6 +23,10 @@ import (
 type WorkspaceSettings struct {
 	// preview mode: document|slide
 	PreviewMode string `json:"preview_mode"`
+	// EntryFile is the entry file pinned by the user for preview and export.
+	// It is a path relative to the project root. Empty means no entry file is
+	// pinned, in which case the focused document is used.
+	EntryFile string `json:"entry_file,omitempty"`
 }
 
 type GitRepoState struct {
@@ -54,6 +59,10 @@ type WorkspaceService struct {
 	// mu guards the switching/reading of currentWorkspace as well as the
 	// workspace settings file accessors.
 	mu sync.Mutex
+	// entryFile caches the absolute path of the entry file pinned for preview
+	// and export. It is refreshed whenever the workspace or the pin changes,
+	// because the file tree asks for it on every frame.
+	entryFile string
 
 	fileWatcher *WorkspaceFileWatcher
 	eventBus    *bus.EventBus
@@ -97,6 +106,7 @@ func (rp *WorkspaceService) SwitchWorkspace(projectDir string) {
 	}
 	rp.stateIndex.Save(utils.SKey(projectDir), rp.currentWorkspace)
 	rp.allCache = rp.allCache[:0] // invalidate cache
+	rp.entryFile = rp.resolveEntryFileLocked()
 	rp.mu.Unlock()
 
 	// unwatch last git repo if it is a git repo.
@@ -290,6 +300,69 @@ func (rp *WorkspaceService) SetPreviewMode(mode string) {
 	settings := rp.loadWorkspaceSettingsForPath(projectDir)
 	settings.PreviewMode = mode
 	rp.saveWorkspaceSettingForPath(projectDir, settings)
+}
+
+// EntryFile returns the absolute path of the entry file pinned for preview and
+// export. It returns an empty string when no entry file is pinned or when the
+// pinned file does not exist anymore.
+func (rp *WorkspaceService) EntryFile() string {
+	rp.mu.Lock()
+	defer rp.mu.Unlock()
+
+	return rp.entryFile
+}
+
+// resolveEntryFileLocked returns the absolute path of the pinned entry file, or
+// an empty string when no entry file is pinned or when the pinned file does not
+// exist anymore. bs.mu must be held.
+func (rp *WorkspaceService) resolveEntryFileLocked() string {
+	if rp.currentWorkspace.Path == "" {
+		return ""
+	}
+
+	settings := rp.loadWorkspaceSettingsForPath(rp.currentWorkspace.Path)
+	if settings.EntryFile == "" {
+		return ""
+	}
+
+	entryFile := filepath.Join(rp.currentWorkspace.Path, settings.EntryFile)
+	if exists, isDir := utils.CheckFileExists(entryFile); !exists || isDir {
+		return ""
+	}
+
+	return entryFile
+}
+
+// SetEntryFile pins relPath, a file path relative to the project root, as the
+// entry file for preview and export. Passing an empty path unpins the entry
+// file, so preview and export follow the focused document again.
+func (rp *WorkspaceService) SetEntryFile(relPath string) error {
+	rp.mu.Lock()
+	defer rp.mu.Unlock()
+
+	projectDir := rp.currentWorkspace.Path
+	if projectDir == "" {
+		return errors.New("no project is opened")
+	}
+
+	if relPath != "" {
+		relPath = filepath.Clean(relPath)
+		if !filepath.IsLocal(relPath) {
+			return fmt.Errorf("invalid entry file: %s", relPath)
+		}
+
+		exists, isDir := utils.CheckFileExists(filepath.Join(projectDir, relPath))
+		if !exists || isDir {
+			return fmt.Errorf("entry file does not exist: %s", relPath)
+		}
+	}
+
+	settings := rp.loadWorkspaceSettingsForPath(projectDir)
+	settings.EntryFile = relPath
+	rp.saveWorkspaceSettingForPath(projectDir, settings)
+	rp.entryFile = rp.resolveEntryFileLocked()
+
+	return nil
 }
 
 func (rp *WorkspaceService) WatchFile(path string) error {

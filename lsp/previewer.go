@@ -37,12 +37,25 @@ type PreviewService struct {
 	client *Client
 	task   *previewTask
 	mu     sync.Mutex
+	// pinnedMainFile resolves the entry file pinned by the user, if any. It is
+	// queried every time a preview server is started.
+	pinnedMainFile func() string
 }
 
 func NewPreviwService(client *Client) *PreviewService {
 	return &PreviewService{
 		client: client,
 	}
+}
+
+// SetPinnedMainFileProvider sets the function used to resolve the entry file
+// pinned by the user when a preview server is started. It must be set before
+// Start is called.
+func (p *PreviewService) SetPinnedMainFileProvider(provider func() string) {
+	p.mu.Lock()
+	defer p.mu.Unlock()
+
+	p.pinnedMainFile = provider
 }
 
 // Start starts a new preview server by calling a Tinymist LSP command.
@@ -77,6 +90,11 @@ func (p *PreviewService) Start(ctx context.Context, opts PreviewOptions, onFinis
 		return err
 	}
 
+	// Pin the entry file (if any) so that the preview always compiles it no
+	// matter which document is focused. This has to happen before the preview
+	// is started, otherwise the first compilation uses the focused document.
+	p.pinMain(ctx, p.pinnedMain())
+
 	// Lastly start a new preview server.
 	previewServerPort, err := p.startPreview(ctx)
 	if err != nil {
@@ -92,6 +110,43 @@ func (p *PreviewService) Start(ctx context.Context, opts PreviewOptions, onFinis
 		onFinish()
 	}
 	return nil
+}
+
+// pinnedMain returns the entry file pinned by the user, or an empty string if
+// no entry file is pinned. p.mu must be held by the caller.
+func (p *PreviewService) pinnedMain() string {
+	if p.pinnedMainFile == nil {
+		return ""
+	}
+
+	return p.pinnedMainFile()
+}
+
+// PinMain pins path, which must be an absolute file path, as the main file
+// compiled by the language server. Passing an empty path unpins the main file
+// so the server follows the focused document again.
+func (p *PreviewService) PinMain(ctx context.Context, path string) error {
+	// tinymist.pinMain accepts a single argument: the path to pin, or null to
+	// unpin. See https://github.com/Myriad-Dreamin/tinymist.
+	var arg any
+	if path != "" {
+		arg = path
+	}
+
+	_, err := p.client.ExecuteCommand(ctx, "tinymist.pinMain", []any{arg})
+	if err != nil {
+		return fmt.Errorf("pin main file: %w", err)
+	}
+
+	return nil
+}
+
+// pinMain is like PinMain, but only logs the error. Failing to pin the main
+// file should not prevent the preview from starting.
+func (p *PreviewService) pinMain(ctx context.Context, path string) {
+	if err := p.PinMain(ctx, path); err != nil {
+		log.Println(err)
+	}
 }
 
 func (p *PreviewService) Address() string {
